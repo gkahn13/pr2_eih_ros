@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/gkahn/ros_workspace/tfx/build/devel/setup.sh

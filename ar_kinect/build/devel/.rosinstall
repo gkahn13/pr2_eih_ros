@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/peter/groovy_workspace/src/ar_kinect/build/devel/setup.sh

@@ -1,0 +1,21 @@
+<launch>
+
+  <!--
+  <node pkg="pointcloud_publisher" type="example" name="example">
+    <param name="pointcloud_topic" value="/hand_kinect_points" />
+  </node>
+  -->
+
+  <node pkg="ar_kinect" type="ar_kinect" name="head_ar_kinect">
+    <param name="pointcloud_topic" value="/camera/depth_registered/points" />
+    <param name="ar_pose_topic" value="head_kinect_ar_kinect_pose" />
+    <param name="visualization_marker_topic" value="head_kinect_ar_visualization_marker" />
+  </node>
+    
+  <!-- <node pkg="ar_kinect" type="ar_kinect" name="hand_ar_kinect"> -->
+  <!--   <param name="pointcloud_topic" value="/hand_kinect_points" /> -->
+  <!--   <param name="ar_pose_topic" value="hand_kinect_ar_kinect_pose" /> -->
+  <!--   <param name="visualization_marker_topic" value="hand_kinect_ar_visualization_marker" /> -->
+  <!-- </node> -->
+
+</launch>
