@@ -87,7 +87,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			tf::transformTFToEigen(kinfu_to_camera, affine_current_cam_pose);
 
 			pcl::PointCloud<pcl::PointXYZRGBA> transformed_cloud;
-			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose.inverse()); // might not need inverse here
+			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose); // TODO: might not need inverse here
 
 
 			// convert the data into gpu format for kinfu tracker to use
@@ -98,13 +98,25 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			// TODO: Greg - does this really iterate through the points in the correct order?
 			int i;
 			pcl::PointCloud<pcl::PointXYZRGBA>::iterator cloud_iter;
-			for(cloud_iter = transformed_cloud.begin(), i = 0;
-					cloud_iter != transformed_cloud.end();
+			for(cloud_iter = cloud.begin(), i = 0;
+					cloud_iter != cloud.end();
 					cloud_iter++, i++) {
 				data[i] = static_cast<unsigned short>(1e3*cloud_iter->z);
 //				std::cout << cloud_iter->z << "\n";
 			}
 			std::cout << "Cloud size: " << i << "\n";
+
+			for(cloud_iter = transformed_cloud.begin(), i = 0;
+					cloud_iter != transformed_cloud.end();
+					cloud_iter++, i++) {
+//				std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
+				if ((cloud_iter->x < 0) || (cloud_iter->y < 0) || (cloud_iter->z < 0)) {
+					std::cout << "crap: " << i << "\n";
+				}
+			}
+
+			std::cout << "affined_current_cam_pose:\n" << affine_current_cam_pose.translation().transpose() << "\n";
+			std::cout << affine_current_cam_pose.rotation() << "\n\n";
 
 			depth.upload(data, cols);
 
@@ -267,6 +279,15 @@ int main (int argc, char** argv) {
 		pcl::gpu::kinfuLS::TsdfVolume tsdf = pcl_kinfu_tracker->volume();
 		tsdf.fetchCloudHost(current_cloud);
 
+		int i;
+		pcl::PointCloud<pcl::PointXYZ>::iterator cloud_iter;
+		for(cloud_iter = current_cloud.begin(), i = 0;
+				cloud_iter != current_cloud.end();
+				cloud_iter++, i++) {
+//			std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
+		}
+		std::cout << "number iterated through: " << i << "\n";
+
 		// Publish the data
 		toROSMsg(current_cloud, output);
 		output.header.stamp = ros::Time::now();
@@ -274,6 +295,9 @@ int main (int argc, char** argv) {
 		pub.publish (output);
 		downloading = false;
 		std::cout << "Kinfu cloud published\n\n";
+
+		std::cout << "output data: " << output.data.size() << "\n";
+
 	}
 
 

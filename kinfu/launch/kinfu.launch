@@ -1,5 +1,5 @@
 <launch>
   <node pkg="tf" type="static_transform_publisher" name="kinfu_to_wrist_kinect"
-	args="1.5 1 2 -0.70711 0 .70711 0 /base_link /kinfu_frame 10" />
-  <!-- <node pkg="kinfu" type="kinfu" name="kinfu_node" /> -->
+  args="-0.5 1 2 -0.5 0.5 -0.5 0.5 /base_link /kinfu_frame 10" />
+	<!-- args="1.5 1 2 -0.70711 0 .70711 0 /base_link /kinfu_frame 10" /> -->
 </launch>
