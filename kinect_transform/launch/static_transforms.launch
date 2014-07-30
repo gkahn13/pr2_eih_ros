@@ -1,6 +1,6 @@
 <launch>
   <node pkg="tf" type="static_transform_publisher" name="static1"
-  	args="0 0 0 0 0 0 hand_kinect_optical_frame openni_rgb_optical_frame 100" />
+  	args="0 0 0 0 0 0 camera_rgb_optical_frame openni_rgb_optical_frame 10" />
   <!-- <node pkg="tf" type="static_transform_publisher" name="static6" -->
   <!-- 	args="-0.01 0.01 0.02 -0.5139 0.5357 -0.4620 0.4853 r_gripper_tool_frame hand_kinect_optical_frame 100" /> -->
   <include file="$(find kinect_transform)/launch/wrist_to_hand.launch" />

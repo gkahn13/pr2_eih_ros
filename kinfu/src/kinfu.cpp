@@ -40,6 +40,7 @@ namespace rave = OpenRAVE;
 #include <pcl/gpu/kinfu_large_scale/tsdf_volume.h>
 #include <pcl/gpu/containers/initialization.h>
 #include <pcl/gpu/containers/device_array.h>
+//#include <pcl/gpu/kinfu/tsdf_volume.h>
 
 //#include <pcl/console/parse.h>
 //#include <pcl/gpu/kinfu/kinfu.h>
@@ -65,26 +66,65 @@ typedef short            WeightT;
 #endif
 
 ros::Publisher pub;
-tf::TransformListener listener;
+boost::shared_ptr<tf::TransformListener> listener;
 pcl::gpu::kinfuLS::KinfuTracker* pcl_kinfu_tracker;
+bool downloading;
+int counter;
 using namespace pcl;
+using namespace std;
 
 void 
 cloud_cb (const PointCloud<PointXYZRGB>::ConstPtr& input)
 {
-  // ... do data processing
 
-  //sensor_msgs::PointCloud2ConstPtr&
-  //PointCloud<PointXYZRGB> cloud = input;
-  sensor_msgs::PointCloud2 output;
-  //sensor_msgs::Image output;
-  toROSMsg(*input, output);
-  output.header.stamp = ros::Time::now();
-  output.header.frame_id = "/camera_rgb_optical_frame";
-  // Publish the data
-  pub.publish (output);
+  cout << "is organized: " << input->isOrganized() << endl;
+  cout << "height: " << input->height << endl;
+  cout << "width: " << input->width << endl;
   
+  cout << "entered callback" << endl;
+  if (!downloading && (counter % 30 == 0)) {
+    
+
+    
+    cout << "updating" << endl;
+  // get the current location of the camera relative to the kinfu frame
+  tf::StampedTransform kinfu_to_camera;
+  // published in kinfu.launch
+  listener->waitForTransform("/kinfu_frame", "/camera_rgb_optical_frame",
+  			     ros::Time(0), ros::Duration(5));
+  listener->lookupTransform("/kinfu_frame", "/camera_rgb_optical_frame",
+  			    ros::Time(0), kinfu_to_camera);
+  
+  // convert camera pose to format suitable for kinfu
+  Affine3d affine_current_cam_pose;
+  tf::transformTFToEigen(kinfu_to_camera, affine_current_cam_pose);
+
+  pcl::PointCloud<PointXYZRGB> transformed_cloud;
+  pcl::transformPointCloud(*input, transformed_cloud, affine_current_cam_pose.inverse()); // might not need inverse here
+
+
+  // convert the data into gpu format for kinfu tracker to use
+  pcl::gpu::DeviceArray2D<unsigned short> depth(H_SUB,W_SUB);
+  std::vector<unsigned short> data(HEIGHT_FULL*WIDTH_FULL);
+  int cols = WIDTH_FULL;
+  
+  int i;
+  pcl::PointCloud<PointXYZRGB>::iterator cloud_iter;
+  for(cloud_iter = transformed_cloud.begin(), i = 0;
+      cloud_iter != transformed_cloud.end();
+      cloud_iter++, i++) {
+    data[i] = static_cast<unsigned short>(cloud_iter->z);
+  }
+
+  depth.upload(data, cols);
+
+  // update kinfu tracker with new depth map and camera pose
+  (*pcl_kinfu_tracker)(depth, affine_current_cam_pose.cast<float>());
+  cout << "updated" << endl;
+    
   //ros::spinOnce();
+  }
+  counter++;
 }
 
 
@@ -92,50 +132,57 @@ int
 main (int argc, char** argv)
 {
   // Initialize ROS
-  
-  // Create a ROS subscriber for the input point cloud
-  //ros::Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
 
-  // Create a ROS publisher for the output point cloud
-
-  ros::init (argc, argv, "camera");
+  ros::init(argc, argv, "kinfu");
+  //ros::Duration(2).sleep();
   ros::NodeHandle nh("~");
   std::string dev;
+  // fill in tf listener
+  listener.reset(new tf::TransformListener());
+
   if (!nh.getParam("device_number", dev)) {
     dev = "1";
   }
   std::string pointcloud_topic;
   if (!nh.getParam("pointcloud_topic", pointcloud_topic)) {
-    //pointcloud_topic = "/hand_kinect_points";
-    pointcloud_topic = "kinfu/points";
+    pointcloud_topic = "kinfu_points";
   }
   std::cout << "pointcloud_topic: " << pointcloud_topic << "\n";
+  
+  // grabber to get data from the device
   Grabber* grabber = new OpenNIGrabber("#" + dev);
+  
+  // Create a ROS publisher for the output point cloud
   pub = nh.advertise<sensor_msgs::PointCloud2> (pointcloud_topic, 1);
   boost::function<void (const PointCloud<PointXYZRGB>::ConstPtr&)> f =
     boost::bind(&cloud_cb, _1);
+  
 
+  // depth-camera intrinsics
   double fx = 525.0, fy = 525.0, cx = 319.5, cy = 239.5; // https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats
 
   double x = 2, y = 2, z = 2; // x and y must be equal!
 
   Vector3i gpu_size = Vector3i(y,z,x);
   Vector3d gpu_resolution = Vector3d(pcl::device::kinfuLS::VOLUME_X,
-			    pcl::device::kinfuLS::VOLUME_Y,
-			    pcl::device::kinfuLS::VOLUME_Z);
+  			    pcl::device::kinfuLS::VOLUME_Y,
+  			    pcl::device::kinfuLS::VOLUME_Z);
 
   // the transform from /base_link to /kinfu_frame
-  // TODO: publish as static transform, use listener to read
-  Matrix4d gpu_pcl_tsdf_origin = Matrix4d::Identity();
-  gpu_pcl_tsdf_origin.block<3,3>(0,0) << -1, 0, 0,
-    0, 0, -1,
-    0, -1, 0;
-  gpu_pcl_tsdf_origin.block<3,1>(0,3) = Vector3d(0, 0, 0) + Vector3d(x/2., y/2., z/2.);
+  // now published in kinfu.launch, so the tf listener can just read it in
+
+  // Matrix4d gpu_pcl_tsdf_origin = Matrix4d::Identity();
+  // gpu_pcl_tsdf_origin.block<3,3>(0,0) << -1, 0, 0,
+  //   0, 0, -1,
+  //   0, -1, 0;
+  // gpu_pcl_tsdf_origin.block<3,1>(0,3) = Vector3d(0, 0, 0) + Vector3d(x/2., y/2., z/2.);
 
   tf::StampedTransform kinfu_to_camera;
-  // this transform will be published
-  listener.lookupTransform("/kinfu_frame", "/camera_rgb_optical_frame",
-			   ros::Time(0), kinfu_to_camera);
+  // published in kinfu.launch
+  listener->waitForTransform("/kinfu_frame", "/camera_rgb_optical_frame",
+  			     ros::Time(0), ros::Duration(5));
+  listener->lookupTransform("/kinfu_frame", "/camera_rgb_optical_frame",
+  			    ros::Time(0), kinfu_to_camera);
   
   
   // setup kinfu tracker
@@ -161,6 +208,35 @@ main (int argc, char** argv)
   grabber->start();
 
   ros::spinOnce();
+
+  cout << "ready to publish clouds" << endl;
+  downloading = false;
+  pcl::PointCloud<PointXYZ> current_cloud;
+  sensor_msgs::PointCloud2 output;
+  while(ros::ok()) {
+    string response;
+    getline(cin, response); // wait for key press
+    if (response == "q") {
+      grabber->stop();
+      pub.publish(output);
+      pcl::io::savePCDFileASCII("kinfu.pcd", current_cloud);
+      exit(0);
+    }
+    downloading = true;
+    cout << "publishing cloud" << endl;
+    // Download tsdf and convert to pointcloud
+    pcl::gpu::kinfuLS::TsdfVolume tsdf = pcl_kinfu_tracker->volume();
+    tsdf.fetchCloudHost(current_cloud);
+
+    // Publish the data
+    toROSMsg(current_cloud, output);
+    output.header.stamp = ros::Time::now();
+    output.header.frame_id = "/kinfu_frame";
+    pub.publish (output);
+    downloading = false;
+    cout << "published" << endl;
+  }
+
 
   // Spin
   ros::spin ();
