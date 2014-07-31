@@ -105,7 +105,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			tf::transformTFToEigen(kinfu_to_camera, affine_current_cam_pose);
 
 			pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
-			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose); // TODO: might not need inverse here
+			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose);
 
 
 			// convert the data into gpu format for kinfu tracker to use
@@ -373,13 +373,32 @@ int main (int argc, char** argv) {
 		#endif
 
 		//
+
+		// get the transform from from rgb optical frame to kinfu frame
+		tf::StampedTransform rgb_to_kinfu;
+		listener->waitForTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					   ros::Time(0), ros::Duration(5));
+		listener->lookupTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					  ros::Time(0), rgb_to_kinfu);
+
+		// transform kinfu points back to rgb optical frame
+		Affine3d current_transform;
+		tf::transformTFToEigen(rgb_to_kinfu, current_transform);
+		
+		#ifdef USE_COLOR
+		pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
+                #else
+		pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
+		#endif
+		
+		pcl::transformPointCloud(current_cloud, transformed_cloud, current_transform);
 		
 
 		// Publish the data
 		sensor_msgs::PointCloud2 output;
-		toROSMsg(current_cloud, output);
+		toROSMsg(transformed_cloud, output);
 		output.header.stamp = ros::Time::now();
-		output.header.frame_id = "/kinfu_frame";
+		output.header.frame_id = "/camera_rgb_optical_frame";
 		pub.publish (output);
 		if (publish_kinfu_under_cam_depth_reg) {
 		  variable_pub.publish(output);
