@@ -57,6 +57,7 @@ catkin_package(
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} include)
 
 ## create executables
+add_executable(${PROJECT_NAME} src/handle_detector.cpp)
 add_executable(${PROJECT_NAME}_localization src/localization.cpp)
 add_executable(${PROJECT_NAME}_importance_sampling src/importance_sampling.cpp)
 
@@ -70,6 +71,12 @@ add_library(${PROJECT_NAME}_visualizer src/visualizer.cpp)
 
 ## add dependencies
 add_dependencies(${PROJECT_NAME}_messages ${PROJECT_NAME}_gencpp)
+
+## link libraries to handle_detector executable
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_affordances)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_visualizer)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_messages)
 
 ## link libraries to localization executable
 target_link_libraries(${PROJECT_NAME}_localization ${catkin_LIBRARIES})

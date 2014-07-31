@@ -273,7 +273,7 @@ int main (int argc, char** argv) {
 
 	ros::init(argc, argv, "kinfu");
 	//ros::Duration(2).sleep();
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
 	std::string dev;
 	// fill in tf listener
 	listener.reset(new tf::TransformListener());
