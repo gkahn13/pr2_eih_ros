@@ -41,11 +41,14 @@ typedef short WeightT;
 #define H_SUB 48 // 48
 #define N_SUB (W_SUB*H_SUB)
 
+//#define USE_COLOR
+
 boost::shared_ptr<tf::TransformListener> listener;
 
-ros::Publisher pub, current_pointcloud_pub;
+ros::Publisher pub, current_pointcloud_pub, variable_pub;
 bool downloading;
 int counter;
+bool publish_kinfu_under_cam_depth_reg;
 
 namespace carmine {
 	const int WIDTH = 640;
@@ -66,6 +69,19 @@ namespace kinfu {
 
 	const float shifting_distance = 5.0f;
 }
+
+template<typename MergedT, typename PointT>
+typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& points, const pcl::PointCloud<pcl::RGB>& colors)
+{    
+  typename pcl::PointCloud<MergedT>::Ptr merged_ptr(new pcl::PointCloud<MergedT>());
+
+  pcl::copyPointCloud (points, *merged_ptr);      
+  for (size_t i = 0; i < colors.size (); ++i)
+    merged_ptr->points[i].rgba = colors.points[i].rgba;
+
+  return merged_ptr;
+}
+
 
 pcl::PointCloud<pcl::PointXYZRGB> last_cloud;
 
@@ -89,12 +105,19 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			tf::transformTFToEigen(kinfu_to_camera, affine_current_cam_pose);
 
 			pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
-			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose); // TODO: might not need inverse here
+			pcl::transformPointCloud(cloud, transformed_cloud, affine_current_cam_pose);
 
 
 			// convert the data into gpu format for kinfu tracker to use
 			pcl::gpu::DeviceArray2D<unsigned short> depth(carmine::HEIGHT,carmine::WIDTH);
 			std::vector<unsigned short> data(carmine::HEIGHT*carmine::WIDTH);
+			
+			#ifdef USE_COLOR
+			// the same for color data
+			pcl::gpu::DeviceArray2D<pcl::gpu::kinfuLS::PixelRGB> color(carmine::HEIGHT,carmine::WIDTH);
+			std::vector<pcl::gpu::kinfuLS::PixelRGB> color_data(carmine::HEIGHT*carmine::WIDTH);
+			#endif
+
 			const int cols = carmine::WIDTH;
 
 			// TODO: Greg - does this really iterate through the points in the correct order?
@@ -104,6 +127,13 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 					cloud_iter != cloud.end();
 					cloud_iter++, i++) {
 				data[i] = static_cast<unsigned short>(1e3*cloud_iter->z);
+				#ifdef USE_COLOR
+				pcl::gpu::kinfuLS::PixelRGB current_pixel = pcl::gpu::kinfuLS::PixelRGB();
+				current_pixel.r = cloud_iter->r;
+				current_pixel.g = cloud_iter->g;
+				current_pixel.b = cloud_iter->b;
+				color_data[i] = current_pixel; 
+				#endif
 //				std::cout << cloud_iter->z << "\n";
 			}
 //			std::cout << "Cloud size: " << i << "\n";
@@ -121,9 +151,15 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			std::cout << affine_current_cam_pose.rotation() << "\n\n";
 
 			depth.upload(data, cols);
+			#ifdef USE_COLOR
+			color.upload(color_data, cols);
+			#endif
 
 			// update kinfu tracker with new depth map and camera pose
 			(*pcl_kinfu_tracker)(depth, affine_current_cam_pose.cast<float>());
+			#ifdef USE_COLOR
+			(*pcl_kinfu_tracker)(depth, color);
+			#endif
 			std::cout << "Updated kinfu!\n\n";
 		}
 
@@ -151,6 +187,9 @@ void _cloud_callback (const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& input) 
 
 	// Publish the data
 	current_pointcloud_pub.publish (output);
+	if (!publish_kinfu_under_cam_depth_reg) {
+	  variable_pub.publish(output);
+	}
 
 //	std::cout << "is organized: " << input->isOrganized() << "\n";
 //	std::cout << "height: " << input->height << "\n";
@@ -220,6 +259,9 @@ pcl::gpu::kinfuLS::KinfuTracker* init_kinfu() {
 	tf::transformTFToEigen(kinfu_to_camera, affine_init_cam_pose);
 	pcl_kinfu_tracker->setInitialCameraPose(affine_init_cam_pose.cast<float>());
 	pcl_kinfu_tracker->reset();
+	#ifdef USE_COLOR
+	pcl_kinfu_tracker->initColorIntegration();
+	#endif
 
 	return pcl_kinfu_tracker;
 }
@@ -231,7 +273,7 @@ int main (int argc, char** argv) {
 
 	ros::init(argc, argv, "kinfu");
 	//ros::Duration(2).sleep();
-	ros::NodeHandle nh("~");
+	ros::NodeHandle nh;
 	std::string dev;
 	// fill in tf listener
 	listener.reset(new tf::TransformListener());
@@ -253,6 +295,17 @@ int main (int argc, char** argv) {
 	current_pointcloud_pub = nh.advertise<sensor_msgs::PointCloud2> ("camera_points", 1);
 	boost::function<void (const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr&)> f = boost::bind(&_cloud_callback, _1);
 
+	std::string variable_topic;
+	if (!nh.getParam("handle_points_source", variable_topic)) {
+	  publish_kinfu_under_cam_depth_reg = true;
+	} else if (variable_topic == "kinfu") {
+	  publish_kinfu_under_cam_depth_reg = true;
+	} else {
+	    publish_kinfu_under_cam_depth_reg = false;
+	}
+
+	variable_pub = nh.advertise<sensor_msgs::PointCloud2> ("/camera/depth_registered/points", 1);
+
 	grabber->registerCallback(f);
 	grabber->start();
 
@@ -264,8 +317,6 @@ int main (int argc, char** argv) {
 
 	std::cout << "Ready to publish clouds\n";
 	downloading = false;
-	pcl::PointCloud<pcl::PointXYZ> current_cloud;
-	sensor_msgs::PointCloud2 output;
 
 	while(ros::ok()) {
 		ros::spinOnce();
@@ -281,24 +332,77 @@ int main (int argc, char** argv) {
 
 		downloading = true;
 		std::cout << "Publishing kinfu cloud...\n";
+		#ifndef USE_COLOR
+		pcl::PointCloud<pcl::PointXYZ> current_cloud;
 		// Download tsdf and convert to pointcloud
 		pcl::gpu::kinfuLS::TsdfVolume tsdf = pcl_kinfu_tracker->volume();
 		tsdf.fetchCloudHost(current_cloud);
 
-		int i;
-		pcl::PointCloud<pcl::PointXYZ>::iterator cloud_iter;
-		for(cloud_iter = current_cloud.begin(), i = 0;
-				cloud_iter != current_cloud.end();
-				cloud_iter++, i++) {
-//			std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
-		}
-		std::cout << "number iterated through: " << i << "\n";
+// 		int i;
+// 		pcl::PointCloud<pcl::PointXYZ>::iterator cloud_iter;
+// 		for(cloud_iter = current_cloud.begin(), i = 0;
+// 				cloud_iter != current_cloud.end();
+// 				cloud_iter++, i++) {
+// //			std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
+// 		}
+// 		std::cout << "number iterated through: " << i << "\n";
+
+
+		#else
+		// new way of doing it, with color
+
+		pcl::gpu::DeviceArray<pcl::PointXYZ> cloud_buffer_device_;
+		pcl::gpu::DeviceArray<pcl::RGB> point_colors_device_;
+
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_ = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::PointCloud<pcl::RGB>::Ptr point_colors_ptr_ = pcl::PointCloud<pcl::RGB>::Ptr (new pcl::PointCloud<pcl::RGB>);
+
+		pcl::gpu::DeviceArray<pcl::PointXYZ> extracted = pcl_kinfu_tracker->volume().fetchCloud(cloud_buffer_device_); // cloud_buffer_device_ is just another pcl::gpu::DeviceArray<pcl::PointXYZ>
+		extracted.download (cloud_ptr_->points);
+		cloud_ptr_->width = (int)cloud_ptr_->points.size ();
+		cloud_ptr_->height = 1;
+
+		pcl_kinfu_tracker->colorVolume().fetchColors(extracted, point_colors_device_); // same as above for point_colors_device
+		point_colors_device_.download(point_colors_ptr_->points);
+		point_colors_ptr_->width = (int)point_colors_ptr_->points.size ();
+		point_colors_ptr_->height = 1;
+
+
+		pcl::PointCloud<pcl::PointXYZRGB> current_cloud = *(merge<pcl::PointXYZRGB>(*cloud_ptr_, *point_colors_ptr_));
+		
+		#endif
+
+		//
+
+		// get the transform from from rgb optical frame to kinfu frame
+		tf::StampedTransform rgb_to_kinfu;
+		listener->waitForTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					   ros::Time(0), ros::Duration(5));
+		listener->lookupTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					  ros::Time(0), rgb_to_kinfu);
+
+		// transform kinfu points back to rgb optical frame
+		Affine3d current_transform;
+		tf::transformTFToEigen(rgb_to_kinfu, current_transform);
+		
+		#ifdef USE_COLOR
+		pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
+                #else
+		pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
+		#endif
+		
+		pcl::transformPointCloud(current_cloud, transformed_cloud, current_transform);
+		
 
 		// Publish the data
-		toROSMsg(current_cloud, output);
+		sensor_msgs::PointCloud2 output;
+		toROSMsg(transformed_cloud, output);
 		output.header.stamp = ros::Time::now();
-		output.header.frame_id = "/kinfu_frame";
+		output.header.frame_id = "/camera_rgb_optical_frame";
 		pub.publish (output);
+		if (publish_kinfu_under_cam_depth_reg) {
+		  variable_pub.publish(output);
+		}
 		downloading = false;
 		std::cout << "Kinfu cloud published\n\n";
 
@@ -313,3 +417,27 @@ int main (int argc, char** argv) {
 
 	update_kinfu_thread.join();
 }
+
+
+
+/*
+  pcl::gpu::DeviceArray<pcl::PointXYZ> cloud_buffer_device_;
+  pcl::gpu::DeviceArray<pcl::RGB> point_colors_device_;
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr_ = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::RGB>::Ptr point_colors_ptr_ = pcl::PointCloud<pcl::RGB>::Ptr (new pcl::PointCloud<pcl::RGB>);
+
+  pcl::gpu::DeviceArray<pcl::PointXYZ> extracted = kinfu.volume().fetchCloud (cloud_buffer_device_); // cloud_buffer_device_ is just another pcl::gpu::DeviceArray<pcl::PointXYZ>
+  extracted.download (cloud_ptr_->points);
+  cloud_ptr_->width = (int)cloud_ptr_->points.size ();
+  cloud_ptr_->height = 1;
+
+  kinfu.colorVolume().fetchColors(extracted, point_colors_device_); // same as above for point_colors_device
+  point_colors_device_.download(point_colors_ptr_->points);
+  point_colors_ptr_->width = (int)point_colors_ptr_->points.size ();
+  point_colors_ptr_->height = 1;
+
+
+  pcl::PointCloud<pcl::PointXYZRGB> current_cloud = std::merge<pcl::PointXYZRGB>(cloud_ptr_, point_colors_ptr_);
+
+ */
