@@ -72,10 +72,11 @@ namespace kinfu {
 
 template<typename MergedT, typename PointT>
 typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& points, const pcl::PointCloud<pcl::RGB>& colors)
-{    
+{
   typename pcl::PointCloud<MergedT>::Ptr merged_ptr(new pcl::PointCloud<MergedT>());
 
-  pcl::copyPointCloud (points, *merged_ptr);      
+  pcl::copyPointCloud (points, *merged_ptr);
+
   for (size_t i = 0; i < colors.size (); ++i)
     merged_ptr->points[i].rgba = colors.points[i].rgba;
 
@@ -86,12 +87,12 @@ typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& poin
 pcl::PointCloud<pcl::PointXYZRGB> last_cloud;
 
 void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
-	while(ros::ok()) {
-		if (!downloading) {
-			std::cout << "Updating kinfu...\n";
+  while(ros::ok()) {
+    if (!downloading) {
+      std::cout << "Updating kinfu...\n";
 
-			pcl::PointCloud<pcl::PointXYZRGB> cloud;
-			pcl::copyPointCloud(last_cloud, cloud);
+      pcl::PointCloud<pcl::PointXYZRGB> cloud;
+      pcl::copyPointCloud(last_cloud, cloud);
 
 			// get the current location of the camera relative to the kinfu frame (see kinfu.launch)
 			tf::StampedTransform kinfu_to_camera;
@@ -111,7 +112,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			// convert the data into gpu format for kinfu tracker to use
 			pcl::gpu::DeviceArray2D<unsigned short> depth(carmine::HEIGHT,carmine::WIDTH);
 			std::vector<unsigned short> data(carmine::HEIGHT*carmine::WIDTH);
-			
+
 			#ifdef USE_COLOR
 			// the same for color data
 			pcl::gpu::DeviceArray2D<pcl::gpu::kinfuLS::PixelRGB> color(carmine::HEIGHT,carmine::WIDTH);
@@ -132,7 +133,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 				current_pixel.r = cloud_iter->r;
 				current_pixel.g = cloud_iter->g;
 				current_pixel.b = cloud_iter->b;
-				color_data[i] = current_pixel; 
+				color_data[i] = current_pixel;
 				#endif
 //				std::cout << cloud_iter->z << "\n";
 			}
@@ -369,7 +370,7 @@ int main (int argc, char** argv) {
 
 
 		pcl::PointCloud<pcl::PointXYZRGB> current_cloud = *(merge<pcl::PointXYZRGB>(*cloud_ptr_, *point_colors_ptr_));
-		
+
 		#endif
 
 		//
@@ -384,15 +385,15 @@ int main (int argc, char** argv) {
 		// transform kinfu points back to rgb optical frame
 		Affine3d current_transform;
 		tf::transformTFToEigen(rgb_to_kinfu, current_transform);
-		
+
 		#ifdef USE_COLOR
 		pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
                 #else
 		pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
 		#endif
-		
+
 		pcl::transformPointCloud(current_cloud, transformed_cloud, current_transform);
-		
+
 
 
 		// Publish the data

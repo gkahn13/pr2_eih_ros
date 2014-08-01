@@ -35,8 +35,9 @@ int main(int argc, char** argv) {
        boundary_iter != input_cloud_boundary->end();
        boundary_iter++, xyz_iter++) {
     pcl::Boundary current = *boundary_iter;
-    if (current.boundary_point) {
-      output.push_back(*xyz_iter);
+    pcl::PointXYZ xyz_point = *xyz_iter;
+    if (current.boundary_point) { // && xyz_point.y >= -0.05 + 1.35 && xyz_point.y <= 0.05 + 1.35) {
+      output.push_back(xyz_point);
     }
   }
 
