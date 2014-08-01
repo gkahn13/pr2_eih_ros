@@ -47,116 +47,235 @@ CylindricalShell::fitCylinder(const PointCloud::Ptr &cloud, const std::vector<in
   this->normal = normal;
 }
 
-bool 
-CylindricalShell::hasClearance(const PointCloud::Ptr &cloud, double maxHandAperture, 
-                              double handleGap)
+//bool
+//CylindricalShell::hasClearance(const PointCloud::Ptr &cloud, double maxHandAperture,
+//                              double handleGap)
+//{
+//	int min_points_inner = 40; // min number of points required to be within the inner cylinder
+//	int gap_threshold = 5; // threshold below which the gap is considered to be large enough
+//	double outer_sample_radius = 1.5 * (maxHandAperture + handleGap); // outer sample radius
+//
+//	// set-up an Organized Neighbor search
+//  if (cloud->isOrganized())
+//  {
+//    pcl::search::OrganizedNeighbor<pcl::PointXYZ>::Ptr organized_neighbor
+//      (new pcl::search::OrganizedNeighbor<pcl::PointXYZ>());
+//    organized_neighbor->setInputCloud(cloud);
+//    pcl::PointXYZ searchPoint;
+//    std::vector<int> nn_indices;
+//    std::vector<float> nn_dists;
+//    searchPoint.x = this->centroid(0);
+//    searchPoint.y = this->centroid(1);
+//    searchPoint.z = this->centroid(2);
+//
+//    // find points that lie inside the cylindrical shell
+//    if (organized_neighbor->radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists) > 0 )
+//    {
+//      std::vector<int> cropped_indices;
+//
+//      for (int i = 0; i < nn_indices.size(); i++)
+//      {
+//        Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
+//        double axialDist = this->curvature_axis.dot(cropped - centroid);
+//        if (fabs(axialDist) < this->extent / 2)
+//        {
+//          cropped_indices.push_back(i);
+//        }
+//      }
+//
+//      Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
+//      for (int i = 0; i < cropped_indices.size(); i++)
+//        croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
+//
+//      Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
+//      Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
+//
+//      /* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and
+//       * number of points within the inner cylinder is larger than <min_points_inner> */
+//      for (double r = this->radius; r <= maxHandAperture; r += 0.001)
+//      {
+//        //~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
+//        int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
+//        int numInside = (normalDist.array() <= r).count();
+//        //~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
+//
+//        if (numInGap < gap_threshold && numInside > min_points_inner)
+//        {
+//          this->radius = r;
+//          return true;
+//        }
+//      }
+//    }
+//  }
+//  else
+//  {
+//    pcl::KdTreeFLANN<pcl::PointXYZ> tree;
+//    tree.setInputCloud(cloud);
+//    pcl::PointXYZ searchPoint;
+//    std::vector<int> nn_indices;
+//    std::vector<float> nn_dists;
+//    searchPoint.x = this->centroid(0);
+//    searchPoint.y = this->centroid(1);
+//    searchPoint.z = this->centroid(2);
+//
+//    // find points that lie inside the cylindrical shell
+//    if (tree.radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists) > 0 )
+//    {
+//      std::vector<int> cropped_indices;
+//
+//      for (int i = 0; i < nn_indices.size(); i++)
+//      {
+//        Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
+//        double axialDist = this->curvature_axis.dot(cropped - centroid);
+//        if (fabs(axialDist) < this->extent / 2)
+//        {
+//          cropped_indices.push_back(i);
+//        }
+//      }
+//
+//      Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
+//      for (int i = 0; i < cropped_indices.size(); i++)
+//        croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
+//
+//      Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
+//      Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
+//
+//      /* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and
+//       * number of points within the inner cylinder is larger than <min_points_inner> */
+//      for (double r = this->radius; r <= maxHandAperture; r += 0.001)
+//      {
+//        //~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
+//        int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
+//        int numInside = (normalDist.array() <= r).count();
+//        //~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
+//
+//        if (numInGap < gap_threshold && numInside > min_points_inner)
+//        {
+//          this->radius = r;
+//          return true;
+//        }
+//      }
+//    }
+//  }
+//
+//	return false;
+//}
+
+
+bool
+CylindricalShell::hasClearance(const PointCloud::Ptr &cloud, double maxHandAperture, double handleGap)
 {
 	int min_points_inner = 40; // min number of points required to be within the inner cylinder
-	int gap_threshold = 5; // threshold below which the gap is considered to be large enough	
+	int gap_threshold = 5; // threshold below which the gap is considered to be large enough
 	double outer_sample_radius = 1.5 * (maxHandAperture + handleGap); // outer sample radius
-	
+
+	pcl::PointXYZ searchPoint;
+	std::vector<int> nn_indices;
+	std::vector<float> nn_dists;
+	searchPoint.x = this->centroid(0);
+	searchPoint.y = this->centroid(1);
+	searchPoint.z = this->centroid(2);
+	int num_in_radius = 0;
+
 	// set-up an Organized Neighbor search
-  if (cloud->isOrganized())
-  {
-    pcl::search::OrganizedNeighbor<pcl::PointXYZ>::Ptr organized_neighbor
-      (new pcl::search::OrganizedNeighbor<pcl::PointXYZ>());
-    organized_neighbor->setInputCloud(cloud);
-    pcl::PointXYZ searchPoint;
-    std::vector<int> nn_indices;
-    std::vector<float> nn_dists;
-    searchPoint.x = this->centroid(0);
-    searchPoint.y = this->centroid(1);
-    searchPoint.z = this->centroid(2);
-  
-    // find points that lie inside the cylindrical shell
-    if (organized_neighbor->radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists) > 0 )
-    {
-      std::vector<int> cropped_indices;
-          
-      for (int i = 0; i < nn_indices.size(); i++)
-      {
-        Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
-        double axialDist = this->curvature_axis.dot(cropped - centroid);
-        if (fabs(axialDist) < this->extent / 2)
-        {
-          cropped_indices.push_back(i);
-        }
-      }
-      
-      Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
-      for (int i = 0; i < cropped_indices.size(); i++)
-        croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
-      
-      Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
-      Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
-      
-      /* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and 
-       * number of points within the inner cylinder is larger than <min_points_inner> */
-      for (double r = this->radius; r <= maxHandAperture; r += 0.001)
-      {
-        //~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
-        int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
-        int numInside = (normalDist.array() <= r).count();
-        //~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
-        
-        if (numInGap < gap_threshold && numInside > min_points_inner)
-        {
-          this->radius = r;
-          return true;
-        }
-      }
-    }
-  }
-  else
-  {
-    pcl::KdTreeFLANN<pcl::PointXYZ> tree;
-    tree.setInputCloud(cloud);
-    pcl::PointXYZ searchPoint;
-    std::vector<int> nn_indices;
-    std::vector<float> nn_dists;
-    searchPoint.x = this->centroid(0);
-    searchPoint.y = this->centroid(1);
-    searchPoint.z = this->centroid(2);
-  
-    // find points that lie inside the cylindrical shell
-    if (tree.radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists) > 0 )
-    {
-      std::vector<int> cropped_indices;
-          
-      for (int i = 0; i < nn_indices.size(); i++)
-      {
-        Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
-        double axialDist = this->curvature_axis.dot(cropped - centroid);
-        if (fabs(axialDist) < this->extent / 2)
-        {
-          cropped_indices.push_back(i);
-        }
-      }
-      
-      Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
-      for (int i = 0; i < cropped_indices.size(); i++)
-        croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
-      
-      Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
-      Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
-      
-      /* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and 
-       * number of points within the inner cylinder is larger than <min_points_inner> */
-      for (double r = this->radius; r <= maxHandAperture; r += 0.001)
-      {
-        //~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
-        int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
-        int numInside = (normalDist.array() <= r).count();
-        //~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
-        
-        if (numInGap < gap_threshold && numInside > min_points_inner)
-        {
-          this->radius = r;
-          return true;
-        }
-      }
-    }
-  }
-		
+	if (cloud->isOrganized())
+	{
+		pcl::search::OrganizedNeighbor<pcl::PointXYZ>::Ptr organized_neighbor
+		(new pcl::search::OrganizedNeighbor<pcl::PointXYZ>());
+		organized_neighbor->setInputCloud(cloud);
+
+		num_in_radius = organized_neighbor->radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists);
+	}
+	else
+	{
+		pcl::KdTreeFLANN<pcl::PointXYZ> tree;
+		tree.setInputCloud(cloud);
+
+		num_in_radius = tree.radiusSearch(searchPoint, outer_sample_radius, nn_indices, nn_dists);
+	}
+
+	// find points that lie inside the cylindrical shell
+	if (num_in_radius > 0 )
+	{
+		std::vector<int> cropped_indices;
+
+		for (int i = 0; i < nn_indices.size(); i++)
+		{
+			Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
+			double axialDist = this->curvature_axis.dot(cropped - centroid);
+			if (fabs(axialDist) < this->extent / 2)
+			{
+				cropped_indices.push_back(i);
+			}
+		}
+
+		Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
+		for (int i = 0; i < cropped_indices.size(); i++)
+			croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
+
+		Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
+		Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
+
+		/* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and
+		 * number of points within the inner cylinder is larger than <min_points_inner> */
+		for (double r = this->radius; r <= maxHandAperture; r += 0.001)
+		{
+			//~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
+			int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
+			int numInside = (normalDist.array() <= r).count();
+			//~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
+
+			if (numInGap < gap_threshold && numInside > min_points_inner)
+			{
+				this->radius = r;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool
+CylindricalShell::fitRadius(const PointCloud::Ptr& cloud, double maxHandAperture, double handleGap, const std::vector<int>& nn_indices,
+		int min_points_inner, int gap_threshold)
+{
+	// find points that lie inside the cylindrical shell
+	std::vector<int> cropped_indices;
+
+	for (int i = 0; i < nn_indices.size(); i++)
+	{
+		Eigen::Vector3d cropped = cloud->points[nn_indices[i]].getVector3fMap().cast<double>();
+		double axialDist = this->curvature_axis.dot(cropped - centroid);
+		if (fabs(axialDist) < this->extent / 2)
+		{
+			cropped_indices.push_back(i);
+		}
+	}
+
+	Eigen::Matrix<double,3,Eigen::Dynamic> croppedPts(3,cropped_indices.size());
+	for (int i = 0; i < cropped_indices.size(); i++)
+		croppedPts.col(i) = cloud->points[nn_indices[cropped_indices[i]]].getVector3fMap().cast<double>();
+
+	Eigen::MatrixXd normalDiff = (Eigen::MatrixXd::Identity(3,3) - curvature_axis * curvature_axis.transpose()) * (croppedPts - centroid.replicate(1, croppedPts.cols()));
+	Eigen::VectorXd normalDist = normalDiff.cwiseProduct(normalDiff).colwise().sum().cwiseSqrt();
+
+	/* increase cylinder radius until number of points in gap is smaller than <gap_threshold> and
+	 * number of points within the inner cylinder is larger than <min_points_inner> */
+	for (double r = this->radius; r <= maxHandAperture; r += 0.001)
+	{
+		//~ int numInGap = (normalDist.array() > r && normalDist.array() < r + handleGap).count();
+		int numInGap = ((normalDist.array() > r) * (normalDist.array() < r + handleGap) == true).count();
+		int numInside = (normalDist.array() <= r).count();
+		//~ printf("numInGap: %i, numInside: %i, \n", numInGap, numInside);
+
+		if (numInGap < gap_threshold && numInside > min_points_inner)
+		{
+			this->radius = r;
+			return true;
+		}
+	}
+
+
 	return false;
 }

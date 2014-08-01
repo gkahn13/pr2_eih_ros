@@ -72,6 +72,20 @@ class CylindricalShell
     bool 
     hasClearance(const PointCloud::Ptr &cloud, double maxHandAperture, double handleGap);
     
+    /**
+     * \brief Determines if radius can be found that fits the points and has a large enough affordance gap
+     * \param cloud the point cloud
+     * \param maxHandAperture the maximum robot hand aperture
+     * \param handleGap the required size of the gap around the handle
+     * \param nn_indices indices of the nearest neighbors in the point cloud
+     * \param min_points_inner min number of points required to be within the inner cylinder
+     * \param gap_threshold threshold below which the gap is considered large enough
+     */
+    bool
+    fitRadius(const PointCloud::Ptr& cloud, double maxHandAperture, double handleGap, const std::vector<int>& nn_indices,
+    		int min_points_inner=40, int gap_threshold=5);
+    		//int min_points_inner=40, int gap_threshold=5);
+
     /** \brief Get the extent of the cylindrical shell.
       */
     inline double 
