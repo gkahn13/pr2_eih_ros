@@ -394,6 +394,7 @@ int main (int argc, char** argv) {
 		pcl::transformPointCloud(current_cloud, transformed_cloud, current_transform);
 		
 
+
 		// Publish the data
 		sensor_msgs::PointCloud2 output;
 		toROSMsg(transformed_cloud, output);

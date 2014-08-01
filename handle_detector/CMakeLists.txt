@@ -24,6 +24,9 @@ include_directories(${Eigen_INCLUDE_DIRS})
 ## compiler optimization flags
 set(CMAKE_CXX_FLAGS "-DNDEBUG -O3 -fopenmp -Wno-deprecated")
 
+# Peter: suppresses some Eigen warnings
+add_definitions("-Wno-enum-compare")
+
 ## add messages
 add_message_files(
   FILES
