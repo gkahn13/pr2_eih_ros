@@ -31,8 +31,16 @@ main (int argc, char** argv)
 //    seg.setMethodType (pcl::SAC_RANSAC);
     seg.setDistanceThreshold (0.01);
 
+    // input cloud
     seg.setInputCloud (cloud);
+
+
     seg.segment (*inliers, *coefficients);
+
+    // get the method, in order to tweak parameters
+    pcl::SACSegmentation<pcl::PointXYZ>::SampleConsensusPtr method = seg.getMethod();
+    cout << "max number of iterations: " << method->getMaxIterations() << endl;
+
 
     if (inliers->indices.size () == 0)
     {
@@ -55,7 +63,10 @@ main (int argc, char** argv)
         //                                        << cloud->points[inliers->indices[i]].z << std::endl;
         int current_index = inliers->indices[i];
         pcl::PointXYZ current_point = cloud->points[current_index];
-        new_cloud.push_back(current_point);
+        // hardcoded value for end of table
+        if (current_point.z < 1.1) {
+            new_cloud.push_back(current_point);
+        }
     }
 
     pcl::io::savePCDFileASCII(outfile, new_cloud);

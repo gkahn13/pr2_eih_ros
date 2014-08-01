@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(boundary_detection)
+project(pcl_utils)
 
 add_definitions("-Wno-enum-compare")
 
@@ -30,3 +30,6 @@ target_link_libraries(convert_pcd ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(generate_boundary_pointcloud src/generate_boundary_pointcloud.cpp)
 target_link_libraries(generate_boundary_pointcloud ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(plane_recognition src/plane_recognition.cpp)
+target_link_libraries(plane_recognition ${PCL_LIBRARIES} ${catkin_LIBRARIES})

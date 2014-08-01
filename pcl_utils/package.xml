@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>boundary_detection</name>
+  <name>pcl_utils</name>
   <version>0.0.0</version>
   <description>The boundary detection package</description>
   <maintainer email="peter@todo.todo">peter</maintainer>
