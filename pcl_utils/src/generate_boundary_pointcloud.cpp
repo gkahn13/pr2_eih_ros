@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   }
 
   //fromPCLPointCloud2(*input_cloud_2, *input_cloud_xyz);
-  
+
   pcl::io::savePCDFileASCII(outfile, output);
 
 }

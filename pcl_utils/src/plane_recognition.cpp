@@ -1,26 +1,12 @@
-#include <iostream>
-#include <pcl/ModelCoefficients.h>
+#include <plane_recognition.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
-
 
 using namespace std;
 
-int
-main (int argc, char** argv)
+namespace plane_recognition
 {
-    string infile = argv[1];
-    string outfile = argv[2];
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::io::loadPCDFile(infile, *cloud);
-
-    std::cerr << "Point cloud data: " << cloud->points.size () << " points" << std::endl;
-
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients)
+{
     // Create the segmentation object
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     // Optional
@@ -34,13 +20,28 @@ main (int argc, char** argv)
     // input cloud
     seg.setInputCloud (cloud);
 
-
     seg.segment (*inliers, *coefficients);
 
-    // get the method, in order to tweak parameters
-    pcl::SACSegmentation<pcl::PointXYZ>::SampleConsensusPtr method = seg.getMethod();
-    cout << "max number of iterations: " << method->getMaxIterations() << endl;
+//    // get the method, in order to tweak parameters
+//    pcl::SACSegmentation<pcl::PointXYZ>::SampleConsensusPtr method = seg.getMethod();
+//    cout << "max number of iterations: " << method->getMaxIterations() << endl;
 
+}
+}
+
+int
+main (int argc, char** argv)
+{
+    string infile = argv[1];
+    string outfile = argv[2];
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::io::loadPCDFile(infile, *cloud);
+    std::cerr << "Point cloud data: " << cloud->points.size () << " points" << std::endl;
+
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+
+    plane_recognition::calculate_plane(cloud, inliers, coefficients);
 
     if (inliers->indices.size () == 0)
     {
@@ -57,14 +58,16 @@ main (int argc, char** argv)
 
     pcl::PointCloud<pcl::PointXYZ> new_cloud;
 
-    for (size_t i = 0; i < inliers->indices.size (); ++i) {
+    for (size_t i = 0; i < inliers->indices.size (); ++i)
+    {
         //std::cerr << inliers->indices[i] << "    " << cloud->points[inliers->indices[i]].x << " "
         //                                       << cloud->points[inliers->indices[i]].y << " "
         //                                        << cloud->points[inliers->indices[i]].z << std::endl;
         int current_index = inliers->indices[i];
         pcl::PointXYZ current_point = cloud->points[current_index];
         // hardcoded value for end of table
-        if (current_point.z < 1.1) {
+        if (current_point.z < 1.1)
+        {
             new_cloud.push_back(current_point);
         }
     }
