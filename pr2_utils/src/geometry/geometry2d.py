@@ -61,6 +61,7 @@ class ImagePlane:
         
         image_plane_segments, image_plane_halfspaces = list(), list()
         
+        # find segments on border that are not in a triangle
         sort_keys = [lambda p: p[0], lambda p: -p[1], lambda p: -p[0], lambda p: p[1]]
         for segment, halfspace, sort_key in zip(self.segments, self.halfspaces, sort_keys):
             intersections = filter(lambda x: x is not None, [segment.intersection(s) for s in triangle_segments])
@@ -74,9 +75,7 @@ class ImagePlane:
                     image_plane_segments.append(seg)
                     image_plane_halfspaces.append(halfspace)
                     
-        #return image_plane_segments
-        
-        
+        # find polygons while there still exit unused image_plane_segments
         polygons = list()
         while len(image_plane_segments) > 0:
             print('Number of image plane segments left: {0}'.format(len(image_plane_segments)))
@@ -86,6 +85,7 @@ class ImagePlane:
             polygon, segments_used = self.find_polygon(segments, halfspaces, segments[0], halfspaces[0])
             polygons.append(polygon)
             
+            # filter out used segments from image_plane_segments
             new_image_plane_segments, new_image_plane_halfspaces = list(), list()
             for segment, halfspace in zip(image_plane_segments, image_plane_halfspaces):
                 if segment not in segments_used:
@@ -98,9 +98,6 @@ class ImagePlane:
         return polygons
         
             
-        
-
-    #def truncate_against_triangles(self, triangles):
     def find_polygon(self, segments, halfspaces, start_segment, start_halfspace):
         curr_segment = start_segment
         curr_halfspace = start_halfspace
@@ -115,6 +112,7 @@ class ImagePlane:
             print('\nCurrent segment: ({0}, {1})'.format(curr_segment.p0, curr_segment.p1))
             print('Current point: {0}'.format(curr_point))
             
+            # find intersecting segment closest to curr_point
             closest_dist = np.inf
             intersect_segment, intersect_halfspace, intersect_point = None, None, None
             
@@ -135,6 +133,7 @@ class ImagePlane:
             print('Intersecting segment: ({0}, {1})'.format(intersect_segment.p0, intersect_segment.p1))
             print('Intersect point: {0}'.format(intersect_point))
             
+            # move along intersecting segment in direction of the normal
             if curr_halfspace.contains(intersect_segment.p0):
                 next_segment = Segment(intersect_point, intersect_segment.p0)
             elif curr_halfspace.contains(intersect_segment.p1):
@@ -145,6 +144,7 @@ class ImagePlane:
             next_halfspace = intersect_halfspace
             next_point = intersect_point
             
+            # if back at the start, have found the whole polygon
             if np.linalg.norm(next_point - start_point) < epsilon:
                 break
             points.append(next_point)
@@ -377,38 +377,6 @@ def test_image_plane_truncate():
     plt.show(block=False)
     
     print('Press enter')
-    raw_input()
-
-def test_image_plane_single_truncate():
-    image_plane = ImagePlane([0,10],[10,10],[10,0],[0,0])
-    #triangles = [Triangle([5,5],[12,5],[12,2])]
-    triangles = [Triangle.random(-2,12,-2,12),
-                 Triangle.random(-2,12,-2,12)]
-    
-    fig = plt.figure()
-    axes = fig.add_subplot(111)
-    
-    image_plane.plot(axes, color='r')
-    for tri in triangles:
-        tri.plot(axes, color='b')
-        
-    xmin, xmax = plt.xlim()
-    ymin, ymax = plt.ylim()
-    plt.xlim((xmin-1, xmax+1))
-    plt.ylim((ymin-1, ymax+1))
-        
-    plt.show(block=False)
-    print('Press enter to find points')
-    raw_input()
-    
-    points = image_plane.truncate_against_triangles(triangles)
-    
-    print('\nFinal points: {0}'.format(points))
-    x_list = [p[0] for p in points]
-    y_list = [p[1] for p in points]
-    axes.plot(x_list+[x_list[0]], y_list+[y_list[0]], 'c-o', linewidth=3.0)
-    
-    plt.show(block=False)
     raw_input()
 
 def test_triangle_halfspaces():
