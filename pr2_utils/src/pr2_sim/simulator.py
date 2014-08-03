@@ -151,8 +151,14 @@ class Simulator:
     # plotting #
     ############
     
-    def clear_plots(self):
-        self.handles = list()
+    def clear_plots(self, num_to_clear=-1):
+        """
+        :param num_to_clear: if num_to_clear < 0, clear all plots, else clear num_to_clear
+        """
+        if num_to_clear < 0:
+            self.handles = list()
+        else:
+            self.handles = self.handles[:-int(min(num_to_clear, len(self.handles)))]
     
     def plot_point(self, pos_array, size=.01, color=(0,1,0)):
         """

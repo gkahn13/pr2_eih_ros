@@ -6,7 +6,6 @@ import tfx
 import tf.transformations as tft
 
 import openravepy as rave
-import trajoptpy.kin_utils as ku
 
 import simulator
 from utils import utils
