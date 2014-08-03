@@ -52,21 +52,64 @@ class ImagePlane:
                             Halfspace((self.p2+self.p3)/2., self.p0-self.p3),
                             Halfspace((self.p3+self.p0)/2., self.p1-self.p0)]
 
-    def truncate_against_triangles(self, triangles):
-        # initialize with ImagePlane hsegments/halfspaces
-        segments, halfspaces = self.segments, self.halfspaces
+    def truncate(self, triangles):
         
+        triangle_segments, triangle_halfspaces = list(), list()
         for triangle in triangles:
-            segments += triangle.segments()
-            halfspaces += triangle.halfspaces()
-            
-        # TODO: choose start segment correctly
-        start_point = segments[0].p0
+            triangle_segments += triangle.segments()
+            triangle_halfspaces += triangle.halfspaces()
         
-        curr_segment = segments[0]
-        curr_halfspace = halfspaces[0]
-        curr_point = segments[0].p0
+        image_plane_segments, image_plane_halfspaces = list(), list()
+        
+        sort_keys = [lambda p: p[0], lambda p: -p[1], lambda p: -p[0], lambda p: p[1]]
+        for segment, halfspace, sort_key in zip(self.segments, self.halfspaces, sort_keys):
+            intersections = filter(lambda x: x is not None, [segment.intersection(s) for s in triangle_segments])
+            intersections += [segment.p0, segment.p1]
+            intersections = sorted(intersections, key=sort_key)
+            
+            intersection_segments = [Segment(intersections[i], intersections[i+1]) for i in xrange(len(intersections)-1)]
+            for seg in intersection_segments:
+                crosses_triangle = max([tri.is_inside((seg.p0+seg.p1)/2.) for tri in triangles] + [False])
+                if not crosses_triangle:
+                    image_plane_segments.append(seg)
+                    image_plane_halfspaces.append(halfspace)
+                    
+        #return image_plane_segments
+        
+        
+        polygons = list()
+        while len(image_plane_segments) > 0:
+            print('Number of image plane segments left: {0}'.format(len(image_plane_segments)))
+            segments = image_plane_segments + triangle_segments
+            halfspaces = image_plane_halfspaces + triangle_halfspaces
+            
+            polygon, segments_used = self.find_polygon(segments, halfspaces, segments[0], halfspaces[0])
+            polygons.append(polygon)
+            
+            new_image_plane_segments, new_image_plane_halfspaces = list(), list()
+            for segment, halfspace in zip(image_plane_segments, image_plane_halfspaces):
+                if segment not in segments_used:
+                    new_image_plane_segments.append(segment)
+                    new_image_plane_halfspaces.append(halfspace)
+                    
+            image_plane_segments = new_image_plane_segments
+            image_plane_halfspaces = new_image_plane_halfspaces
+            
+        return polygons
+        
+            
+        
+
+    #def truncate_against_triangles(self, triangles):
+    def find_polygon(self, segments, halfspaces, start_segment, start_halfspace):
+        curr_segment = start_segment
+        curr_halfspace = start_halfspace
+        curr_point = start_segment.p0
+        
+        start_point = curr_point
         points = [start_point]
+        
+        segments_used = list()
         
         while True:
             print('\nCurrent segment: ({0}, {1})'.format(curr_segment.p0, curr_segment.p1))
@@ -87,6 +130,7 @@ class ImagePlane:
                             intersect_point = intersection
                             
             assert intersect_segment is not None
+            segments_used.append(intersect_segment)
             
             print('Intersecting segment: ({0}, {1})'.format(intersect_segment.p0, intersect_segment.p1))
             print('Intersect point: {0}'.format(intersect_point))
@@ -110,7 +154,7 @@ class ImagePlane:
             #print('Press enter')
             #raw_input()
             
-        return points
+        return Polygon(points), segments_used
     
     def plot(self, axes, color='r'):
         """
@@ -201,6 +245,11 @@ class Triangle:
         """
         axes.plot([self.a[0], self.b[0], self.c[0], self.a[0]], [self.a[1], self.b[1], self.c[1], self.a[1]], color=color)
         
+    @staticmethod
+    def random(min_x, max_x, min_y, max_y):
+        return Triangle([np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
+                        [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
+                        [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)])
         
 class Segment:
     def __init__(self, p0, p1):
@@ -294,12 +343,47 @@ class Halfspace:
 #  TESTS  #
 ###########
 
-def test_image_plane():
+def test_image_plane_truncate():
+    image_plane = ImagePlane([0,10],[10,10],[10,0],[0,0])
+    triangles = [Triangle.random(-2,12,-2,12) for i in xrange(5)]
+    
+    fig = plt.figure()
+    axes = fig.add_subplot(111)
+    
+    image_plane.plot(axes, color='r')
+    for tri in triangles:
+        tri.plot(axes, color='b')
+    
+    xmin, xmax = plt.xlim()
+    ymin, ymax = plt.ylim()
+    plt.xlim((xmin-1, xmax+1))
+    plt.ylim((ymin-1, ymax+1))
+        
+    plt.show(block=False)
+        
+    print('Image plane and triangles')
+    print('Press enter to view truncation')
+    raw_input()
+    
+    polygons = image_plane.truncate(triangles)
+    
+    axes.clear()
+    for polygon in polygons:
+        polygon.plot(axes, color='c')
+        
+    plt.xlim((xmin-1, xmax+1))
+    plt.ylim((ymin-1, ymax+1))
+    
+    plt.show(block=False)
+    
+    print('Press enter')
+    raw_input()
+
+def test_image_plane_single_truncate():
     image_plane = ImagePlane([0,10],[10,10],[10,0],[0,0])
     #triangles = [Triangle([5,5],[12,5],[12,2])]
-    triangles = [Triangle([np.random.uniform(-2,12), np.random.uniform(-2,12)],
-                          [np.random.uniform(-2,12), np.random.uniform(-2,12)],
-                          [np.random.uniform(-2,12), np.random.uniform(-2,12)])]
+    triangles = [Triangle.random(-2,12,-2,12),
+                 Triangle.random(-2,12,-2,12)]
     
     fig = plt.figure()
     axes = fig.add_subplot(111)
@@ -373,4 +457,5 @@ if __name__ == '__main__':
     #test_plotting()
     #test_triangulate()
     #test_triangle_halfspaces()
-    test_image_plane()
+    #test_image_plane_single_truncate()
+    test_image_plane_truncate()
