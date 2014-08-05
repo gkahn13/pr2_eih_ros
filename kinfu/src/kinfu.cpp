@@ -375,13 +375,20 @@ int main (int argc, char** argv) {
         weights_output_file.close();
         */
 
-        std::ofstream os1("kinfu_dist.dat", std::ios::binary);
-        os1.write((const char*)&tsdf_vector, sizeof(tsdf_vector));
-        os1.close();
 
-        std::ofstream os2("kinfu_weights.dat", std::ios::binary);
-        os2.write((const char*)&tsdf_weights, sizeof(tsdf_weights));
-        os2.close();
+        std::ofstream dist_out;
+        const char* dist_pointer = reinterpret_cast<const char*>(&tsdf_vector[0]);
+        size_t bytes = tsdf_vector.size() * sizeof(tsdf_vector[0]);
+        dist_out.open("kinfu_dist.dat", std::ios::out | std::ios::binary);
+        dist_out.write(dist_pointer, bytes);
+        dist_out.close();
+
+        std::ofstream weight_out;
+        const char* weight_pointer = reinterpret_cast<const char*>(&tsdf_weights[0]);
+        bytes = tsdf_weights.size() * sizeof(tsdf_weights[0]);
+        weight_out.open("kinfu_weights.dat", std::ios::out | std::ios::binary);
+        weight_out.write(weight_pointer, bytes);
+        weight_out.close();
 
 		std::cout << "saved!" << std::endl;
         exit(0);
