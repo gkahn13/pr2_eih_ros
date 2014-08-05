@@ -523,5 +523,5 @@ if __name__ == '__main__':
     #test_plotting()
     #test_triangulate()
     #test_triangle_halfspaces()
-    #test_image_plane_truncate()
-    test_delaunay()
+    test_image_plane_truncate()
+    #test_delaunay()

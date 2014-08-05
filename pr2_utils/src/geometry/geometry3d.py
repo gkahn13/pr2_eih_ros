@@ -71,6 +71,133 @@ class Pyramid:
         sim.plot_segment(b, c, color=color)
         sim.plot_segment(c, a, color=color)
     
+class RectangularPyramid:
+    def __init__(self, base, a, b, c, d):
+        """
+        A pyramid with orign base and points a,b,c,d arranged as
+        b --- a
+        |     |
+        |     |
+        c --- d
+        """
+        self.base = np.array(base)
+        self.a = np.array(a)
+        self.b = np.array(b)
+        self.c = np.array(c)
+        self.d = np.array(d)
+        
+    def is_inside(self, p):
+        """
+        :param p: 3d point as list or np.array
+        :return True if p is inside the pyramid, else False
+        """
+        p = np.array(p)
+        
+        halfspaces = self.get_halfspaces()
+        return np.min([h.contains(p) for h in halfspaces])
+    
+    def get_halfspaces(self):
+        """
+        :return list of halfspaces representing outward-pointing faces
+        """
+        base, a, b, c, d = self.base, self.a, self.b, self.c, self.d
+
+        origins = [(base+a+d)/3.0,
+                   (base+b+a)/3.0,
+                   (base+c+b)/3.0,
+                   (base+d+c)/3.0,
+                   (a+b+c+d)/4.0]
+    
+        normals = [-np.cross(a-base, d-base),
+                   -np.cross(b-base, a-base),
+                   -np.cross(c-base, b-base),
+                   -np.cross(d-base, c-base),
+                   -np.cross(b-a, d-a)]
+        normals = [n/np.linalg.norm(n) for n in normals]
+        
+        return [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
+        
+    def clip_triangle(self, triangle):
+        """
+        Clips triangle against faces (http://www.cs.uu.nl/docs/vakken/gr/2011/Slides/08-pipeline2.pdf)
+        :param triangle: Triangle
+        :return list of Triangle
+        """
+        triangles = [triangle]
+        for halfspace in self.get_halfspaces():
+            new_triangles = list()
+            # clip all triangles against the halfspace
+            for tri in triangles:
+                hyperplane = halfspace.hyperplane()
+                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments()])
+                assert len(intersections) == 0 or len(intersections) == 2
+                inside_vertices = [vertex for vertex in tri.vertices() if halfspace.contains(vertex)]
+                if len(intersections) == 2:
+                    assert len(inside_vertices) == 1 or len(inside_vertices) == 2
+                    if len(inside_vertices) == 1:
+                        # then intersections form new border of triangle
+                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
+                    else:
+                        # create two triangles
+                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
+                        if np.linalg.norm(inside_vertices[1] - intersections[0]) < np.linalg.norm(inside_vertices[1] - intersections[1]):
+                            new_triangles.append(Triangle(inside_vertices[1], intersections[0], inside_vertices[0]))
+                        else:
+                            new_triangles.append(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]))
+                else:
+                    # all/none of triangle in halfspace
+                    assert len(inside_vertices) == 0 or len(inside_vertices) == 3
+                    if len(inside_vertices) == 3:
+                        new_triangles.append(tri) 
+                        
+            triangles = new_triangles
+            
+        return triangles
+    
+    def plot(self, sim, with_sides=True, color=(1,0,0)):
+        """
+        Plots edges of the pyramid
+        :param sim: Simulator instance
+        :param with_sides: if True, plots side edges too
+        :param color: (r,g,b) [0,1]
+        """
+        base, a, b, c, d = self.base, self.a, self.b, self.c, self.d
+        
+        if with_sides:
+            sim.plot_segment(base, a)
+            sim.plot_segment(base, b)
+            sim.plot_segment(base, c)
+            sim.plot_segment(base, d)
+        
+        sim.plot_segment(a, b)
+        sim.plot_segment(b, c)
+        sim.plot_segment(c, d)
+        sim.plot_segment(d, a)
+        
+class Polygon:
+    """ Simple polygon """
+    def __init__(self, points):
+        """
+        :param points: [[x0,y0,z0],[x1,y1,z1],...]
+        """
+        self.points = points
+        
+    def segments(self):
+        segment_list = list()
+        for i in xrange(len(points)):
+            segment_list.append(Segment(self.points[i], self.points[i+1]))
+        segment_list.append(Segment(self.points[-1], self.points[0]))
+        return segment_list
+    
+    def plot(self, sim, color=(1,0,0)):
+        """
+        :param sim: Simulator instance
+        :param color: (r,g,b) [0,1]
+        """
+        for segment in self.segments():
+            segment.plot(sim, color=color)
+
+    
 class Triangle:
     def __init__(self, a, b, c):
         self.a, self.b, self.c = np.array(a), np.array(b), np.array(c)
@@ -156,6 +283,18 @@ class Triangle:
             return intersection
         
         return None
+    
+    def vertices(self):
+        """
+        :return list of np.array points
+        """
+        return [self.a, self.b, self.c]
+        
+    def segments(self):
+        """
+        :return list of Segment
+        """
+        return [Segment(self.a, self.b), Segment(self.b, self.c), Segment(self.c, self.a)]
         
     def hyperplane(self):
         """
@@ -260,6 +399,12 @@ class Halfspace:
         """
         return np.dot(self.normal, np.array(x) - self.origin) >= epsilon
     
+    def hyperplane(self):
+        """
+        :return Hyperplane that defines Halfspace
+        """
+        return Hyperplane(self.origin, self.normal)
+    
     def plot(self, sim, color=(0,0,1)):
         """
         Plots the normal
@@ -340,7 +485,7 @@ def test_distance_to_plot():
     
     IPython.embed()
     
-def test_beam_inside():
+def test_pyramid_inside():
     from pr2_sim import simulator
     
     sim = simulator.Simulator(view=True)
@@ -371,8 +516,40 @@ def test_beam_inside():
     
     IPython.embed()
          
+def test_clip_triangle():
+    from pr2_sim import simulator
+    sim = simulator.Simulator(view=True)
+    
+    base = [.5,0,0]
+    a = [.6, .1, .5]
+    b = [.4, .1, .5]
+    c = [.4, -.1, .5]
+    d = [.6, -.1, .5]
+    
+    frustum = RectangularPyramid(base, a, b, c, d)
+    frustum.plot(sim)
+    
+#     triangle = Triangle([.5, 0, .25], [.5, 0, .6], [.52, .02, .25])
+#     triangle = Triangle([.5, 0, .25], [.7, .5, .5], [.9, .1, .6])
+    triangle = Triangle([.6, .1, .6], [.7, .2, .8], [.5, 0, .6])
+    triangle.plot(sim, color=(0,0,1))
+    
+    print('Original triangle, press enter to clip')
+    raw_input()
+    sim.clear_plots(3)
+    
+    clipped_triangles = frustum.clip_triangle(triangle)
+     
+    print('Number of clipped triangles: {0}'.format(len(clipped_triangles)))
+    for tri in clipped_triangles:
+        tri.plot(sim, color=(0,1,0))
+    
+    print('Press enter to exit')
+    raw_input()
+         
 if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()
     #test_distance_to_plot()
-    test_beam_inside()
+    #test_pyramid_inside()
+    test_clip_triangle()

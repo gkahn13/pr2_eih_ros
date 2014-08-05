@@ -247,6 +247,25 @@ class Camera:
             
         return triangles2d
     
+    def clip_triangle(self, tri3d):
+        """
+        Clips triangle against view frustum
+        
+        :param tri3d: geometry3d.Triangle
+        :return geometry3d.Polygon
+        """
+        # get view frustum halfspaces
+        # since triangle convex and clipping against
+        # planes, resulting polygon is convex
+        frustum = geometry3d.RectangularPyramid(self.get_pose().position.array,
+                                                self.segment_through_pixel([0,self.width]).p1,
+                                                self.segment_through_pixel([0,0]).p1,
+                                                self.segment_through_pixel([self.height,0]).p1,
+                                                self.segment_through_pixel([self.height,self.width]).p1)
+        
+        tri3d_segments = tri3d.segments()
+        
+    
     ##################
     # visualizations #
     ##################
