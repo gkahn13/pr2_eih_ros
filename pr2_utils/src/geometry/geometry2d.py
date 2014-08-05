@@ -363,6 +363,13 @@ class Segment:
             return intersection
         else:
             return None
+        
+    def is_endpoint(self, point):
+        """
+        :param point: 2d np.array
+        :return True if point is an endpoint of the segment
+        """
+        return np.linalg.norm(self.p0 - point) < epsilon or np.linalg.norm(self.p1 - point) < epsilon
             
     def plot(self, axes, color='r'):
         """

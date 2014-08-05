@@ -151,16 +151,21 @@ class Triangle:
         :param segment: 3d line segment
         :return 3d np.array if intersection, else None
         """
-        origin = (self.a+self.b+self.c)/3.
-        normal = np.cross(self.a-self.b, self.a-self.c)
-        hyperplane = Hyperplane(origin, normal)
-        
-        intersection = hyperplane.intersection(segment)
+        intersection = self.hyperplane().intersection(segment)
         if intersection is not None and np.linalg.norm(intersection - self.closest_point_to(intersection)) < epsilon:
             return intersection
         
         return None
         
+    def hyperplane(self):
+        """
+        Returns hyperplane that this triangle is embedded in
+        
+        :return Hyperplane
+        """
+        origin = (self.a+self.b+self.c)/3.
+        normal = np.cross(self.a-self.b, self.a-self.c)
+        return Hyperplane(origin, normal)
     
     def area(self):
         """

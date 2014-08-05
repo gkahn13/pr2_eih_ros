@@ -103,6 +103,8 @@ class Camera:
         :param triangles3d: list of geometry3d.Triangle with points in frame 'base_link'
         :return list of geometry3d.Pyramid
         """
+        start_time = time.time()
+        
         triangles2d = self.project_triangles(triangles3d)
         
         segments2d = [geometry2d.Segment([0,0],[self.height,0]),
@@ -115,19 +117,33 @@ class Camera:
         # get all segment intersections
         # and filter out those outside of image plane
         intersections = list()
-        for i in xrange(len(segments2d)):
+        for i in xrange(len(segments2d)-1):
             curr_segment = segments2d[i]
-            for j in xrange(i, len(segments2d)):
+            for j in xrange(i+1, len(segments2d)):
                  other_segment = segments2d[j]
                  intersection = curr_segment.intersection(other_segment)
                  if intersection is not None and (0 <= intersection[0] <= self.height) and (0 <= intersection[1] <= self.width):
                      intersections.append(intersection)
-                     
+                   
         # perform delaunay triangulation with the intersections
-        x = [p[0] for p in intersections]
-        y = [p[1] for p in intersections]
-        circumcenters, edges, tri_points, tri_neighbors = delaunay.delaunay(x,y)
-        
+        # keep looping until all delaunay edges only intersect
+        # triangles2d at endpoints  
+        while True:
+            x = [p[0] for p in intersections]
+            y = [p[1] for p in intersections]
+            circumcenters, edges, tri_points, tri_neighbors = delaunay.delaunay(x,y)
+            
+            last_num_intersections = len(intersections)
+            delaunay_segments2d = [geometry2d.Segment(intersections[indices[0]], intersections[indices[1]]) for indices in edges]
+            for dseg2d in delaunay_segments2d:
+                for seg2d in segments2d:
+                    intersection = dseg2d.intersection(seg2d)
+                    if intersection is not None and not dseg2d.is_endpoint(intersection):
+                        intersections.append(intersection)
+            
+            if last_num_intersections == len(intersections):
+                break
+            
         delaunay_triangles2d = list()
         for indices in tri_points:
             p0 = intersections[indices[0]]
@@ -162,16 +178,17 @@ class Camera:
                 # no intersections, so max length
                 pyramids.append(geometry3d.Pyramid(camera_position, dtri3d_seg0.p1, dtri3d_seg1.p1, dtri3d_seg2.p1))
             else:
-                continue # TODO: temp
-                dtri3d_intersection0 = min_tri3d.intersection(dtri3d_seg0)
-                dtri3d_intersection1 = min_tri3d.intersection(dtri3d_seg1)
-                dtri3d_intersection2 = min_tri3d.intersection(dtri3d_seg2)
+                hyperplane3d = tri3d.hyperplane()
+                dtri3d_intersection0 = hyperplane3d.intersection(dtri3d_seg0)
+                dtri3d_intersection1 = hyperplane3d.intersection(dtri3d_seg1)
+                dtri3d_intersection2 = hyperplane3d.intersection(dtri3d_seg2)
                 assert dtri3d_intersection0 is not None
                 assert dtri3d_intersection1 is not None
                 assert dtri3d_intersection2 is not None
                 pyramids.append(geometry3d.Pyramid(camera_position,
                                                    dtri3d_intersection0, dtri3d_intersection1, dtri3d_intersection2))
             
+        print('truncated_view_frustum time: {0}'.format(time.time() - start_time))
                      
         fig = plt.figure()
         axes = fig.add_subplot(111)
@@ -180,10 +197,11 @@ class Camera:
             p0, p1 = segment.p0, segment.p1
             p0_flip = [p0[1], self.height - p0[0]]
             p1_flip = [p1[1], self.height - p1[0]]
-            geometry2d.Segment(p0_flip,p1_flip).plot(axes, color='b')
+            axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=3.0)
+            #geometry2d.Segment(p0_flip,p1_flip).plot(axes, color='b')
         
         for intersection in intersections:
-            axes.plot(intersection[1], self.height - intersection[0], 'rx')
+            axes.plot(intersection[1], self.height - intersection[0], 'rx', markersize=10.0)
         
         for t in delaunay_triangles2d:
             a, b, c = t.a, t.b, t.c
@@ -195,10 +213,17 @@ class Camera:
         plt.show(block=False)
         
         for tri3d in triangles3d:
-            tri3d.plot(self.sim, color=(1,0,0))
+            geometry3d.Triangle(self.sim.transform_from_to(tfx.pose(tri3d.a).matrix,'base_link','world')[:3,3],
+                                self.sim.transform_from_to(tfx.pose(tri3d.b).matrix,'base_link','world')[:3,3],
+                                self.sim.transform_from_to(tfx.pose(tri3d.c).matrix,'base_link','world')[:3,3]).plot(self.sim, color=(1,0,0))
+            #tri3d.plot(self.sim, color=(1,0,0))
         
         for pyramid in pyramids:
-            pyramid.plot(self.sim, with_sides=True, color=(0,1,0))
+            geometry3d.Pyramid(self.sim.transform_from_to(tfx.pose(pyramid.base).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.a).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.b).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.c).matrix,'base_link','world')[:3,3]).plot(self.sim, with_sides=True, color=(0,1,0))
+            #pyramid.plot(self.sim, with_sides=True, color=(0,1,0))
         
         print('in truncated_view_frustum, press enter')
         raw_input()
@@ -251,11 +276,20 @@ class Camera:
 
 def test_truncated_view_frustum():
     sim = simulator.Simulator(view=True)
+    larm = arm.Arm('left',sim=sim)
+    larm.set_posture('mantis')
     rarm = arm.Arm('right',sim=sim)
     rarm.set_posture('mantis')
     
     cam = Camera(rarm, sim)
-    triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
+#     triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
+#     triangles3d = [geometry3d.Triangle([.5,0,.5],[.8,0,.6],[.5,-.3,.9])]
+#     triangles3d = [geometry3d.Triangle([np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
+    table_center = np.array([.2,.7,.5])
+    triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
+                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0]))]
     cam.truncated_view_frustum(triangles3d)
     
 
