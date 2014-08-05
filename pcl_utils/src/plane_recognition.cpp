@@ -29,6 +29,9 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
 }
 }
 
+
+// TODO: Compiling was getting mad about this main. I should move it to another file, eventually.
+/*
 int
 main (int argc, char** argv)
 {
@@ -77,3 +80,4 @@ main (int argc, char** argv)
     return (0);
 
 }
+*/

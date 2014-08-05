@@ -6,17 +6,31 @@
 
 using namespace std;
 
-int main(int argc, char** argv) {
-  string infile = argv[1];
-  string outfile = argv[2];
+int main(int argc, char** argv)
+{
+    string infile = argv[1];
+    string outfile = argv[2];
 
-  pcl::PointCloud<pcl::PointNormal>::Ptr input_cloud (new pcl::PointCloud<pcl::PointNormal>);
-  
-  if (pcl::io::loadPCDFile<pcl::PointNormal>(infile, *input_cloud) == -1) {
-    cout << "Could not find input file." << endl;
-    exit(1);
-  }
+    std::string option = "xyz";
+    if (argc > 3) {
+        option = argv[3];
+    }
 
-  pcl::io::savePLYFileASCII(outfile, *input_cloud);
+    typedef pcl::PointXYZ current_point_type;
+    if (option == "xyz") {
+        typedef pcl::PointXYZ current_point_type;
+    } else {
+        typedef pcl::PointNormal current_point_type;
+    }
+
+    pcl::PointCloud<current_point_type>::Ptr input_cloud (new pcl::PointCloud<current_point_type>);
+
+    if (pcl::io::loadPCDFile<current_point_type>(infile, *input_cloud) == -1)
+    {
+        cout << "Could not find input file." << endl;
+        exit(1);
+    }
+
+    pcl::io::savePLYFileASCII(outfile, *input_cloud);
 
 }
