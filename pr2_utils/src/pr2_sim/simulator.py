@@ -38,6 +38,7 @@ class Simulator:
         """
         msg = self.joint_state_msg
         if msg is None:
+            print('Cannot update simulator, no joint state message received')
             return
         
         indices, joint_values = list(), list()

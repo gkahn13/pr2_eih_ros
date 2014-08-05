@@ -98,29 +98,7 @@ class Beam:
         sim.plot_segment(b, c)
         sim.plot_segment(c, d)
         sim.plot_segment(d, a)
-        
-class Halfspace:
-    def __init__(self, origin, normal):
-        self.origin = origin
-        self.normal = normal
-        
-    def contains(self, x):
-        """
-        :param x: 3d point as list or np.array
-        :return True if x forms acute angle with plane normal, else False
-        """
-        return np.dot(self.normal, np.array(x) - self.origin) >= epsilon
     
-    def plot(self, sim, color=(0,0,1)):
-        """
-        Plots the normal
-        
-        :param sim: Simulator instance
-        :param color: (r,g,b) [0,1]
-        """
-        o, n = self.origin, self.normal
-        sim.plot_segment(o, o + .05*n, color=color)
-
 class Triangle:
     def __init__(self, a, b, c):
         self.a, self.b, self.c = np.array(a), np.array(b), np.array(c)
@@ -208,7 +186,93 @@ class Triangle:
         sim.plot_segment(self.a, self.b, color)
         sim.plot_segment(self.b, self.c, color)
         sim.plot_segment(self.c, self.a, color)
+    
+class Segment:
+    def __init__(self, p0, p1):
+        self.p0, self.p1 = np.array(p0), np.array(p1)
         
+    def closest_point_to(self, x):
+        """
+        min_{0<=t<=1} ||t*(p1-p0) + p0 - x||_{2}^{2}
+        
+        :param x: 3d list or np.array
+        :return 3d np.array of closest point on segment to x
+        """
+        x = np.array(x)
+        v = self.p1 - self.p0
+        b = self.p0 - x
+        
+        t = -np.dot(v, b) / np.dot(v, v)
+        if (0 <= t <= 1):
+            closest = t*(self.p1 - self.p0) + self.p0
+            return closest
+        else:
+            if np.linalg.norm(x - self.p0) < np.linalg.norm(x - self.p1):
+                return self.p0
+            else:
+                return self.p1
+            
+    def intersection(self, other):
+        """
+        Finds intersection point with another segment
+        :param other: Segment
+        :return None if no intersection, else [x,y] of intersection 
+        """
+        p0_other, p1_other = other.p0, other.p1
+        
+        # w = p1 - p0
+        # v = p1_other - p0_other
+        # s*w + p0 = t*v + p_other
+        
+        w = self.p1 - self.p0
+        v = p1_other - p0_other
+        
+        A = np.vstack((w,v)).T
+        b = p0_other - self.p0
+        
+        if np.abs(np.linalg.det(A)) < epsilon:
+            return None
+        
+        soln = np.linalg.solve(A, b)
+        s, t = soln[0], -soln[1]
+        
+        intersection = s*w + self.p0
+        
+        if ((-epsilon <= s) and (s <= 1+epsilon) and (-epsilon <= t) and (t <= 1+epsilon)):
+            return intersection
+        else:
+            return None
+            
+    def plot(self, sim, color=(1,0,0)):
+        """
+        :param axes: pyplot axes
+        :param color: character or (r,g,b) [0,1]
+        """
+        sim.plot_segment(self.p0, self.p1, color=color)
+        
+    
+class Halfspace:
+    def __init__(self, origin, normal):
+        self.origin = origin
+        self.normal = normal
+        
+    def contains(self, x):
+        """
+        :param x: 3d point as list or np.array
+        :return True if x forms acute angle with plane normal, else False
+        """
+        return np.dot(self.normal, np.array(x) - self.origin) >= epsilon
+    
+    def plot(self, sim, color=(0,0,1)):
+        """
+        Plots the normal
+        
+        :param sim: Simulator instance
+        :param color: (r,g,b) [0,1]
+        """
+        o, n = self.origin, self.normal
+        sim.plot_segment(o, o + .05*n, color=color)
+    
         
 #########
 # TESTS #

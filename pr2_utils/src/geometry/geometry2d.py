@@ -250,6 +250,63 @@ class Triangle:
         return Triangle([np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
                         [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
                         [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)])
+     
+# class Line:
+#     def __init__(self, p0, p1):
+#         self.p0, self.p1 = np.array(p0), np.array(p1)
+#          
+#     def closest_point_to(self, x):
+#         """
+#         min ||t*(p1-p0) + p0 - x||_{2}^{2}
+#         
+#         :param x: 2d list or np.array
+#         :return 2d np.array of closest point on line to x
+#         """
+#         x = np.array(x)
+#         v = self.p1 - self.p0
+#         b = self.p0 - x
+#         
+#         t = -np.dot(v, b) / np.dot(v, v)
+#         closest = t*(self.p1 - self.p0) + self.p0
+#         return closest
+#             
+#     def intersection(self, other):
+#         """
+#         Finds intersection point with another segment
+#         :param other: Segment
+#         :return None if no intersection, else [x,y] of intersection 
+#         """
+#         p0_other, p1_other = other.p0, other.p1
+#         
+#         # w = p1 - p0
+#         # v = p1_other - p0_other
+#         # s*w + p0 = t*v + p_other
+#         
+#         w = self.p1 - self.p0
+#         v = p1_other - p0_other
+#         
+#         A = np.vstack((w,v)).T
+#         b = p0_other - self.p0
+#         
+#         if np.abs(np.linalg.det(A)) < epsilon:
+#             return None
+#         
+#         soln = np.linalg.solve(A, b)
+#         s, t = soln[0], -soln[1]
+#         
+#         intersection = s*w + self.p0
+#         
+#         if ((-epsilon <= s) and (s <= 1+epsilon) and (-epsilon <= t) and (t <= 1+epsilon)):
+#             return intersection
+#         else:
+#             return None
+#             
+#     def plot(self, axes, color='r'):
+#         """
+#         :param axes: pyplot axes
+#         :param color: character or (r,g,b) [0,1]
+#         """
+#         axes.plot([self.p0[0], self.p1[0]], [self.p0[1], self.p1[1]], color=color)
         
 class Segment:
     def __init__(self, p0, p1):
@@ -268,8 +325,8 @@ class Segment:
         
         t = -np.dot(v, b) / np.dot(v, v)
         if (0 <= t <= 1):
-            intersection = t*(self.p1 - self.p0) + self.p0
-            return intersection
+            closest = t*(self.p1 - self.p0) + self.p0
+            return closest
         else:
             if np.linalg.norm(x - self.p0) < np.linalg.norm(x - self.p1):
                 return self.p0
@@ -342,6 +399,40 @@ class Halfspace:
 ###########
 #  TESTS  #
 ###########
+
+def test_delaunay():
+    from matplotlib import delaunay
+    
+    points = [(0,0), (10,0), (10,10), (0,10),
+              (5,5), (8,3), (9,6)]
+    
+    x = [p[0] for p in points]
+    y = [p[1] for p in points]
+    
+    circumcenters, edges, tri_points, tri_neighbors = delaunay.delaunay(x,y)
+    
+    triangles = list()
+    for indices in tri_points:
+        p0 = points[indices[0]]
+        p1 = points[indices[1]]
+        p2 = points[indices[2]]
+        triangles.append(Triangle(p0, p1, p2))
+    
+    fig = plt.figure()
+    axes = fig.add_subplot(111)
+    
+    for tri in triangles:
+        tri.plot(axes, color='b')
+
+    xmin, xmax = plt.xlim()
+    ymin, ymax = plt.ylim()
+    plt.xlim((xmin-1, xmax+1))
+    plt.ylim((ymin-1, ymax+1))
+        
+    plt.show(block=False)
+    
+    import IPython
+    IPython.embed()
 
 def test_image_plane_truncate():
     image_plane = ImagePlane([0,10],[10,10],[10,0],[0,0])
@@ -425,5 +516,5 @@ if __name__ == '__main__':
     #test_plotting()
     #test_triangulate()
     #test_triangle_halfspaces()
-    #test_image_plane_single_truncate()
-    test_image_plane_truncate()
+    #test_image_plane_truncate()
+    test_delaunay()

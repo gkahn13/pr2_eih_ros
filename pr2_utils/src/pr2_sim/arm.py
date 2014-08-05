@@ -30,7 +30,7 @@ class Arm:
                   'tucked'   : [0.06, 1.25,   1.79, -1.68, -1.73, -0.10, -0.09],
                   'up'       : [0.33, -0.35,  2.59, -0.15,  0.59, -1.41, -0.27],
                   'side'     : [1.83, -0.33,  1.01, -1.43,  1.1,  -2.10,  3.07],
-                  'mantis'   : [2.03, -0.054, 1.01, -1.47,  0.55, -1.42,  3.96]
+                  'mantis'   : [2.03, -0.054, 1.01, -1.47,  0.55, -1.42,  0.82]
                   }
     
     
@@ -48,9 +48,9 @@ class Arm:
         self.sim = sim
         if self.sim is None:
             self.sim = simulator.Simulator()
-            
-        if view:
-            self.sim.env.SetViewer('qtcoin')
+              
+            if view:
+                self.sim.env.SetViewer('qtcoin')
             
         self.robot = self.sim.robot
         self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm   
@@ -138,7 +138,7 @@ class Arm:
         """
         :return current pose of tool_frame as tfx.pose
         """
-        return tfx.pose(self.tool_frame_link.GetTransform(), frame='world')
+        return tfx.pose(self.sim.transform_from_to(np.eye(4), self.tool_frame, 'base_link'), frame='base_link')
     
     def get_joints(self):
         """
@@ -177,9 +177,10 @@ class Arm:
         :param pose: tfx.pose
         :return list of joints or None if no solution
         """
-        assert len(pose.frame) > 0
+        assert pose.frame == 'base_link'
         
-        joints = self.sim.ik_for_link(np.array(pose.matrix), self.manip, self.tool_frame, 0)
+        pose_mat_world = self.sim.transform_from_to(pose.matrix, pose.frame, 'world')
+        joints = self.sim.ik_for_link(pose_mat_world, self.manip, self.tool_frame, 0)
         
         if joints is not None:
             joints = self._closer_joint_angles(joints, self.get_joints())
@@ -205,6 +206,9 @@ class Arm:
             new_joints[i] = utils.closer_angle(new_joints[i], curr_joints[i])
         return new_joints
     
+#############
+#   TESTS   #
+#############
     
 def test_ik():
     arm = Arm('right')
@@ -226,5 +230,5 @@ def test_teleop():
     
     
 if __name__ == '__main__':
-    #test_ik()
-    test_teleop()
+    test_ik()
+    #test_teleop()
