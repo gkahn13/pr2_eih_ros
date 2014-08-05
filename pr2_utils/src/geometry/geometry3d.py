@@ -13,26 +13,20 @@ import IPython
 
 epsilon = 1e-5
 
-class Beam:
-    def __init__(self, base, a, b, c, d):
+class Pyramid:
+    def __init__(self, base, a, b, c):
         """
-        A pyramid with orign base and points a,b,c,d arranged as
-        
-        b --- a
-        |     |
-        |     |
-        c --- d
+        A pyramid with orign base and points a,b,c
         """
         self.base = np.array(base)
         self.a = np.array(a)
         self.b = np.array(b)
         self.c = np.array(c)
-        self.d = np.array(d)
         
     def is_inside(self, p):
         """
         :param p: 3d point as list or np.array
-        :return True if p is inside the beam, else False
+        :return True if p is inside the pyramid, else False
         """
         p = np.array(p)
         
@@ -43,61 +37,39 @@ class Beam:
         """
         :return list of halfspaces representing outward-pointing faces
         """
-        base, a, b, c, d = self.base, self.a, self.b, self.c, self.d
+        base, a, b, c = self.base, self.a, self.b, self.c
 
-        origins = [(base+a+d)/3.0,
-                   (base+b+a)/3.0,
-                   (base+c+b)/3.0,
-                   (base+d+c)/3.0,
-                   (a+b+c+d)/4.0]
+        origins = [(base+a+b)/3.,
+                   (base+b+c)/3.,
+                   (base+c+a)/3.,
+                   (a+b+c)/3.]
     
-        normals = [-np.cross(a-base, d-base),
-                   -np.cross(b-base, a-base),
-                   -np.cross(c-base, b-base),
-                   -np.cross(d-base, c-base),
-                   -np.cross(b-a, d-a)]
+        normals = [np.cross(a-base, b-base),
+                   np.cross(b-base, c-base),
+                   np.cross(c-base, a-base),
+                   -np.cross(b-a, c-a)]
         normals = [n/np.linalg.norm(n) for n in normals]
         
         return [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
-        
-    def get_side(self, side):
-        """
-        :param side: 'right', 'top', 'left', 'bottom', 'front'
-        :return list of triangles
-        """
-        if side == 'right':
-            return [Triangle(self.base, self.a, self.d)]
-        elif side == 'top':
-            return [Triangle(self.base, self.a, self.b)]
-        elif side == 'left':
-            return [Triangle(self.base, self.b, self.c)]
-        elif side == 'bottom':
-            return [Triangle(self.base, self.c, self.d)]
-        elif side == 'front':
-            return [Triangle(self.a, self.b, self.c), Triangle(self.a, self.d, self.c)]
-        else:
-            return None
     
     def plot(self, sim, with_sides=True, color=(1,0,0)):
         """
-        Plots edges of the beam
+        Plots edges of the pyramid
         
         :param sim: Simulator instance
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
         """
-        base, a, b, c, d = self.base, self.a, self.b, self.c, self.d
+        base, a, b, c = self.base, self.a, self.b, self.c
         
         if with_sides:
-            sim.plot_segment(base, a)
-            sim.plot_segment(base, b)
-            sim.plot_segment(base, c)
-            sim.plot_segment(base, d)
-        
-        sim.plot_segment(a, b)
-        sim.plot_segment(b, c)
-        sim.plot_segment(c, d)
-        sim.plot_segment(d, a)
+            sim.plot_segment(base, a, color=color)
+            sim.plot_segment(base, b, color=color)
+            sim.plot_segment(base, c, color=color)
+            
+        sim.plot_segment(a, b, color=color)
+        sim.plot_segment(b, c, color=color)
+        sim.plot_segment(c, a, color=color)
     
 class Triangle:
     def __init__(self, a, b, c):
@@ -169,6 +141,26 @@ class Triangle:
         """
         closest_pt = self.closest_point_to(p)
         return np.linalg.norm(p - closest_pt)
+    
+    def intersection(self, segment):
+        """
+        Determine point where line segment intersects this triangle
+        - find intersection of segment with hyperplane
+        - if intersection is in the triangle, return it
+        
+        :param segment: 3d line segment
+        :return 3d np.array if intersection, else None
+        """
+        origin = (self.a+self.b+self.c)/3.
+        normal = np.cross(self.a-self.b, self.a-self.c)
+        hyperplane = Hyperplane(origin, normal)
+        
+        intersection = hyperplane.intersection(segment)
+        if intersection is not None and np.linalg.norm(intersection - self.closest_point_to(intersection)) < epsilon:
+            return intersection
+        
+        return None
+        
     
     def area(self):
         """
@@ -273,6 +265,35 @@ class Halfspace:
         o, n = self.origin, self.normal
         sim.plot_segment(o, o + .05*n, color=color)
     
+class Hyperplane:
+    def __init__(self, origin, normal):
+        self.origin = origin
+        self.normal = normal
+        
+    def intersection(self, segment):
+        """
+        Finds intersection with a line segment
+        
+        :segment segment: 2d line segment
+        :return 2d np.array, or None if no intersection
+        """
+        p0, p1 = segment.p0, segment.p1
+        
+        # x = t*(p1 - p0) + p0
+        # n'*(x - origin) = 0
+        # combine to get
+        # n'*(t*(p1-p0) + p0 - origin) = 0
+        # solve for t
+        
+        v = p1 - p0
+        w = p0 - self.origin
+        t = -np.dot(self.normal, w)/np.dot(self.normal, v)
+        
+        if 0 <= t <= 1:
+            return t*(p1-p0) + p0
+        else:
+            return None
+        
         
 #########
 # TESTS #
@@ -323,18 +344,19 @@ def test_beam_inside():
     a = [.6, .1, .5]
     b = [.4, .1, .5]
     c = [.4, -.1, .5]
-    d = [.6, -.1, .5]
     
-    beam = Beam(base, a, b, c, d)
-    beam.plot(sim)
+    pyramid = Pyramid(base, a, b, c)
+    pyramid.plot(sim)
     
-    halfspaces = beam.get_halfspaces()
+    halfspaces = pyramid.get_halfspaces()
     for h in halfspaces:
         h.plot(sim)
         
     for i in xrange(1000):
-        p = np.random.rand(3)
-        is_inside = beam.is_inside(p)
+        p = [np.random.uniform(.4,.6),
+             np.random.uniform(-.1,.1),
+             np.random.uniform(0,.5)]
+        is_inside = pyramid.is_inside(p)
         print('is_inside: {0}'.format(is_inside))
         sim.plot_point(p)
         if is_inside:
@@ -343,7 +365,7 @@ def test_beam_inside():
         
     
     IPython.embed()
-        
+         
 if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()

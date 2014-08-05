@@ -4,6 +4,7 @@ import tfx
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import delaunay
 
 import time
 
@@ -81,21 +82,128 @@ class Camera:
         pixel = np.array(pixel)
         pixel_centered = pixel - np.array([self.height/2., self.width/2.])
         
-        pixel3d_centered_m = np.array([self.focal_length*(pixel_centered[1]/self.fx),
-                                       self.focal_length*(pixel_centered[0]/self.fy),
-                                       self.focal_length])
+        pixel3d_centered_m = self.max_range*np.array([pixel_centered[1]/self.fx,
+                                                      pixel_centered[0]/self.fy,
+                                                      1])
         
         transform = self.get_pose().as_tf()
         p0 = transform.position.array
-        p1_dir = ((transform*tfx.pose(pixel3d_centered_m)).position.array - p0)
-        p1_dir /= np.linalg.norm(p1_dir)
-        p1 = p0 + self.max_range*p1_dir
+        p1 = (transform*tfx.pose(pixel3d_centered_m)).position.array        
         
         return geometry3d.Segment(p0, p1)
     
     #####################
     # calculate frustum #
     #####################
+    
+    def truncated_view_frustum(self, triangles3d):
+        """
+        Truncates the view frustum against environment triangles
+        
+        :param triangles3d: list of geometry3d.Triangle with points in frame 'base_link'
+        :return list of geometry3d.Pyramid
+        """
+        triangles2d = self.project_triangles(triangles3d)
+        
+        segments2d = [geometry2d.Segment([0,0],[self.height,0]),
+                    geometry2d.Segment([self.height,0],[self.height,self.width]),
+                    geometry2d.Segment([self.height,self.width],[0,self.width]),
+                    geometry2d.Segment([0,self.width],[0,0])]
+        for tri2d in triangles2d:
+            segments2d += tri2d.segments()
+        
+        # get all segment intersections
+        # and filter out those outside of image plane
+        intersections = list()
+        for i in xrange(len(segments2d)):
+            curr_segment = segments2d[i]
+            for j in xrange(i, len(segments2d)):
+                 other_segment = segments2d[j]
+                 intersection = curr_segment.intersection(other_segment)
+                 if intersection is not None and (0 <= intersection[0] <= self.height) and (0 <= intersection[1] <= self.width):
+                     intersections.append(intersection)
+                     
+        # perform delaunay triangulation with the intersections
+        x = [p[0] for p in intersections]
+        y = [p[1] for p in intersections]
+        circumcenters, edges, tri_points, tri_neighbors = delaunay.delaunay(x,y)
+        
+        delaunay_triangles2d = list()
+        for indices in tri_points:
+            p0 = intersections[indices[0]]
+            p1 = intersections[indices[1]]
+            p2 = intersections[indices[2]]
+            delaunay_triangles2d.append(geometry2d.Triangle(p0, p1, p2))
+            
+        # for each delaunay triangle center
+        # find the closest triangle3d that intersects
+        # and then form a pyramid from the intersection points
+        
+        pyramids = list()
+        camera_position = self.get_pose().position.array
+        for dtri2d in delaunay_triangles2d:
+            center = (dtri2d.a + dtri2d.b + dtri2d.c)/3.
+            segment = self.segment_through_pixel(center)
+            
+            min_dist, min_tri3d = np.inf, None
+            for tri3d in triangles3d:
+                intersection = tri3d.intersection(segment)
+                if intersection is not None:
+                    dist = np.linalg.norm(intersection - camera_position)
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_tri3d = tri3d
+                
+            dtri3d_seg0 = self.segment_through_pixel(dtri2d.a)
+            dtri3d_seg1 = self.segment_through_pixel(dtri2d.b)
+            dtri3d_seg2 = self.segment_through_pixel(dtri2d.c)
+                                    
+            if min_tri3d is None:
+                # no intersections, so max length
+                pyramids.append(geometry3d.Pyramid(camera_position, dtri3d_seg0.p1, dtri3d_seg1.p1, dtri3d_seg2.p1))
+            else:
+                continue # TODO: temp
+                dtri3d_intersection0 = min_tri3d.intersection(dtri3d_seg0)
+                dtri3d_intersection1 = min_tri3d.intersection(dtri3d_seg1)
+                dtri3d_intersection2 = min_tri3d.intersection(dtri3d_seg2)
+                assert dtri3d_intersection0 is not None
+                assert dtri3d_intersection1 is not None
+                assert dtri3d_intersection2 is not None
+                pyramids.append(geometry3d.Pyramid(camera_position,
+                                                   dtri3d_intersection0, dtri3d_intersection1, dtri3d_intersection2))
+            
+                     
+        fig = plt.figure()
+        axes = fig.add_subplot(111)
+        
+        for segment in segments2d:
+            p0, p1 = segment.p0, segment.p1
+            p0_flip = [p0[1], self.height - p0[0]]
+            p1_flip = [p1[1], self.height - p1[0]]
+            geometry2d.Segment(p0_flip,p1_flip).plot(axes, color='b')
+        
+        for intersection in intersections:
+            axes.plot(intersection[1], self.height - intersection[0], 'rx')
+        
+        for t in delaunay_triangles2d:
+            a, b, c = t.a, t.b, t.c
+            a_flip = [a[1], self.height - a[0]]
+            b_flip = [b[1], self.height - b[0]]
+            c_flip = [c[1], self.height - c[0]]
+            geometry2d.Triangle(a_flip,b_flip,c_flip).plot(axes, color='g')
+            
+        plt.show(block=False)
+        
+        for tri3d in triangles3d:
+            tri3d.plot(self.sim, color=(1,0,0))
+        
+        for pyramid in pyramids:
+            pyramid.plot(self.sim, with_sides=True, color=(0,1,0))
+        
+        print('in truncated_view_frustum, press enter')
+        raw_input()
+#         import IPython
+#         IPython.embed()
         
     def project_triangles(self, triangles3d):
         """
@@ -141,16 +249,26 @@ class Camera:
 #  TESTS  #
 ###########
 
+def test_truncated_view_frustum():
+    sim = simulator.Simulator(view=True)
+    rarm = arm.Arm('right',sim=sim)
+    rarm.set_posture('mantis')
+    
+    cam = Camera(rarm, sim)
+    triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
+    cam.truncated_view_frustum(triangles3d)
+    
+
 def test_project_triangles():
     sim = simulator.Simulator(view=True)
     rarm = arm.Arm('right',sim=sim)
     rarm.set_posture('mantis')
     
     cam = Camera(rarm, sim)
-    #triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
-    triangles3d = [geometry3d.Triangle(cam.segment_through_pixel([1,1]).p1,
-                                       cam.segment_through_pixel([cam.height-1,cam.width-1]).p1,
-                                       cam.segment_through_pixel([1,cam.width-1]).p1)]
+    triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
+#     triangles3d = [geometry3d.Triangle(cam.segment_through_pixel([1,1]).p1,
+#                                        cam.segment_through_pixel([cam.height-1,cam.width-1]).p1,
+#                                        cam.segment_through_pixel([1,cam.width-1]).p1)]
     triangles2d = cam.project_triangles(triangles3d)
     
     for triangle3d in triangles3d:
@@ -190,6 +308,7 @@ def test_camera_teleop():
     raw_input()
 
 if __name__ == '__main__':
-    test_project_triangles()
+    test_truncated_view_frustum()
+    #test_project_triangles()
     #test_camera_teleop()
     
