@@ -56,136 +56,6 @@ class Polygon:
             x_list.append(x)
             y_list.append(y)
         axes.plot(x_list, y_list, color=color)
-
-class ImagePlane:
-    def __init__(self, p0, p1, p2, p3):
-        """
-        p0 ---- p1
-        |       |
-        p3 ---- p2
-        :param p0, p1, p2, p3: each is 2d points (list/np.array) of corners of ImagePlane
-        """
-        self.p0, self.p1, self.p2, self.p3 = np.array(p0), np.array(p1), np.array(p2), np.array(p3)
-        self.segments = [Segment(p0, p1), Segment(p1, p2), Segment(p2, p3), Segment(p3, p0)]
-        
-        # assuming ImagePlane is rectangle
-        self.halfspaces =  [Halfspace((self.p0+self.p1)/2., self.p2-self.p1),
-                            Halfspace((self.p1+self.p2)/2., self.p3-self.p2),
-                            Halfspace((self.p2+self.p3)/2., self.p0-self.p3),
-                            Halfspace((self.p3+self.p0)/2., self.p1-self.p0)]
-
-    def truncate(self, triangles):
-        
-        triangle_segments, triangle_halfspaces = list(), list()
-        for triangle in triangles:
-            triangle_segments += triangle.segments()
-            triangle_halfspaces += triangle.halfspaces()
-        
-        image_plane_segments, image_plane_halfspaces = list(), list()
-        
-        # find segments on border that are not in a triangle
-        sort_keys = [lambda p: p[0], lambda p: -p[1], lambda p: -p[0], lambda p: p[1]]
-        for segment, halfspace, sort_key in zip(self.segments, self.halfspaces, sort_keys):
-            intersections = filter(lambda x: x is not None, [segment.intersection(s) for s in triangle_segments])
-            intersections += [segment.p0, segment.p1]
-            intersections = sorted(intersections, key=sort_key)
-            
-            intersection_segments = [Segment(intersections[i], intersections[i+1]) for i in xrange(len(intersections)-1)]
-            for seg in intersection_segments:
-                crosses_triangle = max([tri.is_inside((seg.p0+seg.p1)/2.) for tri in triangles] + [False])
-                if not crosses_triangle:
-                    image_plane_segments.append(seg)
-                    image_plane_halfspaces.append(halfspace)
-                    
-        # find polygons while there still exit unused image_plane_segments
-        polygons = list()
-        while len(image_plane_segments) > 0:
-            print('Number of image plane segments left: {0}'.format(len(image_plane_segments)))
-            segments = image_plane_segments + triangle_segments
-            halfspaces = image_plane_halfspaces + triangle_halfspaces
-            
-            polygon, segments_used = self.find_polygon(segments, halfspaces, segments[0], halfspaces[0])
-            polygons.append(polygon)
-            
-            # filter out used segments from image_plane_segments
-            new_image_plane_segments, new_image_plane_halfspaces = list(), list()
-            for segment, halfspace in zip(image_plane_segments, image_plane_halfspaces):
-                if segment not in segments_used:
-                    new_image_plane_segments.append(segment)
-                    new_image_plane_halfspaces.append(halfspace)
-                    
-            image_plane_segments = new_image_plane_segments
-            image_plane_halfspaces = new_image_plane_halfspaces
-            
-        return polygons
-        
-            
-    def find_polygon(self, segments, halfspaces, start_segment, start_halfspace):
-        curr_segment = start_segment
-        curr_halfspace = start_halfspace
-        curr_point = start_segment.p0
-        
-        start_point = curr_point
-        points = [start_point]
-        
-        segments_used = list()
-        
-        while True:
-            print('\nCurrent segment: ({0}, {1})'.format(curr_segment.p0, curr_segment.p1))
-            print('Current point: {0}'.format(curr_point))
-            
-            # find intersecting segment closest to curr_point
-            closest_dist = np.inf
-            intersect_segment, intersect_halfspace, intersect_point = None, None, None
-            
-            for other_segment, other_halfspace in zip(segments, halfspaces):
-                if curr_halfspace != other_halfspace: # make sure not comparing to current segment
-                    intersection = curr_segment.intersection(other_segment)
-                    if intersection is not None:
-                        dist = np.linalg.norm(intersection - curr_point)
-                        if dist > epsilon and dist < closest_dist:
-                            closest_dist = dist
-                            intersect_segment = other_segment
-                            intersect_halfspace = other_halfspace
-                            intersect_point = intersection
-                            
-            assert intersect_segment is not None
-            segments_used.append(intersect_segment)
-            
-            print('Intersecting segment: ({0}, {1})'.format(intersect_segment.p0, intersect_segment.p1))
-            print('Intersect point: {0}'.format(intersect_point))
-            
-            # move along intersecting segment in direction of the normal
-            if curr_halfspace.contains(intersect_segment.p0):
-                next_segment = Segment(intersect_point, intersect_segment.p0)
-            elif curr_halfspace.contains(intersect_segment.p1):
-                next_segment = Segment(intersect_point, intersect_segment.p1)
-            else:
-                next_segment = intersect_segment
-                
-            next_halfspace = intersect_halfspace
-            next_point = intersect_point
-            
-            # if back at the start, have found the whole polygon
-            if np.linalg.norm(next_point - start_point) < epsilon:
-                break
-            points.append(next_point)
-            
-            curr_segment, curr_halfspace, curr_point = next_segment, next_halfspace, next_point
-            
-            #print('Press enter')
-            #raw_input()
-            
-        return Polygon(points), segments_used
-    
-    def plot(self, axes, color='r'):
-        """
-        :param axes: pyplot axes
-        :param color: character or (r,g,b) [0,1]
-        """
-        for segment in self.segments:
-            segment.plot(axes, color=color)
-            
             
 
 class Triangle:
@@ -204,7 +74,7 @@ class Triangle:
             return None
         
         min_pt, min_dist = None, np.inf
-        for s in self.segments():
+        for s in self.segments:
             s_min_pt = s.closest_point_to(x)
             if np.linalg.norm(x - s_min_pt) < min_dist:
                 min_dist = np.linalg.norm(x - s_min_pt)
@@ -217,15 +87,16 @@ class Triangle:
         :param x: 2d list or np.array
         :return True if x is inside, else False
         """
-        total_area = self.area()
-        area0 = Triangle(self.a, self.b, x).area()
-        area1 = Triangle(self.b, self.c, x).area()
-        area2 = Triangle(self.c, self.a, x).area()
+        total_area = self.area
+        area0 = Triangle(self.a, self.b, x).area
+        area1 = Triangle(self.b, self.c, x).area
+        area2 = Triangle(self.c, self.a, x).area
         
         is_correct_area = np.abs(total_area - (area0 + area1 + area2)) < epsilon
         
         return is_correct_area
     
+    @property
     def area(self):
         """
         :return float area
@@ -233,18 +104,21 @@ class Triangle:
         a, b, c = self.a, self.b, self.c
         return np.abs((c[0]*(a[1] - b[1]) + a[0]*(b[1] - c[1]) + b[0]*(c[1] - a[1])) / 2.0)
         
+    @property
     def vertices(self):
         """
         :return Triangle corners
         """
         return (self.a, self.b, self.c)
         
+    @property
     def segments(self):
         """
         :return [edge0, edge1, edge2]
         """
         return (Segment(self.a, self.b), Segment(self.b, self.c), Segment(self.c, self.a))
     
+    @property
     def halfspaces(self):
         """
         halfspaces of edges pointing outwards
@@ -361,12 +235,6 @@ class Segment:
         """
         a = self.p1 - self.p0
         b = other.p1 - other.p0
-        
-#         sin_theta = np.linalg.norm(np.cross(a, b) / (np.linalg.norm(a)*np.linalg.norm(b)))
-#         return np.arcsin(sin_theta)
-
-#         cos_theta = np.linalg.norm(np.dot(a, b)) / (np.linalg.norm(a)*np.linalg.norm(b))
-#         return np.arccos(cos_theta)
 
         theta = np.arctan2(a[0]*b[1] - a[1]*b[0], a[0]*b[0] + a[1]*b[1])
         return theta
@@ -438,80 +306,10 @@ class Halfspace:
 #  TESTS  #
 ###########
 
-def test_delaunay():
-    from matplotlib import delaunay
-    
-    points = [(0,0), (10,0), (10,10), (0,10),
-              (5,5), (8,3), (9,6)]
-    
-    x = [p[0] for p in points]
-    y = [p[1] for p in points]
-    
-    circumcenters, edges, tri_points, tri_neighbors = delaunay.delaunay(x,y)
-    
-    triangles = list()
-    for indices in tri_points:
-        p0 = points[indices[0]]
-        p1 = points[indices[1]]
-        p2 = points[indices[2]]
-        triangles.append(Triangle(p0, p1, p2))
-    
-    fig = plt.figure()
-    axes = fig.add_subplot(111)
-    
-    for tri in triangles:
-        tri.plot(axes, color='b')
-
-    xmin, xmax = plt.xlim()
-    ymin, ymax = plt.ylim()
-    plt.xlim((xmin-1, xmax+1))
-    plt.ylim((ymin-1, ymax+1))
-        
-    plt.show(block=False)
-    
-    import IPython
-    IPython.embed()
-
-def test_image_plane_truncate():
-    image_plane = ImagePlane([0,10],[10,10],[10,0],[0,0])
-    triangles = [Triangle.random(-2,12,-2,12) for i in xrange(5)]
-    
-    fig = plt.figure()
-    axes = fig.add_subplot(111)
-    
-    image_plane.plot(axes, color='r')
-    for tri in triangles:
-        tri.plot(axes, color='b')
-    
-    xmin, xmax = plt.xlim()
-    ymin, ymax = plt.ylim()
-    plt.xlim((xmin-1, xmax+1))
-    plt.ylim((ymin-1, ymax+1))
-        
-    plt.show(block=False)
-        
-    print('Image plane and triangles')
-    print('Press enter to view truncation')
-    raw_input()
-    
-    polygons = image_plane.truncate(triangles)
-    
-    axes.clear()
-    for polygon in polygons:
-        polygon.plot(axes, color='c')
-        
-    plt.xlim((xmin-1, xmax+1))
-    plt.ylim((ymin-1, ymax+1))
-    
-    plt.show(block=False)
-    
-    print('Press enter')
-    raw_input()
-
 def test_triangle_halfspaces():
     #tri = Triangle([1,1],[2,1],[0,0])
     tri = Triangle([0,0],[1,0],[0,1])
-    hspaces = tri.halfspaces()
+    hspaces = tri.halfspaces
     
     fig = plt.figure()
     axes = fig.add_subplot(111)
@@ -553,6 +351,4 @@ def test_plotting():
 if __name__ == '__main__':
     #test_plotting()
     #test_triangulate()
-    #test_triangle_halfspaces()
-    test_image_plane_truncate()
-    #test_delaunay()
+    test_triangle_halfspaces()

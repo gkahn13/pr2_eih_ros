@@ -65,13 +65,24 @@ class Simulator:
     # frame methods #
     #################
         
-    def transform_from_to(self, pose_mat_in_ref, ref_link_name, targ_link_name):
+    def transform_from_to(self, p, ref_link_name, targ_link_name):
         """
-        :param pose_mat_in_ref: 4x4 np.array
+        :param p: 4x4 or 3d np.array
         :param ref_link_name: string
         :param targ_link_name: string
         """
-        pose_mat_in_ref = np.array(pose_mat_in_ref)
+        p = np.array(p)
+        shape = p.shape
+        if len(shape) == 1 and shape[0] == 3:
+            pose_mat_in_ref = np.eye(4)
+            pose_mat_in_ref[:3,3] = p
+            is_position = True
+        elif len(shape) == 2 and shape == (4,4):
+            pose_mat_in_ref = p
+            is_position = False
+        else:
+            print('Incorrect array size in transform_from_to')
+            return p
         
         # ref -> world
         if ref_link_name != 'world':
@@ -88,8 +99,12 @@ class Simulator:
         # target -> ref
         targ_from_ref = np.dot(np.linalg.inv(targ_from_world), ref_from_world)
     
-        pose_mat_in_targ = np.dot(targ_from_ref, pose_mat_in_ref)
-        return np.array(pose_mat_in_targ)
+        pose_mat_in_targ = np.array(np.dot(targ_from_ref, pose_mat_in_ref))
+        
+        if is_position:
+            return pose_mat_in_targ[:3,3]
+        else:
+            return pose_mat_in_targ
     
     def transform_relative_pose_for_ik(self, manip, matrix4, ref_frame, targ_frame):
         """

@@ -52,10 +52,11 @@ class Pyramid:
         """
         p = np.array(p)
         
-        halfspaces = self.get_halfspaces()
+        halfspaces = self.halfspaces
         return np.min([h.contains(p) for h in halfspaces])    
     
-    def get_halfspaces(self):
+    @property
+    def halfspaces(self):
         """
         :return list of halfspaces representing outward-pointing faces
         """
@@ -74,15 +75,19 @@ class Pyramid:
         
         return [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
     
-    def plot(self, sim, with_sides=True, color=(1,0,0)):
+    def plot(self, sim, frame='world', with_sides=True, color=(1,0,0)):
         """
         Plots edges of the pyramid
         
         :param sim: Simulator instance
+        :param frame: frame in which points are defined in
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
         """
-        base, a, b, c = self.base, self.a, self.b, self.c
+        base = sim.transform_from_to(self.base, frame, 'world')
+        a = sim.transform_from_to(self.a, frame, 'world')
+        b = sim.transform_from_to(self.b, frame, 'world')
+        c = sim.transform_from_to(self.c, frame, 'world')
         
         if with_sides:
             sim.plot_segment(base, a, color=color)
@@ -115,10 +120,11 @@ class RectangularPyramid:
         """
         p = np.array(p)
         
-        halfspaces = self.get_halfspaces()
+        halfspaces = self.halfspaces
         return np.min([h.contains(p) for h in halfspaces])
     
-    def get_halfspaces(self):
+    @property
+    def halfspaces(self):
         """
         :return list of halfspaces representing outward-pointing faces
         """
@@ -146,14 +152,14 @@ class RectangularPyramid:
         :return list of Triangle
         """
         triangles = [triangle]
-        for halfspace in self.get_halfspaces():
+        for halfspace in self.halfspaces:
             new_triangles = list()
             # clip all triangles against the halfspace
             for tri in triangles:
-                hyperplane = halfspace.hyperplane()
-                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments()])
+                hyperplane = halfspace.hyperplane
+                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments])
                 assert len(intersections) == 0 or len(intersections) == 2
-                inside_vertices = [vertex for vertex in tri.vertices() if halfspace.contains(vertex)]
+                inside_vertices = [vertex for vertex in tri.vertices if halfspace.contains(vertex)]
                 if len(intersections) == 2:
                     assert len(inside_vertices) == 1 or len(inside_vertices) == 2
                     if len(inside_vertices) == 1:
@@ -176,14 +182,19 @@ class RectangularPyramid:
             
         return triangles
     
-    def plot(self, sim, with_sides=True, color=(1,0,0)):
+    def plot(self, sim, frame='world', with_sides=True, color=(1,0,0)):
         """
         Plots edges of the pyramid
         :param sim: Simulator instance
+        :param frame: frame in which points are defined in
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
         """
-        base, a, b, c, d = self.base, self.a, self.b, self.c, self.d
+        base = sim.transform_from_to(self.base, frame, 'world')
+        a = sim.transform_from_to(self.a, frame, 'world')
+        b = sim.transform_from_to(self.b, frame, 'world')
+        c = sim.transform_from_to(self.c, frame, 'world')
+        d = sim.transform_from_to(self.d, frame, 'world')
         
         if with_sides:
             sim.plot_segment(base, a)
@@ -195,30 +206,6 @@ class RectangularPyramid:
         sim.plot_segment(b, c)
         sim.plot_segment(c, d)
         sim.plot_segment(d, a)
-        
-class Polygon:
-    """ Simple polygon """
-    def __init__(self, points):
-        """
-        :param points: [[x0,y0,z0],[x1,y1,z1],...]
-        """
-        self.points = points
-        
-    def segments(self):
-        segment_list = list()
-        for i in xrange(len(points)):
-            segment_list.append(Segment(self.points[i], self.points[i+1]))
-        segment_list.append(Segment(self.points[-1], self.points[0]))
-        return segment_list
-    
-    def plot(self, sim, color=(1,0,0)):
-        """
-        :param sim: Simulator instance
-        :param color: (r,g,b) [0,1]
-        """
-        for segment in self.segments():
-            segment.plot(sim, color=color)
-
     
 class Triangle:
     def __init__(self, a, b, c):
@@ -300,24 +287,27 @@ class Triangle:
         :param segment: 3d line segment
         :return 3d np.array if intersection, else None
         """
-        intersection = self.hyperplane().intersection(segment)
+        intersection = self.hyperplane.intersection(segment)
         if intersection is not None and np.linalg.norm(intersection - self.closest_point_to(intersection)) < epsilon:
             return intersection
         
         return None
     
+    @property
     def vertices(self):
         """
         :return list of np.array points
         """
         return [self.a, self.b, self.c]
         
+    @property
     def segments(self):
         """
         :return list of Segment
         """
         return [Segment(self.a, self.b), Segment(self.b, self.c), Segment(self.c, self.a)]
         
+    @property
     def hyperplane(self):
         """
         Returns hyperplane that this triangle is embedded in
@@ -328,22 +318,28 @@ class Triangle:
         normal = np.cross(self.a-self.b, self.a-self.c)
         return Hyperplane(origin, normal)
     
+    @property
     def area(self):
         """
         :return area of the triangle
         """
         tri_rot, rot = self.align_with([0,0,1])
         tri_2d = geometry2d.Triangle(tri_rot.a[:2], tri_rot.b[:2], tri_rot.c[:2])
-        return tri_2d.area()
+        return tri_2d.area
         
-    def plot(self, sim, color=(1,0,0)):
+    def plot(self, sim, frame='world', color=(1,0,0)):
         """
         :param sim: Simulator instance
+        :param frame: frame in which points are defined in
         :param color: (r,g,b) [0,1]
         """
-        sim.plot_segment(self.a, self.b, color)
-        sim.plot_segment(self.b, self.c, color)
-        sim.plot_segment(self.c, self.a, color)
+        a = sim.transform_from_to(self.a, frame, 'world')
+        b = sim.transform_from_to(self.b, frame, 'world')
+        c = sim.transform_from_to(self.c, frame, 'world')
+        
+        sim.plot_segment(a, b, color)
+        sim.plot_segment(b, c, color)
+        sim.plot_segment(c, a, color)
     
 class Segment:
     def __init__(self, p0, p1):
@@ -401,12 +397,15 @@ class Segment:
         else:
             return None
             
-    def plot(self, sim, color=(1,0,0)):
+    def plot(self, sim, frame='world', color=(1,0,0)):
         """
         :param axes: pyplot axes
+        :param frame: frame in which points are defined in
         :param color: character or (r,g,b) [0,1]
         """
-        sim.plot_segment(self.p0, self.p1, color=color)
+        p0 = sim.transform_from_to(self.p0, frame, 'world')
+        p1 = sim.transform_from_to(self.p1, frame, 'world')
+        sim.plot_segment(p0, p1, color=color)
         
     
 class Halfspace:
@@ -421,20 +420,23 @@ class Halfspace:
         """
         return np.dot(self.normal, np.array(x) - self.origin) >= epsilon
     
+    @property
     def hyperplane(self):
         """
         :return Hyperplane that defines Halfspace
         """
         return Hyperplane(self.origin, self.normal)
     
-    def plot(self, sim, color=(0,0,1)):
+    def plot(self, sim, frame='world', color=(0,0,1)):
         """
         Plots the normal
         
         :param sim: Simulator instance
+        :param frame: frame in which points are defined in
         :param color: (r,g,b) [0,1]
         """
-        o, n = self.origin, self.normal
+        o = sim.transform_from_to(self.origin, frame, 'world')
+        n = sim.transform_from_to(self.normal, frame, 'world')
         sim.plot_segment(o, o + .05*n, color=color)
     
 class Hyperplane:
@@ -520,7 +522,7 @@ def test_pyramid_inside():
     pyramid = Pyramid(base, a, b, c)
     pyramid.plot(sim)
     
-    halfspaces = pyramid.get_halfspaces()
+    halfspaces = pyramid.halfspaces
     for h in halfspaces:
         h.plot(sim)
         
