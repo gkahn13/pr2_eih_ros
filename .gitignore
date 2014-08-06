@@ -5,4 +5,4 @@ tfx/
 .cproject
 .project
 *.cbp
-*.layout
+*.layout*

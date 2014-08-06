@@ -354,27 +354,8 @@ int main (int argc, char** argv) {
 		std::cout << "distances: " << tsdf_vector.size() << std::endl;
 		std::cout << "weights: " << tsdf_weights.size() << std::endl;
 
-        /*
-        // write the vector of signed-distance values
-		std::ofstream tsdf_output_file("./kinfu_tsdf.txt");
-//        std::ostream_iterator<float> float_iterator(tsdf_output_file, "\n");
-//        std::copy(tsdf_vector.begin(), tsdf_vector.end(), float_iterator);
-        int i;
-        for (i = 0; i < tsdf_vector.size(); i++) {
-            tsdf_output_file << tsdf_vector[i] << "\n";
-        }
-        tsdf_output_file.close();
 
-        // write the vector of weights
-        std::ofstream weights_output_file("./kinfu_weights.txt");
-//        std::ostream_iterator<short> weight_iterator(weights_output_file, "\n");
-//        std::copy(tsdf_weights.begin(), tsdf_weights.end(), weight_iterator);
-        for (i = 0; i < tsdf_weights.size(); i++) {
-            weights_output_file << tsdf_weights[i] << "\n";
-        }
-        weights_output_file.close();
-        */
-
+        // write the vectors as binary data
 
         std::ofstream dist_out;
         const char* dist_pointer = reinterpret_cast<const char*>(&tsdf_vector[0]);
