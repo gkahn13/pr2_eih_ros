@@ -1,5 +1,4 @@
 <launch>
-  <node pkg="tf" type="static_transform_publisher" name="static3"
-  args="-0.106925711716 -0.00652973239027 -0.0566985277547 0.501389436235 0.466364575859 0.509987956093 0.520600614921
-  r_gripper_tool_frame camera_rgb_optical_frame 10" />
+  <node pkg="tf" type="static_transform_publisher" name="static3" 
+  args="-0.124299390779 -0.00993376045504 -0.0710202918961 0.526284307668 0.485007358544 0.499517824817 0.488133826271 r_gripper_tool_frame camera_rgb_optical_frame 10" />
 </launch>

@@ -55,6 +55,18 @@ class Pyramid:
         halfspaces = self.halfspaces
         return np.min([h.contains(p) for h in halfspaces])    
     
+    def signed_distance(self, point):
+        """
+        :param 3d point as list or np.array
+        :return float signed-distance
+        """
+        point = np.array(point)
+        
+        sign = -1 if self.is_inside(point) else 1
+        dist = min([tri.distance_to(point) for tri in self.faces])
+        
+        return sign*dist
+    
     @property
     def halfspaces(self):
         """
@@ -74,6 +86,16 @@ class Pyramid:
         normals = [n/np.linalg.norm(n) for n in normals]
         
         return [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
+    
+    @property
+    def faces(self):
+        """
+        :return list of Triangle representing the faces of the pyramid
+        """
+        return [Triangle(self.base, self.a, self.b),
+                Triangle(self.base, self.b, self.c),
+                Triangle(self.base, self.c, self.a),
+                Triangle(self.a, self.b, self.c)]
     
     def plot(self, sim, frame='world', with_sides=True, color=(1,0,0)):
         """
@@ -583,10 +605,52 @@ def test_point():
     print('len(s): {0}'.format(len(s)))
     print('s:\n{0}'.format(s))
          
+def test_pyramid_sd():
+    from pr2_sim import simulator
+    
+    sim = simulator.Simulator(view=True)
+    
+    base = [1,0,0]
+    a = [1.5, .5, 2]
+    b = [.5, .5, 2]
+    c = [.5, -.5, 2]
+    
+    pyramid = Pyramid(base, a, b, c)
+    pyramid.plot(sim, frame='base_link')
+    
+    halfspaces = pyramid.halfspaces
+    for h in halfspaces:
+        h.plot(sim)
+        
+    pos_step = .01
+    delta_position = {'a' : [0, pos_step, 0],
+                      'd' : [0, -pos_step, 0],
+                      'w' : [pos_step, 0, 0],
+                      'x' : [-pos_step, 0, 0],
+                      '+' : [0, 0, pos_step],
+                      '-' : [0, 0, -pos_step]}
+    point = np.array(base, dtype=float)
+    
+    print('Move point around with keyboard to test signed-distance')
+    char = ''
+    while char != 'q':
+        char = utils.Getch.getch()
+        
+        sim.clear_plots(1)
+        if delta_position.has_key(char):
+            point += np.array(delta_position[char])
+        sim.plot_point(sim.transform_from_to(point, 'base_link', 'world'), size=.02, color=(0,1,0))
+        
+        is_inside = pyramid.is_inside(point)
+        sd = pyramid.signed_distance(point)
+        print('is inside: {0}'.format(is_inside))
+        print('sd: {0}\n'.format(sd))
+
 if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()
     #test_distance_to_plot()
     #test_pyramid_inside()
     #test_clip_triangle()
-    test_point()
+    #test_point()
+    test_pyramid_sd()

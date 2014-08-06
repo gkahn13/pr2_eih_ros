@@ -10,6 +10,7 @@ import time
 
 from geometry import geometry2d, geometry3d
 from pr2_sim import simulator, arm
+from utils import utils
 
 # height=640., width=480., focal_length=.01, fx=480.*2., fy=640.*2., cx=480./2. + 0.5, cy=640./2. + 0.5
 wrist_to_hand = tfx.transform((-0.106925711716, -0.00652973239027, -0.0566985277547),
@@ -95,11 +96,12 @@ class Camera:
     # calculate frustum #
     #####################
     
-    def truncated_view_frustum(self, triangles3d):
+    def truncated_view_frustum(self, triangles3d, plot=False):
         """
         Truncates the view frustum against environment triangles
         
         :param triangles3d: list of geometry3d.Triangle with points in frame 'base_link'
+        :param plot: if True, plots in 3d (OpenRAVE) and 2d (matplotlib)
         :return list of geometry3d.Pyramid
         """
         start_time = time.time()
@@ -178,7 +180,7 @@ class Camera:
             for tri2d in new_partition_triangles2d:
                 segments2d.update(tri2d.segments)
                 
-            if sum([tri2d.area for tri2d in partition_triangles2d]) > self.width*self.height:
+            if sum([tri2d.area for tri2d in partition_triangles2d]) >= self.width*self.height:
                 break
             
         # now that we have tesselated the projection into triangles
@@ -211,49 +213,46 @@ class Camera:
                 pyramids3d.append(geometry3d.Pyramid(camera_position, vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1))
             
                 
-        
-        
-        print('Total time: {0}'.format(time.time() - start_time))
-        total_area = sum([tri2d.area for tri2d in partition_triangles2d])
-        print('Total area (should be {0}): {1}'.format(self.width*self.height, total_area))
+        if plot:
+            print('Total time: {0}'.format(time.time() - start_time))
+            total_area = sum([tri2d.area for tri2d in partition_triangles2d])
+            print('Total area (should be {0}): {1}'.format(self.width*self.height, total_area))
+                
+            self.plot(frame='base_link')
+            for tri3d in triangles3d:
+                tri3d.plot(self.sim, frame='base_link', color=(1,0,0))
+                
+            for pyramid in pyramids3d:
+                pyramid.plot(self.sim, frame='base_link', with_sides=False, color=(0,1,0))
             
-        #################                    
-        # TEMP plotting #
-        #################
-        self.plot(frame='base_link')
-        for tri3d in triangles3d:
-            tri3d.plot(self.sim, frame='base_link', color=(1,0,0))
+            fig = plt.figure()
+            axes = fig.add_subplot(111)
             
-        raw_input()
-        for pyramid in pyramids3d:
-            pyramid.plot(self.sim, frame='base_link', with_sides=False, color=(0,1,0))
-        
-        fig = plt.figure()
-        axes = fig.add_subplot(111)
-        
-        for tri2d in triangles2d:
-            for segment in tri2d.segments:
-                p0, p1 = segment.p0, segment.p1
-                p0_flip = [p0[1], self.height - p0[0]]
-                p1_flip = [p1[1], self.height - p1[0]]
-                axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=2.0)
-             
-        axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
-        
-        for pt2d in points2d:
-            axes.plot(pt2d.p[1], self.height - pt2d.p[0], 'rx', markersize=10.0)
+            for tri2d in triangles2d:
+                for segment in tri2d.segments:
+                    p0, p1 = segment.p0, segment.p1
+                    p0_flip = [p0[1], self.height - p0[0]]
+                    p1_flip = [p1[1], self.height - p1[0]]
+                    axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=2.0)
+                 
+            axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
             
-        plt.xlim((-10, self.width+10))
-        plt.ylim((-10, self.height+10))
-        
-        colors = plt.cm.hsv(np.linspace(0, 1, len(partition_triangles2d)))
-        for i, tri2d in enumerate(partition_triangles2d):
-            x = [p[1] for p in tri2d.vertices]
-            y = [self.height - p[0] for p in tri2d.vertices]
-            axes.fill(x, y, color=colors[i])
-        
-        plt.show(block=False)
-        #################
+            for pt2d in points2d:
+                axes.plot(pt2d.p[1], self.height - pt2d.p[0], 'rx', markersize=10.0)
+                
+            plt.xlim((-10, self.width+10))
+            plt.ylim((-10, self.height+10))
+            
+            colors = plt.cm.hsv(np.linspace(0, 1, len(partition_triangles2d)))
+            for i, tri2d in enumerate(partition_triangles2d):
+                x = [p[1] for p in tri2d.vertices]
+                y = [self.height - p[0] for p in tri2d.vertices]
+                axes.fill(x, y, color=colors[i])
+            
+            plt.show(block=False)
+            
+        return pyramids3d
+            
         
     def project_triangles(self, triangles3d):
         """
@@ -271,7 +270,21 @@ class Camera:
             triangles2d.append(geometry2d.Triangle(a_proj, b_proj, c_proj))
             
         return triangles2d
-                                
+                         
+    ###################
+    # signed distance #
+    ###################
+    
+    def signed_distance(self, point, truncated_frustum):
+        """
+        Calculates signed-distance of point to truncated view frustum
+        
+        :param point: tfx.point/np.array
+        :param truncated_frustum: list of geometry3d.Pyramid
+        :return float signed-distance
+        """
+        point = tfx.point(point).array
+        return min([pyramid3d.signed_distance(point) for pyramid3d in truncated_frustum])
     
     ##################
     # visualizations #
@@ -295,6 +308,48 @@ class Camera:
 #  TESTS  #
 ###########
 
+def test_signed_distance():
+    sim = simulator.Simulator(view=True)
+    larm = arm.Arm('left',sim=sim)
+    larm.set_posture('mantis')
+    rarm = arm.Arm('right',sim=sim)
+    rarm.set_posture('mantis')
+    
+    cam = Camera(rarm, sim)
+    #     triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
+#     triangles3d = [geometry3d.Triangle([.5,0,.5],[.8,0,.6],[.5,-.3,.9])]
+#     triangles3d = [geometry3d.Triangle([np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
+    table_center = np.array([.2,.7,.5])
+    triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
+                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
+                   geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-1.2,0]))]
+    truncated_frustum = cam.truncated_view_frustum(triangles3d, plot=True)
+    
+    pos_step = .01
+    delta_position = {'a' : [0, pos_step, 0],
+                      'd' : [0, -pos_step, 0],
+                      'w' : [pos_step, 0, 0],
+                      'x' : [-pos_step, 0, 0],
+                      '+' : [0, 0, pos_step],
+                      '-' : [0, 0, -pos_step]}
+    point = tfx.point(table_center)
+    
+    print('Move point around with keyboard to test signed-distance')
+    char = ''
+    while char != 'q':
+        char = utils.Getch.getch()
+        
+        sim.clear_plots(1)
+        if delta_position.has_key(char):
+            point += delta_position[char]
+        sim.plot_point(sim.transform_from_to(point.array, 'base_link', 'world'), size=.02, color=(0,0,1))
+        
+        sd = cam.signed_distance(point, truncated_frustum)
+        print('sd: {0}'.format(sd))
+
+
 def test_truncated_view_frustum():
     sim = simulator.Simulator(view=True)
     larm = arm.Arm('left',sim=sim)
@@ -312,7 +367,9 @@ def test_truncated_view_frustum():
     triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
                    geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
                    geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-.9,0]))]
-    cam.truncated_view_frustum(triangles3d)
+    
+    
+    cam.truncated_view_frustum(triangles3d, plot=True)
     
     print('Press enter to exit')
     raw_input()
@@ -367,7 +424,8 @@ def test_camera_teleop():
     raw_input()
 
 if __name__ == '__main__':
-    test_truncated_view_frustum()
+    test_signed_distance()
+    #test_truncated_view_frustum()
     #test_project_triangles()
     #test_camera_teleop()
     

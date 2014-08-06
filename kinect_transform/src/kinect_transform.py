@@ -70,7 +70,7 @@ def kinect_transform_publisher():
     transform = transforms[0]
     for i in range(1, len(transforms)):
         transform = transform.interpolate(transforms[i], 1 / len(transforms))
-    transform.child = "hand_kinect_optical_frame"
+    transform.child = "camera_rgb_optical_frame"
     print transform
     rospack = rospkg.RosPack()
     os.chdir(rospack.get_path("kinect_transform"))
