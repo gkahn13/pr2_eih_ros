@@ -16,18 +16,41 @@
 
 #include <pcl/io/pcd_io.h>
 
+#include <pointcloud_voxel_grid.h>
+
 
 int main(int argc, char** argv)
 {
     if (argc < 4)
     {
-        std::cerr << "Not enough arguments! Please specify two input and one output files" << std::endl;
+        std::cerr << "Not enough arguments! Please specify at least two input and one output files" << std::endl;
         exit(1);
     }
 
     char* infile1 = argv[1];
     char* infile2 = argv[2];
-    char* outfile = argv[3];
+    char* outfile1 = argv[3];
+    // if inverse is true, will output foreground cloud and inverse cloud
+    // if false, will only output the zero crossing pointcloud
+    bool inverse = false;
+    char* outfile2 = "";
+    char* outfile3 = "";
+    if (argc >= 6) {
+        outfile2 = argv[4];
+        outfile3 = argv[5];
+        inverse = true;
+    }
+
+    int jump = 4;
+    if (argc >= 7) {
+        jump = std::atoi(argv[6]);
+    }
+
+    double voxel_size = 0.02;
+    if (argc >= 8) {
+        voxel_size = std::atof(argv[7])
+    }
+
 
 
     std::vector<float> tsdf_distances;
@@ -59,9 +82,9 @@ int main(int argc, char** argv)
     double resolution = 512;
     double size = 2;
 
-    pcl::PointCloud<pcl::PointXYZ> new_cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 
-    int jump = 4;
     for (int z = 0; z < resolution; z = z + jump) {
         for (int y = 0; y < resolution; y = y + jump) {
             for (int x = 0; x < resolution; x = x + jump) {
@@ -71,18 +94,33 @@ int main(int argc, char** argv)
                 current.x = x * size / resolution;
                 current.y = y * size / resolution;
                 current.z = z * size / resolution;
-                if (current_weight > 0 && current_distance < 0.5) {
-                    new_cloud.push_back(current);
+
+                if (current_weight > 0 && current_distance > 0.2 && current_distance < 0.8) {
+                    zero_crossing_cloud->push_back(current);
+                }
+
+                if (inverse && current_weight > 0 && current_distance > 0.5) {
+                    foreground_cloud->push_back(current);
                 }
             }
         }
     }
 
 
-    std::cout << "cloud height: " << new_cloud.height << std::endl;
-    std::cout << "cloud width: " << new_cloud.width << std::endl;
+    //std::cout << "cloud height: " << new_cloud->height << std::endl;
+    //std::cout << "cloud width: " << new_cloud->width << std::endl;
 
-    pcl::io::savePCDFileASCII(outfile, new_cloud);
+    pcl::io::savePCDFileASCII(outfile1, *zero_crossing_cloud);
+
+
+    if (inverse) {
+        PointCloudVoxelGrid vox_grid = PointCloudVoxelGrid(foreground_cloud, 0.02);
+        PointCloudVoxelGrid::CloudType inverse_cloud = vox_grid.get_inverse_cloud();
+
+        pcl::io::savePCDFileASCII(outfile2, *foreground_cloud);
+        pcl::io::savePCDFileASCII(outfile3, inverse_cloud);
+    }
+
 
     /*
 

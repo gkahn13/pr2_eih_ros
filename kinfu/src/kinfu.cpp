@@ -48,7 +48,7 @@ typedef short WeightT;
 #define N_SUB (W_SUB*H_SUB)
 
 //#define USE_COLOR
-//#define SAVE_TSDF
+#define SAVE_TSDF
 
 boost::shared_ptr<tf::TransformListener> listener;
 ros::Publisher pub, current_pointcloud_pub, variable_pub;
@@ -325,6 +325,7 @@ int main (int argc, char** argv) {
 	std::cout << "Ready to publish clouds\n";
 	downloading = false;
 
+    int current = 1;
 	while(ros::ok()) {
 		ros::spinOnce();
 		ros::Duration(5).sleep();
@@ -357,22 +358,27 @@ int main (int argc, char** argv) {
 
         // write the vectors as binary data
 
+        std::stringstream current_stream;
+        current_stream << current;
+
         std::ofstream dist_out;
         const char* dist_pointer = reinterpret_cast<const char*>(&tsdf_vector[0]);
         size_t bytes = tsdf_vector.size() * sizeof(tsdf_vector[0]);
-        dist_out.open("kinfu_dist.dat", std::ios::out | std::ios::binary);
+        std::string dist_file = "kinfu_dist" + current_stream.str() + ".dat";
+        dist_out.open(dist_file.c_str(), std::ios::out | std::ios::binary);
         dist_out.write(dist_pointer, bytes);
         dist_out.close();
 
         std::ofstream weight_out;
         const char* weight_pointer = reinterpret_cast<const char*>(&tsdf_weights[0]);
         bytes = tsdf_weights.size() * sizeof(tsdf_weights[0]);
-        weight_out.open("kinfu_weights.dat", std::ios::out | std::ios::binary);
+
+        std::string weight_file = "kinfu_weights" + current_stream.str() + ".dat";
+        weight_out.open(weight_file.c_str(), std::ios::out | std::ios::binary);
         weight_out.write(weight_pointer, bytes);
         weight_out.close();
-
+        current++;
 		std::cout << "saved!" << std::endl;
-        exit(0);
         #endif
 
 		tsdf.fetchCloudHost(current_cloud);

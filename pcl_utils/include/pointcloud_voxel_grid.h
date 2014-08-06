@@ -13,14 +13,14 @@ class PointCloudVoxelGrid
 {
 public:
 
-    const int NOT_VISITED = 0;
-    const int VISITED = 1;
+    static const int NOT_VISITED = 0;
+    static const int VISITED = 1;
 
     typedef Eigen::Vector3i voxel;
     typedef pcl::PointXYZ PointType;
     typedef pcl::PointCloud<PointType> CloudType;
 
-    PointCloudVoxelGrid(CloudType cloud, double resolution);
+    PointCloudVoxelGrid(CloudType::Ptr cloud, double resolution);
 
     inline int get(int x, int y, int z) const
     {
@@ -51,9 +51,11 @@ public:
 
     inline void set(voxel v, int val) {
         set(v(0), v(1), v(2), val);
-    };
+    }
 
-    void set(PointType point, int val);
+    inline void set(PointType point, int val) {
+        set(point_to_voxel(point), val);
+    }
 
     inline void mark_as_seen(PointType point) {
         set(point, VISITED);
@@ -63,9 +65,9 @@ public:
 
     PointType voxel_to_point(voxel v);
 
-    PointType calculate_extremes(CloudType cloud);
+    Eigen::Matrix<double, 6, 1> calculate_extremes(CloudType::Ptr cloud);
 
-    void walk_cloud(CloudType cloud);
+    void walk_cloud(CloudType::Ptr cloud);
 
     CloudType get_inverse_cloud();
 
@@ -78,6 +80,7 @@ private:
     // these will be in the original space - i.e. meters
     Eigen::Vector3d minimum;
     Eigen::Vector3d maximum;
+    double res;
 };
 
 #endif // POINTCLOUD_VOXEL_GRID_H_INCLUDED
