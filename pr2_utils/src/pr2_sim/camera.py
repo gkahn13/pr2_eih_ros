@@ -77,7 +77,7 @@ class Camera:
         :param pixel: 2d list/np.array
         :return geometry3d.Segment (with endpoints in frame 'base_link')
         """
-        assert (0 <= pixel[0] <= self.height) and (0 <= pixel[1] <= self.width)
+        # assert (0 <= pixel[0] <= self.height) and (0 <= pixel[1] <= self.width)
         
         pixel = np.array(pixel)
         pixel_centered = pixel - np.array([self.height/2., self.width/2.])
@@ -346,7 +346,35 @@ class Camera:
             if total_area >= self.width*self.height:
                 break
             
+        
+        camera_position = self.get_pose().position.array
+        pyramids3d = list()
+        for tri2d in partition_triangles2d:
+            tri2d_vertices = tri2d.vertices()
+            center2d = sum(tri2d_vertices)/3.
             
+            center_seg3d = self.segment_through_pixel(center2d)
+            vertices_seg3d = [self.segment_through_pixel(vertex) for vertex in tri2d_vertices]
+            
+            min_dist, min_tri3d = np.inf, None
+            for tri3d in triangles3d:
+                intersection = tri3d.intersection(center_seg3d)
+                if intersection is not None:
+                    dist = np.linalg.norm(intersection - camera_position)
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_tri3d = tri3d
+                    
+            if min_tri3d is not None:
+                hyperplane3d = min_tri3d.hyperplane()
+                tri3d_intersections = [hyperplane3d.intersection(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
+                assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
+                pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
+            else:
+                pyramids3d.append(geometry3d.Pyramid(camera_position, vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1))
+            
+                
+        
         
         print('Total time: {0}'.format(time.time() - start_time))
         total_area = sum([tri2d.area() for tri2d in partition_triangles2d])
@@ -355,21 +383,31 @@ class Camera:
         #################                    
         # TEMP plotting #
         #################
-        frustum.plot(self.sim)
-        for tri3d in clipped_triangles3d:
-            tri3d.plot(self.sim, color=(0,1,0))
+        self.plot()
+        for tri3d in triangles3d:
+            geometry3d.Triangle(self.sim.transform_from_to(tfx.pose(tri3d.a).matrix,'base_link','world')[:3,3],
+                                self.sim.transform_from_to(tfx.pose(tri3d.b).matrix,'base_link','world')[:3,3],
+                                self.sim.transform_from_to(tfx.pose(tri3d.c).matrix,'base_link','world')[:3,3]).plot(self.sim, color=(1,0,0))
+            
+            
+        raw_input()
+        for pyramid in pyramids3d:
+            geometry3d.Pyramid(self.sim.transform_from_to(tfx.pose(pyramid.base).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.a).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.b).matrix,'base_link','world')[:3,3],
+                               self.sim.transform_from_to(tfx.pose(pyramid.c).matrix,'base_link','world')[:3,3]).plot(self.sim, with_sides=False, color=(0,1,0))
             
         fig = plt.figure()
         axes = fig.add_subplot(111)
         
-#         for tri2d in triangles2d:
-#             for segment in tri2d.segments():
-#                 p0, p1 = segment.p0, segment.p1
-#                 p0_flip = [p0[1], self.height - p0[0]]
-#                 p1_flip = [p1[1], self.height - p1[0]]
-#                 axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=2.0)
-#             
-#         axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
+        for tri2d in triangles2d:
+            for segment in tri2d.segments():
+                p0, p1 = segment.p0, segment.p1
+                p0_flip = [p0[1], self.height - p0[0]]
+                p1_flip = [p1[1], self.height - p1[0]]
+                axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=2.0)
+             
+        axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
         
         for pt2d in points2d:
             axes.plot(pt2d.p[1], self.height - pt2d.p[0], 'rx', markersize=10.0)
@@ -386,7 +424,7 @@ class Camera:
             axes.fill(x, y, color=colors[i])
         
             plt.show(block=False)
-            raw_input()
+#             raw_input()
         #################
                                 
     
@@ -432,7 +470,8 @@ def test_truncated_view_frustum():
 #                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
     table_center = np.array([.2,.7,.5])
     triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
-                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0]))]
+                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
+                   geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-.9,0]))]
     cam.truncated_view_frustum_new(triangles3d)
     
     print('Press enter to exit')
