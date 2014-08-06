@@ -139,8 +139,11 @@ class Camera:
                 if intersection is not None:
                     points2d.add(geometry3d.Point(intersection))
                     
+        print('len(points2d): {0}'.format(len(points2d)))
         partition_triangles2d = set()
-        for pt2d in points2d:            
+        for i, pt2d in enumerate(points2d):            
+            print('len(segments2d): {0}'.format(len(segments2d)))
+            
             # find other points that don't cross anything in segments2d
             p = pt2d.p
             points_in_los = set()
@@ -149,41 +152,33 @@ class Camera:
                 if pt2d != other_pt2d:
                     seg2d = geometry2d.Segment(p, other_p)
                     for check_seg2d in segments2d:
-                        if not seg2d.is_parallel(check_seg2d):
-                            intersection = seg2d.intersection(check_seg2d)
-                            if intersection is not None and not seg2d.is_endpoint(intersection):
-                                break
+                        intersection = seg2d.intersection(check_seg2d)
+                        if intersection is not None and not seg2d.is_endpoint(intersection):
+                            break
                     else:
                         points_in_los.add(geometry2d.Point(other_p)) 
                                 
             # sort segments by angle
-            seg2d_compare = geometry2d.Segment([0,0], [-1,0])
+            seg2d_compare = geometry2d.Segment([0,0], [1,0])
             segments2d_in_los_sorted = sorted([geometry2d.Segment(p, other.p) for other in points_in_los], key=lambda seg: seg.angle(seg2d_compare))
                 
             new_partition_triangles2d = set()
             for i in xrange(len(segments2d_in_los_sorted)-1):
-                tri2d = geometry2d.Triangle(p, segments2d_in_los_sorted[i].p1, segments2d_in_los_sorted[i+1].p1)
-                not_colliding = True
-                for tri_seg2d in tri2d.segments:
-                    for check_seg2d in segments2d:
-                        if not tri_seg2d.is_parallel(check_seg2d):
-                            intersection = tri_seg2d.intersection(check_seg2d)
-                            if intersection is not None and not tri_seg2d.is_endpoint(intersection):
-                                not_colliding = False
-                                break
-                    if not_colliding is False:
+                tri_seg2d = geometry2d.Segment(segments2d_in_los_sorted[i].p1, segments2d_in_los_sorted[i+1].p1)
+                # check top segment of triangle against segments2d
+                for check_seg2d in segments2d:
+                    intersection = tri_seg2d.intersection(check_seg2d)
+                    if intersection is not None and not tri_seg2d.is_endpoint(intersection):
                         break
-                
-                if not_colliding:        
-                    new_partition_triangles2d.add(tri2d)
+                else:        
+                    new_partition_triangles2d.add(geometry2d.Triangle(p, tri_seg2d.p0, tri_seg2d.p1))
             
             # update partition and new segments
             partition_triangles2d.update(new_partition_triangles2d)
             for tri2d in new_partition_triangles2d:
                 segments2d.update(tri2d.segments)
                 
-            total_area = sum([tri2d.area for tri2d in partition_triangles2d])
-            if total_area >= self.width*self.height:
+            if sum([tri2d.area for tri2d in partition_triangles2d]) > self.width*self.height:
                 break
             
         # now that we have tesselated the projection into triangles

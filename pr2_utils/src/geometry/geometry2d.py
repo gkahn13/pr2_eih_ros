@@ -204,6 +204,13 @@ class Segment:
         """
         p0_other, p1_other = other.p0, other.p1
         
+        # for speed, check if axis-aligned separation
+        if (max(self.p0[0], self.p1[0]) < min(p0_other[0], p1_other[0])) or \
+            (max(p0_other[0], p1_other[0]) < min(self.p0[0], self.p1[0])) or \
+            (max(self.p0[1], self.p1[1]) < min(p0_other[1], p1_other[1])) or \
+            (max(p0_other[1], p1_other[1]) < min(self.p0[1], self.p1[1])):
+            return None
+        
         # w = p1 - p0
         # v = p1_other - p0_other
         # s*w + p0 = t*v + p_other
