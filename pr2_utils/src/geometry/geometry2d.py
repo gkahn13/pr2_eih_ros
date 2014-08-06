@@ -4,6 +4,28 @@ from matplotlib import pyplot as plt
 
 epsilon = 1e-5
 
+class Point:
+    """ Allows comparing 2d points """
+    def __init__(self, p):
+        """
+        :param p: list/np.array
+        """
+        self.p = np.array(p)
+        
+    def __eq__(self, other):
+        """
+        :param other: list/np.array/Point
+        """
+        if isinstance(other, Point):
+            return np.linalg.norm(self.p - other.p) < epsilon
+        elif isinstance(other, list) or isinstance(other, np.array):
+            return np.linalg.norm(self.p - np.array(other)) < epsilon
+        return False
+    
+    def __hash__(self):
+        return 0
+    
+
 class Polygon:
     """ Simple polygon """
     def __init__(self, points):
@@ -211,6 +233,12 @@ class Triangle:
         a, b, c = self.a, self.b, self.c
         return np.abs((c[0]*(a[1] - b[1]) + a[0]*(b[1] - c[1]) + b[0]*(c[1] - a[1])) / 2.0)
         
+    def vertices(self):
+        """
+        :return Triangle corners
+        """
+        return (self.a, self.b, self.c)
+        
     def segments(self):
         """
         :return [edge0, edge1, edge2]
@@ -245,68 +273,29 @@ class Triangle:
         """
         axes.plot([self.a[0], self.b[0], self.c[0], self.a[0]], [self.a[1], self.b[1], self.c[1], self.a[1]], color=color)
         
+    def __eq__(self, other):
+        """
+        :param other: Triangle
+        :return True if other's points within epsilon distance
+        """
+        points = sorted(sorted([self.a, self.b, self.c], key=lambda x: x[0]), key=lambda x: x[1])
+        other_points = sorted(sorted([other.a, other.b, other.c], key=lambda x: x[0]), key=lambda x: x[1])
+        
+        for point, other_point in zip(points, other_points):
+            if np.linalg.norm(point - other_point) > epsilon:
+                return False
+            
+        return True
+    
+    def __hash__(self):
+        return 0 
+        
     @staticmethod
     def random(min_x, max_x, min_y, max_y):
         return Triangle([np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
                         [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)],
                         [np.random.uniform(min_x, max_x), np.random.uniform(min_y, max_y)])
-     
-# class Line:
-#     def __init__(self, p0, p1):
-#         self.p0, self.p1 = np.array(p0), np.array(p1)
-#          
-#     def closest_point_to(self, x):
-#         """
-#         min ||t*(p1-p0) + p0 - x||_{2}^{2}
-#         
-#         :param x: 2d list or np.array
-#         :return 2d np.array of closest point on line to x
-#         """
-#         x = np.array(x)
-#         v = self.p1 - self.p0
-#         b = self.p0 - x
-#         
-#         t = -np.dot(v, b) / np.dot(v, v)
-#         closest = t*(self.p1 - self.p0) + self.p0
-#         return closest
-#             
-#     def intersection(self, other):
-#         """
-#         Finds intersection point with another segment
-#         :param other: Segment
-#         :return None if no intersection, else [x,y] of intersection 
-#         """
-#         p0_other, p1_other = other.p0, other.p1
-#         
-#         # w = p1 - p0
-#         # v = p1_other - p0_other
-#         # s*w + p0 = t*v + p_other
-#         
-#         w = self.p1 - self.p0
-#         v = p1_other - p0_other
-#         
-#         A = np.vstack((w,v)).T
-#         b = p0_other - self.p0
-#         
-#         if np.abs(np.linalg.det(A)) < epsilon:
-#             return None
-#         
-#         soln = np.linalg.solve(A, b)
-#         s, t = soln[0], -soln[1]
-#         
-#         intersection = s*w + self.p0
-#         
-#         if ((-epsilon <= s) and (s <= 1+epsilon) and (-epsilon <= t) and (t <= 1+epsilon)):
-#             return intersection
-#         else:
-#             return None
-#             
-#     def plot(self, axes, color='r'):
-#         """
-#         :param axes: pyplot axes
-#         :param color: character or (r,g,b) [0,1]
-#         """
-#         axes.plot([self.p0[0], self.p1[0]], [self.p0[1], self.p1[1]], color=color)
+
         
 class Segment:
     def __init__(self, p0, p1):
@@ -364,12 +353,43 @@ class Segment:
         else:
             return None
         
+    def angle(self, other):
+        """
+        Finds vector angle between this and other
+        :param other: Segment
+        :return float [-pi, pi]
+        """
+        a = self.p1 - self.p0
+        b = other.p1 - other.p0
+        
+#         sin_theta = np.linalg.norm(np.cross(a, b) / (np.linalg.norm(a)*np.linalg.norm(b)))
+#         return np.arcsin(sin_theta)
+
+#         cos_theta = np.linalg.norm(np.dot(a, b)) / (np.linalg.norm(a)*np.linalg.norm(b))
+#         return np.arccos(cos_theta)
+
+        theta = np.arctan2(a[0]*b[1] - a[1]*b[0], a[0]*b[0] + a[1]*b[1])
+        return theta
+        
     def is_endpoint(self, point):
         """
         :param point: 2d np.array
         :return True if point is an endpoint of the segment
         """
         return np.linalg.norm(self.p0 - point) < epsilon or np.linalg.norm(self.p1 - point) < epsilon
+    
+    def is_parallel(self, other):
+        """
+        :param other: Segment
+        :return True if segments are parallel
+        """
+        slope = self.p1 - self.p0
+        slope /= np.linalg.norm(slope)
+        
+        other_slope = other.p1 - other.p0
+        other_slope /= np.linalg.norm(other_slope)
+        
+        return np.linalg.norm(slope - other_slope) < epsilon or np.linalg.norm(slope + other_slope) < epsilon
             
     def plot(self, axes, color='r'):
         """
@@ -377,6 +397,17 @@ class Segment:
         :param color: character or (r,g,b) [0,1]
         """
         axes.plot([self.p0[0], self.p1[0]], [self.p0[1], self.p1[1]], color=color)
+        
+    def __eq__(self, other):
+        """
+        :param other: Segment
+        :return True if other's points within epsilon distance
+        """
+        return (np.linalg.norm(self.p0 - other.p0) < epsilon and np.linalg.norm(self.p1 - other.p1) < epsilon) or \
+                 (np.linalg.norm(self.p0 - other.p1) < epsilon and np.linalg.norm(self.p1 - other.p0) < epsilon)
+    
+    def __hash__(self):
+        return 0 
         
         
 class Halfspace:

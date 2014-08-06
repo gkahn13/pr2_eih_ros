@@ -13,6 +13,28 @@ import IPython
 
 epsilon = 1e-5
 
+class Point:
+    """ Allows comparing 3d points """
+    def __init__(self, p):
+        """
+        :param p: list/np.array
+        """
+        self.p = np.array(p)
+        
+    def __eq__(self, other):
+        """
+        :param other: list/np.array/Point
+        """
+        if isinstance(other, Point):
+            return np.linalg.norm(self.p - other.p) < epsilon
+        elif isinstance(other, list) or isinstance(other, np.array):
+            return np.linalg.norm(self.p - np.array(other)) < epsilon
+        return False
+    
+    def __hash__(self):
+        return 0
+        
+
 class Pyramid:
     def __init__(self, base, a, b, c):
         """
@@ -108,11 +130,11 @@ class RectangularPyramid:
                    (base+d+c)/3.0,
                    (a+b+c+d)/4.0]
     
-        normals = [-np.cross(a-base, d-base),
-                   -np.cross(b-base, a-base),
-                   -np.cross(c-base, b-base),
-                   -np.cross(d-base, c-base),
-                   -np.cross(b-a, d-a)]
+        normals = [np.cross(a-base, d-base),
+                   np.cross(b-base, a-base),
+                   np.cross(c-base, b-base),
+                   np.cross(d-base, c-base),
+                   np.cross(b-a, d-a)]
         normals = [n/np.linalg.norm(n) for n in normals]
         
         return [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
@@ -546,10 +568,23 @@ def test_clip_triangle():
     
     print('Press enter to exit')
     raw_input()
+    
+def test_point():
+    p = Point([1,2,3])
+    q = Point([1,2,3.000001])
+    
+    print('p == q: {0}'.format(p == q))
+    
+    s = set()
+    s.add(p)
+    s.add(q)
+    print('len(s): {0}'.format(len(s)))
+    print('s:\n{0}'.format(s))
          
 if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()
     #test_distance_to_plot()
     #test_pyramid_inside()
-    test_clip_triangle()
+    #test_clip_triangle()
+    test_point()

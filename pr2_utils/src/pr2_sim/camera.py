@@ -225,11 +225,6 @@ class Camera:
                                self.sim.transform_from_to(tfx.pose(pyramid.c).matrix,'base_link','world')[:3,3]).plot(self.sim, with_sides=True, color=(0,1,0))
             #pyramid.plot(self.sim, with_sides=True, color=(0,1,0))
         
-        print('in truncated_view_frustum, press enter')
-        raw_input()
-#         import IPython
-#         IPython.embed()
-        
     def project_triangles(self, triangles3d):
         """
         Projects 3d triangles onto image plane and returns 2d triangles
@@ -247,24 +242,153 @@ class Camera:
             
         return triangles2d
     
-    def clip_triangle(self, tri3d):
+    def truncated_view_frustum_new(self, triangles3d):
         """
-        Clips triangle against view frustum
+        Truncates the view frustum against environment triangles
         
-        :param tri3d: geometry3d.Triangle
-        :return geometry3d.Polygon
+        :param triangles3d: list of geometry3d.Triangle with points in frame 'base_link'
+        :return list of geometry3d.Pyramid
         """
-        # get view frustum halfspaces
-        # since triangle convex and clipping against
-        # planes, resulting polygon is convex
+        start_time = time.time()
+        
         frustum = geometry3d.RectangularPyramid(self.get_pose().position.array,
                                                 self.segment_through_pixel([0,self.width]).p1,
                                                 self.segment_through_pixel([0,0]).p1,
                                                 self.segment_through_pixel([self.height,0]).p1,
                                                 self.segment_through_pixel([self.height,self.width]).p1)
         
-        tri3d_segments = tri3d.segments()
+#         print('Number of triangles3d: {0}'.format(len(triangles3d)))
+        clipped_triangles3d = list()
+        for tri3d in triangles3d:
+            clipped_triangles3d += frustum.clip_triangle(tri3d)
+#         print('Number of clipped triangles: {0}'.format(len(clipped_triangles3d)))
+            
+        triangles2d = self.project_triangles(clipped_triangles3d)
         
+        segments2d = set()
+        for tri2d in triangles2d:
+            segments2d.update(tri2d.segments())
+        
+        # avoid redundant points
+        points2d = {geometry3d.Point([0,0]),
+                    geometry3d.Point([self.height,0]),
+                    geometry3d.Point([0,self.width]),
+                    geometry3d.Point([self.height,self.width])}
+        # add vertices
+        for seg2d in segments2d:
+            points2d.add(geometry3d.Point(seg2d.p0))
+            points2d.add(geometry3d.Point(seg2d.p1))
+        # add intersections
+        segments2d_list = list(segments2d)
+        for i in xrange(len(segments2d_list)-1):
+            seg2d = segments2d_list[i]
+            for j in xrange(i+1, len(segments2d_list)):
+                other_seg2d = segments2d_list[j]
+                intersection = seg2d.intersection(other_seg2d)
+                if intersection is not None:
+                    points2d.add(geometry3d.Point(intersection))
+                    
+        partition_triangles2d = set()
+        for pt2d in points2d:
+#             print('len(segments2d): {0}'.format(len(segments2d)))
+            
+            # find other points that don't cross anything in segment2d
+            p = pt2d.p
+            points_in_los = set()
+            for other_pt2d in points2d:
+                other_p = other_pt2d.p
+                if pt2d != other_pt2d:
+                    seg2d = geometry2d.Segment(p, other_p)
+                    for check_seg2d in segments2d:
+                        if not seg2d.is_parallel(check_seg2d):
+                            intersection = seg2d.intersection(check_seg2d)
+                            if intersection is not None and not seg2d.is_endpoint(intersection):
+                                break
+                    else:
+                        points_in_los.add(geometry2d.Point(other_p)) 
+                                
+#             points_in_los = filter(lambda x: 0 <= x.p[0] <= self.height and 0 <= x.p[1] <= self.width, points_in_los)
+                                
+#             print('Number in line of sight of ({0}, {1}): {2}'.format(p[1], self.height-p[0], len(points_in_los)))
+#             for point_in_los in points_in_los:
+#                 print('({0}, {1})'.format(point_in_los.p[1], self.height-point_in_los.p[0]))
+            
+            # sort segments by angle
+            seg2d_compare = geometry2d.Segment([0,0], [-1,0])
+            segments2d_in_los_sorted = sorted([geometry2d.Segment(p, other.p) for other in points_in_los], key=lambda seg: seg.angle(seg2d_compare))
+#             for s in segments2d_in_los_sorted:
+#                 print('({0},{1})\t({2},{3})'.format(s.p0[1], self.height - s.p0[0], s.p1[1], self.height - s.p1[0]))
+                
+            #new_partition_triangles2d = [geometry2d.Triangle(p, segments2d_in_los_sorted[i].p1, segments2d_in_los_sorted[i+1].p1) for i in xrange(len(segments2d_in_los_sorted)-1)]
+            new_partition_triangles2d = set()
+            for i in xrange(len(segments2d_in_los_sorted)-1):
+                tri2d = geometry2d.Triangle(p, segments2d_in_los_sorted[i].p1, segments2d_in_los_sorted[i+1].p1)
+                not_colliding = True
+                for tri_seg2d in tri2d.segments():
+                    for check_seg2d in segments2d:
+                        if not tri_seg2d.is_parallel(check_seg2d):
+                            intersection = tri_seg2d.intersection(check_seg2d)
+                            if intersection is not None and not tri_seg2d.is_endpoint(intersection):
+                                not_colliding = False
+                                break
+                    if not_colliding is False:
+                        break
+                
+                if not_colliding:        
+                    new_partition_triangles2d.add(tri2d)
+            
+            # update partition and new segments
+            partition_triangles2d.update(new_partition_triangles2d)
+            for tri2d in new_partition_triangles2d:
+                segments2d.update(tri2d.segments())
+                
+            total_area = sum([tri2d.area() for tri2d in partition_triangles2d])
+            if total_area >= self.width*self.height:
+                break
+            
+            
+        
+        print('Total time: {0}'.format(time.time() - start_time))
+        total_area = sum([tri2d.area() for tri2d in partition_triangles2d])
+        print('Total area (should be {0}): {1}'.format(self.width*self.height, total_area))
+            
+        #################                    
+        # TEMP plotting #
+        #################
+        frustum.plot(self.sim)
+        for tri3d in clipped_triangles3d:
+            tri3d.plot(self.sim, color=(0,1,0))
+            
+        fig = plt.figure()
+        axes = fig.add_subplot(111)
+        
+#         for tri2d in triangles2d:
+#             for segment in tri2d.segments():
+#                 p0, p1 = segment.p0, segment.p1
+#                 p0_flip = [p0[1], self.height - p0[0]]
+#                 p1_flip = [p1[1], self.height - p1[0]]
+#                 axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'b--o', linewidth=2.0)
+#             
+#         axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
+        
+        for pt2d in points2d:
+            axes.plot(pt2d.p[1], self.height - pt2d.p[0], 'rx', markersize=10.0)
+            
+        plt.xlim((-10, self.width+10))
+        plt.ylim((-10, self.height+10))
+                
+        plt.show(block=False)
+        
+        colors = plt.cm.hsv(np.linspace(0, 1, len(partition_triangles2d)))
+        for i, tri2d in enumerate(partition_triangles2d):
+            x = [p[1] for p in tri2d.vertices()]
+            y = [self.height - p[0] for p in tri2d.vertices()]
+            axes.fill(x, y, color=colors[i])
+        
+            plt.show(block=False)
+            raw_input()
+        #################
+                                
     
     ##################
     # visualizations #
@@ -309,7 +433,10 @@ def test_truncated_view_frustum():
     table_center = np.array([.2,.7,.5])
     triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
                    geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0]))]
-    cam.truncated_view_frustum(triangles3d)
+    cam.truncated_view_frustum_new(triangles3d)
+    
+    print('Press enter to exit')
+    raw_input()
     
 
 def test_project_triangles():
