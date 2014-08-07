@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib import delaunay
 
 import time
+import random
 
 from geometry import geometry2d, geometry3d
 from pr2_sim import simulator, arm
@@ -141,10 +142,10 @@ class Camera:
                 if intersection is not None:
                     points2d.add(geometry3d.Point(intersection))
                     
-        print('len(points2d): {0}'.format(len(points2d)))
+#         print('len(points2d): {0}'.format(len(points2d)))
         partition_triangles2d = set()
         for i, pt2d in enumerate(points2d):            
-            print('len(segments2d): {0}'.format(len(segments2d)))
+#             print('len(segments2d): {0}'.format(len(segments2d)))
             
             # find other points that don't cross anything in segments2d
             p = pt2d.p
@@ -161,7 +162,7 @@ class Camera:
                         points_in_los.add(geometry2d.Point(other_p)) 
                                 
             # sort segments by angle
-            seg2d_compare = geometry2d.Segment([0,0], [1,0])
+            seg2d_compare = geometry2d.Segment([0,0], [-1,0])
             segments2d_in_los_sorted = sorted([geometry2d.Segment(p, other.p) for other in points_in_los], key=lambda seg: seg.angle(seg2d_compare))
                 
             new_partition_triangles2d = set()
@@ -207,8 +208,9 @@ class Camera:
             if min_tri3d is not None:
                 hyperplane3d = min_tri3d.hyperplane
                 tri3d_intersections = [hyperplane3d.intersection(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
-                assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
-                pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
+                #assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
+                if len(filter(lambda x: x is None, tri3d_intersections)) == 0:
+                    pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
             else:
                 pyramids3d.append(geometry3d.Pyramid(camera_position, vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1))
             
@@ -220,12 +222,13 @@ class Camera:
                 
             self.plot(frame='base_link')
             for tri3d in triangles3d:
-                tri3d.plot(self.sim, frame='base_link', color=(1,0,0))
+                tri3d.plot(self.sim, frame='base_link', fill=True, color=(0,0,1))
                 
             for pyramid in pyramids3d:
-                pyramid.plot(self.sim, frame='base_link', with_sides=False, color=(0,1,0))
+                pyramid.plot(self.sim, frame='base_link', fill=True, with_sides=True, color=(0,1,0), alpha=0.1)
             
-            fig = plt.figure()
+            plt.close(1)
+            fig = plt.figure(1)
             axes = fig.add_subplot(111)
             
             for tri2d in triangles2d:
@@ -243,11 +246,11 @@ class Camera:
             plt.xlim((-10, self.width+10))
             plt.ylim((-10, self.height+10))
             
-            colors = plt.cm.hsv(np.linspace(0, 1, len(partition_triangles2d)))
+            colors = plt.cm.jet(np.linspace(0, 1, len(partition_triangles2d)))
             for i, tri2d in enumerate(partition_triangles2d):
                 x = [p[1] for p in tri2d.vertices]
                 y = [self.height - p[0] for p in tri2d.vertices]
-                axes.fill(x, y, color=colors[i])
+                axes.fill(x, y, color=colors[i], edgecolor=(1,1,1))
             
             plt.show(block=False)
             
@@ -290,7 +293,7 @@ class Camera:
     # visualizations #
     ##################
         
-    def plot(self, frame='world', with_sides=True, color=(1,0,0)):
+    def plot(self, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
         """
         :param frame: frame in which points are defined in
         :param with_sides: if True, plots side edges too
@@ -301,6 +304,6 @@ class Camera:
                                                 self.segment_through_pixel([0,0]).p1,
                                                 self.segment_through_pixel([self.height,0]).p1,
                                                 self.segment_through_pixel([self.height,self.width]).p1)
-        frustum.plot(self.sim, frame=frame, with_sides=with_sides, color=color)
+        frustum.plot(self.sim, frame=frame, fill=fill, with_sides=with_sides, color=color, alpha=alpha)
             
     

@@ -97,14 +97,16 @@ class Pyramid:
                 Triangle(self.base, self.c, self.a),
                 Triangle(self.a, self.b, self.c)]
     
-    def plot(self, sim, frame='world', with_sides=True, color=(1,0,0)):
+    def plot(self, sim, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
         """
         Plots edges of the pyramid
         
         :param sim: Simulator instance
         :param frame: frame in which points are defined in
+        :param fill: if True, colors the faces
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
+        :param alpha: if fill is True, alpha of faces
         """
         base = sim.transform_from_to(self.base, frame, 'world')
         a = sim.transform_from_to(self.a, frame, 'world')
@@ -119,11 +121,19 @@ class Pyramid:
         sim.plot_segment(a, b, color=color)
         sim.plot_segment(b, c, color=color)
         sim.plot_segment(c, a, color=color)
+        
+        if fill:
+            if with_sides:
+                sim.plot_triangle((base, a, b), color=color, alpha=alpha)
+                sim.plot_triangle((base, b, c), color=color, alpha=alpha)
+                sim.plot_triangle((base, c, a), color=color, alpha=alpha)
+                
+            sim.plot_triangle((a, b, c), color=color, alpha=alpha)
     
 class RectangularPyramid:
     def __init__(self, base, a, b, c, d):
         """
-        A pyramid with orign base and points a,b,c,d arranged as
+        A pyramid with origin base and points a,b,c,d arranged as
         b --- a
         |     |
         |     |
@@ -204,13 +214,15 @@ class RectangularPyramid:
             
         return triangles
     
-    def plot(self, sim, frame='world', with_sides=True, color=(1,0,0)):
+    def plot(self, sim, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
         """
         Plots edges of the pyramid
         :param sim: Simulator instance
         :param frame: frame in which points are defined in
+        :param fill: if True, colors the faces
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
+        :param alpha: if fill is True, alpha of faces
         """
         base = sim.transform_from_to(self.base, frame, 'world')
         a = sim.transform_from_to(self.a, frame, 'world')
@@ -228,6 +240,16 @@ class RectangularPyramid:
         sim.plot_segment(b, c)
         sim.plot_segment(c, d)
         sim.plot_segment(d, a)
+        
+        if fill:
+            if with_sides:
+                sim.plot_triangle((base,a,b), color=color, alpha=alpha)
+                sim.plot_triangle((base,b,c), color=color, alpha=alpha)
+                sim.plot_triangle((base,c,d), color=color, alpha=alpha)
+                sim.plot_triangle((base,d,a), color=color, alpha=alpha)
+                
+            sim.plot_triangle((a,b,c), color=color, alpha=alpha)
+            sim.plot_triangle((a,c,d), color=color, alpha=alpha)
     
 class Triangle:
     def __init__(self, a, b, c):
@@ -349,11 +371,13 @@ class Triangle:
         tri_2d = geometry2d.Triangle(tri_rot.a[:2], tri_rot.b[:2], tri_rot.c[:2])
         return tri_2d.area
         
-    def plot(self, sim, frame='world', color=(1,0,0)):
+    def plot(self, sim, frame='world', fill=False, color=(1,0,0), alpha=0.25):
         """
         :param sim: Simulator instance
+        :param fill: if True, colors the faces
         :param frame: frame in which points are defined in
         :param color: (r,g,b) [0,1]
+        :param alpha: if fill is True, alpha of faces
         """
         a = sim.transform_from_to(self.a, frame, 'world')
         b = sim.transform_from_to(self.b, frame, 'world')
@@ -362,6 +386,9 @@ class Triangle:
         sim.plot_segment(a, b, color)
         sim.plot_segment(b, c, color)
         sim.plot_segment(c, a, color)
+        
+        if fill:
+            sim.plot_triangle((a,b,c), color=color, alpha=alpha)
     
 class Segment:
     def __init__(self, p0, p1):

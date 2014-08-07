@@ -1,3 +1,7 @@
+"""
+Tests for geometry/geometry2d.py
+"""
+
 from geometry.geometry2d import *
 
 def test_triangle_halfspaces():

@@ -9,7 +9,7 @@ setup_args = generate_distutils_setup(
               'pr2',
               'pr2_sim',
               'utils'],
-    package_dir={'': 'src'},
+    package_dir={'': 'python'},
 )
 
 setup(**setup_args)

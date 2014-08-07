@@ -1,3 +1,7 @@
+"""
+Tests for pr2_sim/camera.py
+"""
+
 from pr2_sim.camera import *
 
 def test_signed_distance():
@@ -14,9 +18,10 @@ def test_signed_distance():
 #                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
 #                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
     table_center = np.array([.2,.7,.5])
-    triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
-                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
-                   geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-1.2,0]))]
+    triangles3d = [#geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
+                   #geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
+                   geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-1.2,0])),
+                   geometry3d.Triangle(table_center+np.array([.25,-1.2,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-1.2,.2]))]
     truncated_frustum = cam.truncated_view_frustum(triangles3d, plot=True)
     
     pos_step = .01
@@ -41,6 +46,7 @@ def test_signed_distance():
         sd = cam.signed_distance(point, truncated_frustum)
         print('sd: {0}'.format(sd))
 
+    print('point: {0}'.format(point))
 
 def test_truncated_view_frustum():
     sim = simulator.Simulator(view=True)
@@ -52,9 +58,9 @@ def test_truncated_view_frustum():
     cam = Camera(rarm, sim)
 #     triangles3d = [geometry3d.Triangle([.7,0,.8],[.7,0,1.1],[.7,-.3,.7])]
 #     triangles3d = [geometry3d.Triangle([.5,0,.5],[.8,0,.6],[.5,-.3,.9])]
-#     triangles3d = [geometry3d.Triangle([np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
-#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
-#                                        [np.random.uniform(.2,.5), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
+#     triangles3d = [geometry3d.Triangle([np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
+#                                        [np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
     table_center = np.array([.2,.7,.5])
     triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
                    geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
@@ -116,8 +122,8 @@ def test_camera_teleop():
     raw_input()
 
 if __name__ == '__main__':
-    test_signed_distance()
-    #test_truncated_view_frustum()
+    #test_signed_distance()
+    test_truncated_view_frustum()
     #test_project_triangles()
     #test_camera_teleop()
     

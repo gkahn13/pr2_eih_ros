@@ -1,4 +1,9 @@
+"""
+Tests for geometry/geometry3d.py
+"""
+
 from geometry.geometry3d import *
+from pr2_sim import simulator
         
 def test_align_with():
     t = Triangle([0,0,1.2], [0,1,1.2], [1,0,1.2])
@@ -21,8 +26,6 @@ def test_distance_to():
     print('Computed distance is: {0}'.format(dist))
         
 def test_distance_to_plot():
-    from pr2_sim import simulator
-    
     sim = simulator.Simulator(view=True)
     
     t = Triangle(np.random.rand(3), np.random.rand(3), np.random.rand(3))
@@ -37,8 +40,6 @@ def test_distance_to_plot():
     IPython.embed()
     
 def test_pyramid_inside():
-    from pr2_sim import simulator
-    
     sim = simulator.Simulator(view=True)
     
     base = [.5,0,0]
@@ -68,7 +69,6 @@ def test_pyramid_inside():
     IPython.embed()
          
 def test_clip_triangle():
-    from pr2_sim import simulator
     sim = simulator.Simulator(view=True)
     
     base = [.5,0,0]
@@ -111,8 +111,6 @@ def test_point():
     print('s:\n{0}'.format(s))
          
 def test_pyramid_sd():
-    from pr2_sim import simulator
-    
     sim = simulator.Simulator(view=True)
     
     base = [1,0,0]
@@ -151,6 +149,14 @@ def test_pyramid_sd():
         print('is inside: {0}'.format(is_inside))
         print('sd: {0}\n'.format(sd))
 
+def test_plotting():
+    sim = simulator.Simulator(view=True)
+    
+    sim.plot_triangle(([1,0,1],[1,0,2],[1.5,0,1.5]),color=(1,0,0),alpha=0.5)
+    
+    print('Press enter to exit')
+    raw_input()
+
 if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()
@@ -158,4 +164,5 @@ if __name__ == '__main__':
     #test_pyramid_inside()
     #test_clip_triangle()
     #test_point()
-    test_pyramid_sd()
+    #test_pyramid_sd()
+    test_plotting()

@@ -197,6 +197,16 @@ class Simulator:
         end = np.array(end)
         
         self.handles += [self.env.drawlinestrip(points=np.array([start, end]), linewidth=3.0, colors=np.array([color,color]))]
+        
+    def plot_triangle(self, points, color=(1,0,0), alpha=1.):
+        """
+        :param points: length 3 list of 3d list/np.array
+        :param color: (r,g,b) [0,1]
+        :param alpha: [0,1]
+        """
+        self.handles += [self.env.drawtrimesh(points=np.vstack(points),
+                                              indices=None,
+                                              colors=np.array(color+(alpha,)))]
     
     def plot_transform(self, T, s=0.1):
         """
