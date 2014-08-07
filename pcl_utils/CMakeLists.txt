@@ -50,3 +50,6 @@ target_link_libraries(cluster_extraction ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(tsdf_converter src/tsdf_converter.cpp src/pointcloud_voxel_grid.cpp)
 target_link_libraries(tsdf_converter ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(cluster_projection src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp)
+target_link_libraries(cluster_projection ${PCL_LIBRARIES} ${catkin_LIBRARIES})

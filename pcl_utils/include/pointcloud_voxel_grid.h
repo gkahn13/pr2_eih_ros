@@ -65,7 +65,7 @@ public:
 
     PointType voxel_to_point(voxel v);
 
-    Eigen::Matrix<double, 6, 1> calculate_extremes(CloudType::Ptr cloud);
+    static Eigen::Matrix<double, 6, 1> calculate_extremes(CloudType::Ptr cloud);
 
     void walk_cloud(CloudType::Ptr cloud);
 
