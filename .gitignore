@@ -6,3 +6,6 @@ tfx/
 .project
 .pydevproject
 *.pyc
+*.cbp
+*.layout*
+

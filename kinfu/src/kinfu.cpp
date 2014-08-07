@@ -28,6 +28,12 @@ using namespace Eigen;
 #include <pcl/gpu/containers/initialization.h>
 #include <pcl/gpu/containers/device_array.h>
 
+// stuff for writing tsdf vectors
+#include <fstream>
+#include <iterator>
+#include <string>
+#include <vector>
+
 #include <cuda_runtime.h>
 #include <assert.h>
 
@@ -42,9 +48,9 @@ typedef short WeightT;
 #define N_SUB (W_SUB*H_SUB)
 
 //#define USE_COLOR
+#define SAVE_TSDF
 
 boost::shared_ptr<tf::TransformListener> listener;
-
 ros::Publisher pub, current_pointcloud_pub, variable_pub;
 bool downloading;
 int counter;
@@ -72,10 +78,11 @@ namespace kinfu {
 
 template<typename MergedT, typename PointT>
 typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& points, const pcl::PointCloud<pcl::RGB>& colors)
-{    
+{
   typename pcl::PointCloud<MergedT>::Ptr merged_ptr(new pcl::PointCloud<MergedT>());
 
-  pcl::copyPointCloud (points, *merged_ptr);      
+  pcl::copyPointCloud (points, *merged_ptr);
+
   for (size_t i = 0; i < colors.size (); ++i)
     merged_ptr->points[i].rgba = colors.points[i].rgba;
 
@@ -86,12 +93,12 @@ typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& poin
 pcl::PointCloud<pcl::PointXYZRGB> last_cloud;
 
 void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
-	while(ros::ok()) {
-		if (!downloading) {
-			std::cout << "Updating kinfu...\n";
+  while(ros::ok()) {
+    if (!downloading) {
+      std::cout << "Updating kinfu...\n";
 
-			pcl::PointCloud<pcl::PointXYZRGB> cloud;
-			pcl::copyPointCloud(last_cloud, cloud);
+      pcl::PointCloud<pcl::PointXYZRGB> cloud;
+      pcl::copyPointCloud(last_cloud, cloud);
 
 			// get the current location of the camera relative to the kinfu frame (see kinfu.launch)
 			tf::StampedTransform kinfu_to_camera;
@@ -111,7 +118,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 			// convert the data into gpu format for kinfu tracker to use
 			pcl::gpu::DeviceArray2D<unsigned short> depth(carmine::HEIGHT,carmine::WIDTH);
 			std::vector<unsigned short> data(carmine::HEIGHT*carmine::WIDTH);
-			
+
 			#ifdef USE_COLOR
 			// the same for color data
 			pcl::gpu::DeviceArray2D<pcl::gpu::kinfuLS::PixelRGB> color(carmine::HEIGHT,carmine::WIDTH);
@@ -132,7 +139,7 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker) {
 				current_pixel.r = cloud_iter->r;
 				current_pixel.g = cloud_iter->g;
 				current_pixel.b = cloud_iter->b;
-				color_data[i] = current_pixel; 
+				color_data[i] = current_pixel;
 				#endif
 //				std::cout << cloud_iter->z << "\n";
 			}
@@ -318,6 +325,7 @@ int main (int argc, char** argv) {
 	std::cout << "Ready to publish clouds\n";
 	downloading = false;
 
+    int current = 1;
 	while(ros::ok()) {
 		ros::spinOnce();
 		ros::Duration(5).sleep();
@@ -336,6 +344,43 @@ int main (int argc, char** argv) {
 		pcl::PointCloud<pcl::PointXYZ> current_cloud;
 		// Download tsdf and convert to pointcloud
 		pcl::gpu::kinfuLS::TsdfVolume tsdf = pcl_kinfu_tracker->volume();
+
+		#ifdef SAVE_TSDF
+		std::vector<float> tsdf_vector;
+		std::vector<short> tsdf_weights;
+		//tsdf.save("kinfu_tsdf.dat"); // doesn't work for some reason
+
+
+		tsdf.downloadTsdfAndWeights(tsdf_vector, tsdf_weights);
+		std::cout << "distances: " << tsdf_vector.size() << std::endl;
+		std::cout << "weights: " << tsdf_weights.size() << std::endl;
+
+
+        // write the vectors as binary data
+
+        std::stringstream current_stream;
+        current_stream << current;
+
+        std::ofstream dist_out;
+        const char* dist_pointer = reinterpret_cast<const char*>(&tsdf_vector[0]);
+        size_t bytes = tsdf_vector.size() * sizeof(tsdf_vector[0]);
+        std::string dist_file = "kinfu_dist" + current_stream.str() + ".dat";
+        dist_out.open(dist_file.c_str(), std::ios::out | std::ios::binary);
+        dist_out.write(dist_pointer, bytes);
+        dist_out.close();
+
+        std::ofstream weight_out;
+        const char* weight_pointer = reinterpret_cast<const char*>(&tsdf_weights[0]);
+        bytes = tsdf_weights.size() * sizeof(tsdf_weights[0]);
+
+        std::string weight_file = "kinfu_weights" + current_stream.str() + ".dat";
+        weight_out.open(weight_file.c_str(), std::ios::out | std::ios::binary);
+        weight_out.write(weight_pointer, bytes);
+        weight_out.close();
+        current++;
+		std::cout << "saved!" << std::endl;
+        #endif
+
 		tsdf.fetchCloudHost(current_cloud);
 
 // 		int i;
@@ -369,7 +414,7 @@ int main (int argc, char** argv) {
 
 
 		pcl::PointCloud<pcl::PointXYZRGB> current_cloud = *(merge<pcl::PointXYZRGB>(*cloud_ptr_, *point_colors_ptr_));
-		
+
 		#endif
 
 		//
@@ -384,15 +429,16 @@ int main (int argc, char** argv) {
 		// transform kinfu points back to rgb optical frame
 		Affine3d current_transform;
 		tf::transformTFToEigen(rgb_to_kinfu, current_transform);
-		
+
 		#ifdef USE_COLOR
 		pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
                 #else
 		pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
 		#endif
-		
+
 		pcl::transformPointCloud(current_cloud, transformed_cloud, current_transform);
-		
+
+
 
 		// Publish the data
 		sensor_msgs::PointCloud2 output;
