@@ -6,11 +6,13 @@ add_definitions("-std=c++11")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen)
+find_package(OpenRAVE REQUIRED)
+find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options graph)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -90,7 +92,9 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include ${Eigen_INCLUDE_DIRS})
+include_directories(include ${Eigen_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+
+link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 
 ## Declare a cpp library
 # add_library(pr2_utils
@@ -100,10 +104,20 @@ include_directories(include ${Eigen_INCLUDE_DIRS})
 ## Declare a cpp executable
 add_executable(geometry_geometry2d tests/geometry_geometry2d.cpp)
 add_executable(geometry_geometry3d tests/geometry_geometry3d.cpp)
+add_executable(pr2_sim_arm         tests/pr2_sim_arm.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
+														 src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
+add_executable(pr2_sim_simulator   tests/pr2_sim_simulator.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
+                                                               src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(pr2_utils_node pr2_utils_generate_messages_cpp)
+
+set_target_properties(pr2_sim_arm PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(pr2_sim_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+
+set_target_properties(pr2_sim_simulator PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(pr2_sim_simulator PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(geometry_geometry2d
@@ -111,6 +125,16 @@ target_link_libraries(geometry_geometry2d
 )
 target_link_libraries(geometry_geometry3d
    ${catkin_LIBRARIES}
+)
+target_link_libraries(pr2_sim_arm
+   ${catkin_LIBRARIES}
+   ${OpenRAVE_CORE_LIBRARIES}
+   ${Boost_LIBRARIES}
+)
+target_link_libraries(pr2_sim_simulator
+   ${catkin_LIBRARIES}
+   ${OpenRAVE_CORE_LIBRARIES}
+   ${Boost_LIBRARIES}
 )
 
 #############
