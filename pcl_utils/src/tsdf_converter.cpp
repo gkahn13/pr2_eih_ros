@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
     double voxel_size = 0.02;
     if (argc >= 8) {
-        voxel_size = std::atof(argv[7])
+        voxel_size = std::atof(argv[7]);
     }
 
 
