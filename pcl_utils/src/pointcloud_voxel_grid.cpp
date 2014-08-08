@@ -10,13 +10,14 @@ PointCloudVoxelGrid::PointCloudVoxelGrid(CloudType::Ptr cloud, double resolution
     y_size = ceil((extremes(4) - extremes(1)) / resolution);
     z_size = ceil((extremes(5) - extremes(2)) / resolution);
 
+
     std::cout << "sizes: " << std::endl;
     std::cout << x_size << std::endl;
     std::cout << y_size << std::endl;
     std::cout << z_size << std::endl;
 
-    std::cout << minimum << std::endl;
-    std::cout << maximum << std::endl;
+    std::cout << "minimum: " << minimum << std::endl;
+    std::cout << "maximum: " << maximum << std::endl;
 
 
 

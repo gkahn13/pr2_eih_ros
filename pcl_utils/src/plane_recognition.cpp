@@ -22,10 +22,6 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
 
     seg.segment (*inliers, *coefficients);
 
-//    // get the method, in order to tweak parameters
-//    pcl::SACSegmentation<pcl::PointXYZ>::SampleConsensusPtr method = seg.getMethod();
-//    cout << "max number of iterations: " << method->getMaxIterations() << endl;
-
 }
 }
 

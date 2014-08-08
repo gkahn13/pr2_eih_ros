@@ -1,41 +1,11 @@
-#include <pcl/ModelCoefficients.h>
-#include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/kdtree/kdtree.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/segmentation/extract_clusters.h>
+#include <cluster_extraction.h>
 
+namespace cluster_extraction {
 
-int
-main (int argc, char** argv)
-{
-    // Read in the cloud data
-    pcl::PCDReader reader;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
-    std::string file = "table_scene_lms400.pcd";
-    if (argc > 1)
-    {
-        file = argv[1];
-    }
-    double cluster_tolerance = 0.02; // 2cm
-    if (argc > 2)
-    {
-        cluster_tolerance = std::atof(argv[2]);
-    }
-    int min_cluster_size = 100;
-    if (argc > 3) {
-        min_cluster_size = std::atoi(argv[3]);
-    }
-    int max_cluster_size = 25000;
-    if (argc > 4) {
-        max_cluster_size = std::atoi(argv[4]);
-    }
-    reader.read (file, *cloud);
+std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double cluster_tolerance, int min_cluster_size, int max_cluster_size) {
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+
     std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
 
     // Create the filtering object: downsample the dataset using a leaf size of 1cm
@@ -51,7 +21,6 @@ main (int argc, char** argv)
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
-    pcl::PCDWriter writer;
     seg.setOptimizeCoefficients (true);
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
@@ -99,7 +68,9 @@ main (int argc, char** argv)
     ec.setInputCloud (cloud_filtered);
     ec.extract (cluster_indices);
 
-    int j = 0;
+    std::vector<pcl::PointCloud<pcl::PointXYZ> > cloud_vector;
+    //pcl::PCDWriter writer;
+    //int j = 0;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
@@ -109,12 +80,50 @@ main (int argc, char** argv)
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
 
+        cloud_vector.push_back(*cloud_cluster);
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-        std::stringstream ss;
-        ss << "cloud_cluster_" << j << ".pcd";
-        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
-        j++;
+
+        //functionality moved to occluded_region_finder.cpp
+//        std::stringstream ss;
+//        ss << "cloud_cluster_" << j << ".pcd";
+//        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+//        j++;
+
     }
 
-    return (0);
+    return cloud_vector;
 }
+}
+
+// now handled in occluded_region_finder.cpp
+
+//int
+//main (int argc, char** argv)
+//{
+//    // Read in the cloud data
+//    pcl::PCDReader reader;
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+//    std::string file = "table_scene_lms400.pcd";
+//    if (argc > 1)
+//    {
+//        file = argv[1];
+//    }
+//    double cluster_tolerance = 0.02; // 2cm
+//    if (argc > 2)
+//    {
+//        cluster_tolerance = std::atof(argv[2]);
+//    }
+//    int min_cluster_size = 100;
+//    if (argc > 3) {
+//        min_cluster_size = std::atoi(argv[3]);
+//    }
+//    int max_cluster_size = 25000;
+//    if (argc > 4) {
+//        max_cluster_size = std::atoi(argv[4]);
+//    }
+//    reader.read (file, *cloud);
+//
+//    std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(cloud, cluster_tolerance, min_cluster_size, max_cluster_size);
+//
+//    return (0);
+//}

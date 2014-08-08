@@ -45,11 +45,17 @@ target_link_libraries(generate_boundary_pointcloud ${PCL_LIBRARIES} ${catkin_LIB
 add_executable(find_empty_voxels src/find_empty_voxels.cpp src/plane_recognition.cpp)
 target_link_libraries(find_empty_voxels ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(cluster_extraction src/cluster_extraction.cpp)
-target_link_libraries(cluster_extraction ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(cluster_extraction src/cluster_extraction.cpp)
+#target_link_libraries(cluster_extraction ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(tsdf_converter src/tsdf_converter.cpp src/pointcloud_voxel_grid.cpp)
-target_link_libraries(tsdf_converter ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(tsdf_converter src/tsdf_converter.cpp src/pointcloud_voxel_grid.cpp)
+#target_link_libraries(tsdf_converter ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(cluster_projection src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp)
-target_link_libraries(cluster_projection ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(cluster_projection src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp)
+#target_link_libraries(cluster_projection ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(moment_of_intertia src/moment_of_intertia.cpp)
+target_link_libraries(moment_of_intertia ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(occluded_region_finder src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
+target_link_libraries(occluded_region_finder ${PCL_LIBRARIES} ${catkin_LIBRARIES})
