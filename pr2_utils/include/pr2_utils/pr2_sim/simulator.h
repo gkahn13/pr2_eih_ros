@@ -1,8 +1,10 @@
 #ifndef __PR2_SIMULATOR_H__
 #define __PR2_SIMULATOR_H__
 
-#include "ros/ros.h"
-#include "sensor_msgs/JointState.h"
+#include "utils.h"
+
+#include <ros/ros.h>
+#include <sensor_msgs/JointState.h>
 
 #include <Eigen/Eigen>
 using namespace Eigen;
@@ -17,9 +19,11 @@ typedef Matrix<double, 7, 1> VectorJ; // Number of joints in PR2 arm
 namespace pr2_sim {
 
 class Simulator {
+	friend class Arm;
 public:
 	Simulator(const std::string env_file, bool view, bool use_ros);
 	Simulator(bool view, bool use_ros) : Simulator("robots/pr2-beta-static.zae", view, use_ros) { }
+	Simulator() : Simulator(false, false) { }
 
 	void update();
 
