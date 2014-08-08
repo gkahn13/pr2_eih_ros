@@ -110,6 +110,9 @@ add_executable(pr2_sim_simulator   tests/pr2_sim_simulator.cpp src/${PROJECT_NAM
                                                                src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
 add_executable(pr2_sim_camera      tests/pr2_sim_camera.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
 														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
+add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/pr2_sim/arm.cpp
+														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
 														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)                                                     
 
 ## Add cmake target dependencies of the executable/library
@@ -124,6 +127,9 @@ set_target_properties(pr2_sim_simulator PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_F
 
 set_target_properties(pr2_sim_camera PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(pr2_sim_camera PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+
+set_target_properties(gradient_sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(gradient_sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
 set(TIMER_LIBRARIES "dl;rt")
 
@@ -145,6 +151,12 @@ target_link_libraries(pr2_sim_simulator
    ${Boost_LIBRARIES}
 )
 target_link_libraries(pr2_sim_camera
+   ${catkin_LIBRARIES}
+   ${OpenRAVE_CORE_LIBRARIES}
+   ${Boost_LIBRARIES}
+   ${TIMER_LIBRARIES}
+)
+target_link_libraries(gradient_sd
    ${catkin_LIBRARIES}
    ${OpenRAVE_CORE_LIBRARIES}
    ${Boost_LIBRARIES}

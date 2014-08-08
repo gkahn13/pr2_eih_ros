@@ -23,7 +23,7 @@ public:
 	Vector2d pixel_from_point(const Vector3d& point);
 	geometry3d::Segment segment_through_pixel(const Vector2d& pixel);
 
-	std::vector<geometry3d::Pyramid> truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d);
+	std::vector<geometry3d::Pyramid> truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids=true);
 	std::vector<geometry2d::Triangle> project_triangles(const std::vector<geometry3d::Triangle>& triangles3d);
 
 	double signed_distance(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum);

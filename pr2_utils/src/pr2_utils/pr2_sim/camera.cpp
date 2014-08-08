@@ -75,7 +75,14 @@ geometry3d::Segment Camera::segment_through_pixel(const Vector2d& pixel) {
  * Calculate frustum methods
  */
 
-std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d) {
+
+/**
+ * \brief Truncates view frustum against triangles3d
+ * \param triangles3d
+ * \param include_truncated_pyramids for signed-distance gradient, might not want to include truncated pyramids
+ *                                   since they don't change because the environment is static (so gradient will be zero)
+ */
+std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids) {
 	// clip triangles against view frustum
 	geometry3d::RectangularPyramid frustum(get_pose().block<3,1>(0,3),
 			segment_through_pixel({0, width}).p1,
@@ -223,18 +230,20 @@ std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vecto
 
 		// create pyramid from 3d intersections
 		if (min_dist < INFINITY) {
-			geometry3d::Hyperplane hyperplane3d = min_tri3d.get_hyperplane();
-			std::vector<Vector3d> tri3d_intersections;
-			for(const geometry3d::Segment& vertex_seg3d : vertices_seg3d) {
-				Vector3d intersection;
-				if (hyperplane3d.intersection(vertex_seg3d, intersection)) {
-					tri3d_intersections.push_back(intersection);
+			if (include_truncated_pyramids) {
+				geometry3d::Hyperplane hyperplane3d = min_tri3d.get_hyperplane();
+				std::vector<Vector3d> tri3d_intersections;
+				for(const geometry3d::Segment& vertex_seg3d : vertices_seg3d) {
+					Vector3d intersection;
+					if (hyperplane3d.intersection(vertex_seg3d, intersection)) {
+						tri3d_intersections.push_back(intersection);
+					}
 				}
-			}
 
-			if (tri3d_intersections.size() == 3) {
-				pyramids3d.push_back(geometry3d::Pyramid(camera_position,
-						tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]));
+				if (tri3d_intersections.size() == 3) {
+					pyramids3d.push_back(geometry3d::Pyramid(camera_position,
+							tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]));
+				}
 			}
 		} else {
 			// no intersection, so pyramid of segments with length max_range
