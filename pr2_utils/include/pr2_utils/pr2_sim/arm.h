@@ -15,6 +15,8 @@ typedef Matrix<double, 7, 1> VectorJ;
 namespace pr2_sim {
 
 class Arm {
+	friend class Camera;
+
 	std::vector<std::string> joint_name_suffixes = {"_shoulder_pan_joint",
 	                                                 "_shoulder_lift_joint",
 	                                                 "_upper_arm_roll_joint",

@@ -124,14 +124,14 @@ class Camera:
             segments2d.update(tri2d.segments)
         
         # avoid redundant points
-        points2d = {geometry3d.Point([0,0]),
-                    geometry3d.Point([self.height,0]),
-                    geometry3d.Point([0,self.width]),
-                    geometry3d.Point([self.height,self.width])}
+        points2d = {geometry2d.Point([0,0]),
+                    geometry2d.Point([self.height,0]),
+                    geometry2d.Point([0,self.width]),
+                    geometry2d.Point([self.height,self.width])}
         # add vertices
         for seg2d in segments2d:
-            points2d.add(geometry3d.Point(seg2d.p0))
-            points2d.add(geometry3d.Point(seg2d.p1))
+            points2d.add(geometry2d.Point(seg2d.p0))
+            points2d.add(geometry2d.Point(seg2d.p1))
         # add intersections
         segments2d_list = list(segments2d)
         for i in xrange(len(segments2d_list)-1):
@@ -140,11 +140,11 @@ class Camera:
                 other_seg2d = segments2d_list[j]
                 intersection = seg2d.intersection(other_seg2d)
                 if intersection is not None:
-                    points2d.add(geometry3d.Point(intersection))
+                    points2d.add(geometry2d.Point(intersection))
                     
 #         print('len(points2d): {0}'.format(len(points2d)))
         partition_triangles2d = set()
-        for i, pt2d in enumerate(points2d):            
+        for pt2d in points2d:            
 #             print('len(segments2d): {0}'.format(len(segments2d)))
             
             # find other points that don't cross anything in segments2d

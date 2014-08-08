@@ -193,6 +193,10 @@ public:
 		return triangle_area(a, b, c);
 	}
 
+	inline Vector2d get_center() const {
+		return ((a+b+c)/3.0);
+	}
+
 	inline std::vector<Vector2d> get_vertices() const {
 		return {a, b, c};
 	}
@@ -228,6 +232,95 @@ public:
 private:
 	Vector2d a, b, c;
 };
+
+
+/**
+ * Classes to allow for use in unordered_set/sorting
+ */
+
+class PointHash {
+public:
+	long operator()(const Vector2d& x) const {
+		return 0;
+	}
+};
+
+class PointEqualTo {
+public:
+	bool operator()(const Vector2d& a, const Vector2d& b) const {
+		return ((a-b).norm() < epsilon);
+	}
+};
+
+class PointLessThan {
+public:
+	enum Coordinate {x=0, y=1};
+	PointLessThan(Coordinate c) : c(c) { }
+
+	bool operator()(const Vector2d& a, const Vector2d& b) const {
+		return (a(c) < b(c));
+	}
+
+private:
+	Coordinate c;
+};
+
+
+class SegmentHash {
+public:
+	long operator()(const Segment& x) const {
+		return 0;
+	}
+};
+
+class SegmentEqualTo {
+public:
+	bool operator()(const Segment& a, const Segment& b) const {
+		return (((a.p0 - b.p0).norm() < epsilon && ((a.p1 - b.p1).norm() < epsilon)) ||
+				(((a.p0 - b.p1).norm() < epsilon) && ((a.p1 - b.p0).norm() < epsilon)));
+	}
+};
+
+class SegmentAngleCompare {
+public:
+	SegmentAngleCompare(const Segment& compare_segment) : compare_segment(compare_segment) { }
+
+	bool operator()(const Segment& a, const Segment& b) const {
+		return (a.angle(compare_segment) < b.angle(compare_segment));
+	}
+
+private:
+	Segment compare_segment;
+};
+
+class TriangleHash {
+public:
+	long operator()(const Triangle& x) const {
+		return 0;
+	}
+};
+
+class TriangleEqualTo {
+public:
+	bool operator()(const Triangle& a, const Triangle& b) const {
+		std::vector<Vector2d> a_vertices = a.get_vertices();
+		std::vector<Vector2d> b_vertices = b.get_vertices();
+
+		std::sort(a_vertices.begin(), a_vertices.end(), PointLessThan(PointLessThan::Coordinate::x));
+		std::sort(a_vertices.begin(), a_vertices.end(), PointLessThan(PointLessThan::Coordinate::y));
+
+		std::sort(b_vertices.begin(), b_vertices.end(), PointLessThan(PointLessThan::Coordinate::x));
+		std::sort(b_vertices.begin(), b_vertices.end(), PointLessThan(PointLessThan::Coordinate::y));
+
+		for(int i=0; i < 3; ++i) {
+			if ((a_vertices[i] - b_vertices[i]).norm() > epsilon) {
+				return false;
+			}
+		}
+		return true;
+	}
+};
+
 
 
 }

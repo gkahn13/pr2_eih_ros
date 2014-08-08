@@ -2,6 +2,7 @@
 #define __GEOMETRY3D_H__
 
 #include "geometry2d.h"
+#include "pr2_utils/pr2_sim/simulator.h"
 
 #include <vector>
 
@@ -83,7 +84,11 @@ public:
 
 	}
 
-	// TODO: add plotting
+	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color) const {
+		Vector3d p0_world = sim.transform_from_to(p0, frame, "world");
+		Vector3d p1_world = sim.transform_from_to(p1, frame, "world");
+		sim.plot_segment(p0_world, p1_world, color);
+	}
 };
 
 class Hyperplane {
@@ -134,29 +139,22 @@ public:
 		return Hyperplane(origin, normal);
 	}
 
-	// TODO: add plotting
+	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color) const {
+		Vector3d o = sim.transform_from_to(origin, frame, "world");
+		Vector3d n = sim.transform_from_to(normal, frame, "world");
+		sim.plot_segment(o, o + 0.5*n, color);
+	}
 
 private:
 	Vector3d origin, normal;
 };
 
 
-class Point {
-	/**
-	 * \brief Allows comparing 3d points
-	 */
-public:
-	Point(const Vector3d& point) : p(point) { }
-
-	// TODO: add operator for comparison
-
-private:
-	Vector3d p;
-};
-
-
 class Triangle {
 public:
+	Vector3d a, b, c;
+
+	Triangle() { a.setZero(); b.setZero(); c.setZero(); }
 	Triangle(const Vector3d& a_pt, const Vector3d& b_pt, const Vector3d c_pt) : a(a_pt), b(b_pt), c(c_pt) { }
 
 	/**
@@ -240,9 +238,21 @@ public:
 		return Hyperplane(origin, normal);
 	}
 
-private:
-	Vector3d a, b, c;
+	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool fill=false, double alpha=0.25) const {
+		Vector3d a_world = sim.transform_from_to(a, frame, "world");
+		Vector3d b_world = sim.transform_from_to(b, frame, "world");
+		Vector3d c_world = sim.transform_from_to(c, frame, "world");
 
+		sim.plot_segment(a_world, b_world, color);
+		sim.plot_segment(b_world, c_world, color);
+		sim.plot_segment(c_world, a_world, color);
+
+		if (fill) {
+			sim.plot_triangle(a_world, b_world, c_world, color, alpha);
+		}
+	}
+
+private:
 	/**
 	 * \brief Finds rotation to align the normal of this triangle to the target
 	 * \param target align normal to this
@@ -318,7 +328,32 @@ public:
 			Triangle(a, b, c)};
 	}
 
-	// TODO: add plotting
+	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool with_sides=false, bool fill=false, double alpha=0.25) const {
+		Vector3d base_world = sim.transform_from_to(base, frame, "world");
+		Vector3d a_world = sim.transform_from_to(a, frame, "world");
+		Vector3d b_world = sim.transform_from_to(b, frame, "world");
+		Vector3d c_world = sim.transform_from_to(c, frame, "world");
+
+		if (with_sides) {
+			sim.plot_segment(base_world, a_world, color);
+			sim.plot_segment(base_world, b_world, color);
+			sim.plot_segment(base_world, c_world, color);
+		}
+
+		sim.plot_segment(a_world, b_world, color);
+		sim.plot_segment(b_world, c_world, color);
+		sim.plot_segment(c_world, a_world, color);
+
+		if (fill) {
+			if (with_sides) {
+				sim.plot_triangle(base_world, a_world, b_world, color, alpha);
+				sim.plot_triangle(base_world, b_world, c_world, color, alpha);
+				sim.plot_triangle(base_world, c_world, a_world, color, alpha);
+			}
+
+			sim.plot_triangle(a_world, b_world, c_world, color, alpha);
+		}
+	}
 
 private:
 	Vector3d base, a, b, c;
@@ -413,7 +448,37 @@ public:
 			Halfspace((a+b+c+d)/4.0, (b-a).cross(d-a))};
 	}
 
-	// TODO: add plotting
+	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool with_sides=false, bool fill=false, double alpha=0.25) const {
+		Vector3d base_world = sim.transform_from_to(base, frame, "world");
+		Vector3d a_world = sim.transform_from_to(a, frame, "world");
+		Vector3d b_world = sim.transform_from_to(b, frame, "world");
+		Vector3d c_world = sim.transform_from_to(c, frame, "world");
+		Vector3d d_world = sim.transform_from_to(d, frame, "world");
+
+		if (with_sides) {
+			sim.plot_segment(base_world, a_world, color);
+			sim.plot_segment(base_world, b_world, color);
+			sim.plot_segment(base_world, c_world, color);
+			sim.plot_segment(base_world, d_world, color);
+		}
+
+		sim.plot_segment(a_world, b_world, color);
+		sim.plot_segment(b_world, c_world, color);
+		sim.plot_segment(c_world, d_world, color);
+		sim.plot_segment(d_world, a_world, color);
+
+		if (fill) {
+			if (with_sides) {
+				sim.plot_triangle(base_world, a_world, b_world, color, alpha);
+				sim.plot_triangle(base_world, b_world, c_world, color, alpha);
+				sim.plot_triangle(base_world, c_world, d_world, color, alpha);
+				sim.plot_triangle(base_world, d_world, a_world, color, alpha);
+			}
+
+			sim.plot_triangle(a_world, b_world, c_world, color, alpha);
+			sim.plot_triangle(a_world, c_world, d_world, color, alpha);
+		}
+	}
 
 private:
 	Vector3d base, a, b, c, d;

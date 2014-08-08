@@ -231,15 +231,15 @@ class RectangularPyramid:
         d = sim.transform_from_to(self.d, frame, 'world')
         
         if with_sides:
-            sim.plot_segment(base, a)
-            sim.plot_segment(base, b)
-            sim.plot_segment(base, c)
-            sim.plot_segment(base, d)
+            sim.plot_segment(base, a, color=color)
+            sim.plot_segment(base, b, color=color)
+            sim.plot_segment(base, c, color=color)
+            sim.plot_segment(base, d, color=color)
         
-        sim.plot_segment(a, b)
-        sim.plot_segment(b, c)
-        sim.plot_segment(c, d)
-        sim.plot_segment(d, a)
+        sim.plot_segment(a, b, color=color)
+        sim.plot_segment(b, c, color=color)
+        sim.plot_segment(c, d, color=color)
+        sim.plot_segment(d, a, color=color)
         
         if fill:
             if with_sides:

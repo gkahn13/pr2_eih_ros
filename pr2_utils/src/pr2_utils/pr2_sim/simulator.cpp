@@ -185,7 +185,7 @@ void Simulator::plot_segment(Vector3d p0, Vector3d p1, Vector3d color) {
 	float c[6];
 	for(int i=0; i < 3; ++i) { c[i] = color(i); }
 	for(int i=0; i < 3; ++i) { c[i+3] = color(i); }
-	handles.push_back(env->drawlinestrip(points, 2, sizeof(float)*3, 1.0f, c));
+	handles.push_back(env->drawlinestrip(points, 2, sizeof(float)*3, 3.0f, c));
 }
 
 void Simulator::plot_segment(rave::Vector p0, rave::Vector p1, Vector3d color) {
