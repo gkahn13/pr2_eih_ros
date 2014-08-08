@@ -14,6 +14,8 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 set(PCL_LIBRARIES ${PCL_LIBRARIES} "pcl_common")
 
+set(TIMER_LIBRARIES "dl;rt")
+
 set(PCL_BUILD_TYPE Release)
 
 catkin_package(
@@ -58,4 +60,4 @@ add_executable(moment_of_intertia src/moment_of_intertia.cpp)
 target_link_libraries(moment_of_intertia ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(occluded_region_finder src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
-target_link_libraries(occluded_region_finder ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(occluded_region_finder ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})

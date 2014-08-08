@@ -11,15 +11,21 @@
 
 #include <pointcloud_voxel_grid.h>
 #include <plane_recognition.h>
+#include <timer.h>
 
 namespace cluster_projection {
 
-pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ> cluster, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse, pcl::PointCloud<pcl::PointXYZ>::Ptr plane_cloud, Eigen::Matrix4d transformation_matrix) {
+pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ> cluster, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse, pcl::PointCloud<pcl::PointXYZ>::Ptr plane_cloud,
+                                                  Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff) {
+
+//    Timer timer = Timer();
+    //Timer_tic(&timer);
     // transform pointclouds into common coordinate frame
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cluster(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse(new pcl::PointCloud<pcl::PointXYZ>);
+
+    //Eigen::Affine3d affine1 = Eigen::Affine3d(transformation_matrix);
     pcl::transformPointCloud(cluster, *transformed_cluster, transformation_matrix);
-    pcl::transformPointCloud(*inverse, *transformed_inverse, transformation_matrix);
+
 
     double fx = 525., fy = 525., cx = 319.5, cy = 239.5;
 
@@ -29,29 +35,47 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     0, 0, 1;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr projected_cluster(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse(new pcl::PointCloud<pcl::PointXYZ>);
-    std::vector<int> inliers;
 
     // project pointclouds onto image plane
     Eigen::Affine3d affine_transformation = Eigen::Affine3d(P);
     pcl::transformPointCloud(*transformed_cluster, *projected_cluster, affine_transformation);
-    pcl::transformPointCloud(*transformed_inverse, *projected_inverse, affine_transformation);
 
+    // only projects the inverse cloud once, as it will not vary between clusters
+    if (projected_inverse->size() == 0) {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::transformPointCloud(*inverse, *transformed_inverse, transformation_matrix);
+        pcl::transformPointCloud(*transformed_inverse, *projected_inverse, affine_transformation);
+    }
+
+    //std::cout << "transforming and projecting: " << Timer_toc(&timer) << std::endl;
+
+    // I thought combining the transformations would make things faster, but it didn't seem to help
+//    pcl::transformPointCloud(cluster, *projected_cluster, affine_transformation * affine1);
+//    pcl::transformPointCloud(*inverse, *projected_inverse, affine_transformation * affine1);
+
+    //Timer_tic(&timer);
     // find corners for the (axis aligned) bounding box in 2-D
     Eigen::Matrix<double, 6, 1> extremes = PointCloudVoxelGrid::calculate_extremes(projected_cluster);
+    //std::cout << "calculating extremes: " << Timer_toc(&timer) << std::endl;
 
-    std::cout << extremes << std::endl;
 
+    //Timer_tic(&timer);
 
-    // fit a plane to the zero-crossing points to find a table top
-    pcl::PointIndices::Ptr unused(new pcl::PointIndices);
-    pcl::ModelCoefficients::Ptr plane_coeff(new pcl::ModelCoefficients);
-    plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff);
+    // only do this once
+    if (plane_coeff->values.size() == 0) {
+        // fit a plane to the zero-crossing points to find a table top
+        pcl::PointIndices::Ptr unused(new pcl::PointIndices);
+        plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff);
+    }
+
     double a = plane_coeff->values[0], b = plane_coeff->values[1],
     c = plane_coeff->values[2], d = plane_coeff->values[3];
 
-    std::cout << "plane coefficients: " << a << ", " << b << ", " << c << ", " << d << std::endl;
+    //std::cout << "plane fitting: " << Timer_toc(&timer) << std::endl;
 
+    //std::cout << "plane coefficients: " << a << ", " << b << ", " << c << ", " << d << std::endl;
+
+    //Timer_tic(&timer);
     // loop through the clouds, finding the intersection of the inverse cloud and the bounding box
     // of the projected object
     pcl::PointCloud<pcl::PointXYZ>::iterator projected_inverse_iter;
@@ -72,6 +96,8 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
             occluded_region.push_back(current_inverse);
         }
     }
+
+    //std::cout << "occluded region loop: " << Timer_toc(&timer) << std::endl;
 
     return occluded_region;
 

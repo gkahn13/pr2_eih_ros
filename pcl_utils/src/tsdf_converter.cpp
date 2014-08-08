@@ -1,11 +1,8 @@
 #include <tsdf_converter.h>
+#include <timer.h>
 
 namespace tsdf_converter {
-void convert_tsdf(std::string distance_file, std::string weight_file, pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_cloud,
-                  int jump, double voxel_size) {
-
-    std::vector<float> tsdf_distances;
-    std::vector<short> tsdf_weights;
+void read_files(std::string distance_file, std::string weight_file, std::vector<float>* tsdf_distances, std::vector<short>* tsdf_weights) {
 
     // read the raw binary files into vectors
 
@@ -14,8 +11,8 @@ void convert_tsdf(std::string distance_file, std::string weight_file, pcl::Point
     long size1 = is1.tellg();
     is1.seekg(0, std::ifstream::beg);
     std::cout << size1 / sizeof(float) << std::endl;
-    tsdf_distances.resize(size1 / sizeof(float));
-    is1.read(reinterpret_cast<char*>(&tsdf_distances[0]), size1);
+    tsdf_distances->resize(size1 / sizeof(float));
+    is1.read(reinterpret_cast<char*>(&((*tsdf_distances)[0])), size1);
     //is1.close();
 
     std::ifstream is2(weight_file.c_str(), std::ios::binary);
@@ -23,14 +20,13 @@ void convert_tsdf(std::string distance_file, std::string weight_file, pcl::Point
     long size2 = is2.tellg();
     is2.seekg(0, std::ifstream::beg);
     std::cout << size2 / sizeof(short) << std::endl;
-    tsdf_weights.resize(size2 / sizeof(short));
-    is2.read(reinterpret_cast<char*>(&tsdf_weights[0]), size2);
+    tsdf_weights->resize(size2 / sizeof(short));
+    is2.read(reinterpret_cast<char*>(&((*tsdf_weights)[0])), size2);
     //is2.close();
 
-    convert_tsdf_vectors(tsdf_distances, tsdf_weights, zero_crossing_cloud, foreground_cloud, inverse_cloud, jump, voxel_size);
 }
 
-void convert_tsdf_vectors(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_cloud,
+void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_cloud,
                   int jump, double voxel_size) {
     // loop the pointcloud, finding zero crossing points and (optionally) "foreground" points
 
