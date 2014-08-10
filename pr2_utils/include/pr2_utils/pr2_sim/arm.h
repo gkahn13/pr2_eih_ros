@@ -10,7 +10,8 @@ using namespace Eigen;
 #include <openrave-core.h>
 namespace rave = OpenRAVE;
 
-typedef Matrix<double, 7, 1> VectorJ;
+#define ARM_DIM 7
+typedef Matrix<double, ARM_DIM, 1> VectorJ;
 
 namespace pr2_sim {
 

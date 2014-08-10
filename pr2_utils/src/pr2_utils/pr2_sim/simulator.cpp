@@ -224,6 +224,29 @@ void Simulator::plot_transform(Matrix4d T, float length) {
 	plot_transform(eigen_to_rave(T), length);
 }
 
+void Simulator::plot_gaussian(Vector3d mean, Matrix3d cov, Vector3d color) {
+	std::default_random_engine generator;
+	std::normal_distribution<double> distribution(0.0,1.0);
+
+	Matrix3d cov_chol = cov.llt().matrixL();
+	for(int i=0; i < 1000; ++i) {
+		Vector3d z = {distribution(generator), distribution(generator), distribution(generator)};
+		z.normalize();
+		Vector3d x = cov_chol*z + mean;
+		plot_point(x, color, .002);
+	}
+
+	SelfAdjointEigenSolver<Matrix3d> eig(cov);
+	Vector3d eigenvalues = eig.eigenvalues();
+	Matrix3d eigenvectors = eig.eigenvectors();
+
+	for(int i=0; i < 3; ++i) {
+		Vector3d color = Vector3d::Zero();
+		color(i) = 1;
+		plot_segment(mean - (eigenvalues(i)/1.)*eigenvectors.col(i), mean + (eigenvalues(i)/1.)*eigenvectors.col(i), color);
+	}
+}
+
 
 /**
  *

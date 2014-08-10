@@ -33,6 +33,14 @@ Matrix4d Camera::get_pose() {
 	return sim->transform_from_to(tool_to_camera, arm->tool_frame, "base_link");
 }
 
+//Matrix4d Camera::get_pose(const VectorJ& joints) {
+//	VectorJ curr_joints = arm->get_joints();
+//	arm->set_joints(joints);
+//	Matrix4d pose = sim->transform_from_to(tool_to_camera, arm->tool_frame, "base_link");
+//	arm->set_joints(curr_joints);
+//	return pose;
+//}
+
 /**
  * Camera matrix methods
  */
@@ -117,9 +125,10 @@ std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vecto
 	}
 	// add segment intersections
 	std::vector<geometry2d::Segment> segments2d_list(segments2d.begin(), segments2d.end());
-	for(int i=0; i < segments2d_list.size()-1; ++i) {
+	int segments2d_size = segments2d.size(); // had to do this outside of loop, weird...
+	for(int i=0; i < segments2d_size-1; ++i) {
 		const geometry2d::Segment& seg2d = segments2d_list[i];
-		for(int j=i+1; j < segments2d_list.size(); ++j) {
+		for(int j=i+1; j < segments2d_size; ++j) {
 			const geometry2d::Segment& other_seg2d = segments2d_list[j];
 			Vector2d intersection;
 			if (seg2d.intersection(other_seg2d, intersection)) {
@@ -272,6 +281,15 @@ std::vector<geometry2d::Triangle> Camera::project_triangles(const std::vector<ge
 	}
 
 	return triangles2d;
+}
+
+bool Camera::is_in_fov(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum) {
+	for(const geometry3d::Pyramid& pyramid3d : truncated_frustum) {
+		if (pyramid3d.is_inside(point)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 double Camera::signed_distance(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum) {

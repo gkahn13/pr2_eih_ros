@@ -12,6 +12,7 @@ using namespace Eigen;
 #include <openrave-core.h>
 namespace rave = OpenRAVE;
 
+#include <random>
 #include <boost/thread/thread.hpp>
 
 typedef Matrix<double, 7, 1> VectorJ; // Number of joints in PR2 arm
@@ -47,7 +48,7 @@ public:
 	void plot_transform(rave::Transform T, float length=0.1);
 	void plot_transform(Matrix4d T, float length=0.1);
 
-
+	void plot_gaussian(Vector3d mean, Matrix3d cov, Vector3d color);
 
 private:
 	rave::EnvironmentBasePtr env;

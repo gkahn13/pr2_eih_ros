@@ -80,8 +80,8 @@ catkin_python_setup()
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pr2_utils
+  INCLUDE_DIRS include
+  LIBRARIES pr2_utils
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -100,6 +100,11 @@ link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 # add_library(pr2_utils
 #   src/${PROJECT_NAME}/pr2_utils.cpp
 # )
+add_library(pr2_utils
+    src/${PROJECT_NAME}/pr2_sim/arm.cpp
+    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+    src/${PROJECT_NAME}/pr2_sim/camera.cpp
+)
 
 ## Declare a cpp executable
 add_executable(geometry_geometry2d tests/geometry_geometry2d.cpp)
