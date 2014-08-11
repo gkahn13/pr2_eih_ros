@@ -206,14 +206,11 @@ class Camera:
                         min_tri3d = tri3d
                     
             if min_tri3d is not None:
-                hyperplane3d = min_tri3d.hyperplane
-                tri3d_intersections = [hyperplane3d.intersection(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
-                #assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
-                if len(filter(lambda x: x is None, tri3d_intersections)) == 0:
-                    pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
+                tri3d_intersections = [min_tri3d.closest_point_on_segment(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
+                assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
+                pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
             else:
                 pyramids3d.append(geometry3d.Pyramid(camera_position, vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1))
-            
                 
         if plot:
             print('Total time: {0}'.format(time.time() - start_time))

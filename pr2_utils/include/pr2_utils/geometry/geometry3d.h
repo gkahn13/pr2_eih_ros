@@ -96,6 +96,13 @@ public:
 	Hyperplane(const Vector3d& o, const Vector3d n) : origin(o), normal(n) { }
 
 	/**
+	 * \brief Find distance from hyperplane to point
+	 */
+	inline double distance_to(const Vector3d& point) const {
+		return normal.dot(point - origin);
+	}
+
+	/**
 	 * \brief Finds intersection point with another segment
 	 * \param intersection stores intersection (if found)
 	 * \return true if intersection found
@@ -111,7 +118,7 @@ public:
 		Vector3d w = segment.p0 - origin;
 		double t = -normal.dot(w) / normal.dot(v);
 
-		if ((0 <= t) && (t <= 1)) {
+		if ((0-epsilon <= t) && (t <= 1+epsilon)) {
 			intersection = t*(segment.p1 - segment.p0) + segment.p0;
 			return true;
 		}
@@ -132,7 +139,7 @@ public:
 	 * \brief True if x is in the halfspace
 	 */
 	inline bool contains(const Vector3d& x) const {
-		return (normal.dot(x - origin) >= epsilon);
+		return (normal.dot(x - origin) >= 0);
 	}
 
 	inline Hyperplane get_hyperplane() const {
@@ -215,6 +222,20 @@ public:
 		}
 
 		return false;
+	}
+
+	inline Vector3d closest_point_on_segment(const Segment& segment) const {
+		Vector3d point;
+		Hyperplane hyperplane = get_hyperplane();
+		if (!hyperplane.intersection(segment, point)) {
+			if (distance_to(segment.p0) < distance_to(segment.p1)) {
+				point = segment.p0;
+			} else {
+				point = segment.p1;
+			}
+		}
+
+		return point;
 	}
 
 	inline double area() const {

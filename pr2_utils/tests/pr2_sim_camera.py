@@ -61,10 +61,17 @@ def test_truncated_view_frustum():
 #     triangles3d = [geometry3d.Triangle([np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
 #                                        [np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)],
 #                                        [np.random.uniform(.2,1), np.random.uniform(-.5,0), np.random.uniform(.25,.75)]) for _ in xrange(3)]
-    table_center = np.array([.2,.7,.5])
-    triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
-                   geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
-                   geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-.9,0]))]
+#     table_center = np.array([.2,.7,.5])
+#     triangles3d = [geometry3d.Triangle(table_center, table_center+np.array([.5,-1.4,0]), table_center+np.array([.5,0,0])),
+#                    geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
+#                    geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-.9,0]))]
+    
+    triangles3d = list()
+    triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.55,.55], [.5,-.55,.65]))
+    triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.5,.65], [.5,-.55,.65]))
+    # table
+    triangles3d.append(geometry3d.Triangle([0,-1,.55], [0,1,.55], [1,1,.55]))
+    triangles3d.append(geometry3d.Triangle([0,-1,.55], [1,-1,.55], [1,1,.55]))
     
     
     cam.truncated_view_frustum(triangles3d, plot=True)

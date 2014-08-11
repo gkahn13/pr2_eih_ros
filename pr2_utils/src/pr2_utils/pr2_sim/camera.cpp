@@ -240,19 +240,13 @@ std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vecto
 		// create pyramid from 3d intersections
 		if (min_dist < INFINITY) {
 			if (include_truncated_pyramids) {
-				geometry3d::Hyperplane hyperplane3d = min_tri3d.get_hyperplane();
 				std::vector<Vector3d> tri3d_intersections;
 				for(const geometry3d::Segment& vertex_seg3d : vertices_seg3d) {
-					Vector3d intersection;
-					if (hyperplane3d.intersection(vertex_seg3d, intersection)) {
-						tri3d_intersections.push_back(intersection);
-					}
+					tri3d_intersections.push_back(min_tri3d.closest_point_on_segment(vertex_seg3d));
 				}
 
-				if (tri3d_intersections.size() == 3) {
-					pyramids3d.push_back(geometry3d::Pyramid(camera_position,
-							tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]));
-				}
+				pyramids3d.push_back(geometry3d::Pyramid(camera_position,
+						tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]));
 			}
 		} else {
 			// no intersection, so pyramid of segments with length max_range

@@ -337,6 +337,18 @@ class Triangle:
         
         return None
     
+    def closest_point_on_segment(self, segment):
+        hyperplane = self.hyperplane
+        intersection = hyperplane.intersection(segment)
+        
+        if intersection is not None:
+            return intersection
+        else:
+            if self.distance_to(segment.p0) < self.distance_to(segment.p1):
+                return segment.p0
+            else:
+                return segment.p1
+    
     @property
     def vertices(self):
         """
@@ -467,7 +479,7 @@ class Halfspace:
         :param x: 3d point as list or np.array
         :return True if x forms acute angle with plane normal, else False
         """
-        return np.dot(self.normal, np.array(x) - self.origin) >= epsilon
+        return np.dot(self.normal, np.array(x) - self.origin) >= 0
     
     @property
     def hyperplane(self):
@@ -512,7 +524,7 @@ class Hyperplane:
         w = p0 - self.origin
         t = -np.dot(self.normal, w)/np.dot(self.normal, v)
         
-        if 0 <= t <= 1:
+        if 0-epsilon <= t <= 1+epsilon:
             return t*(p1-p0) + p0
         else:
             return None
