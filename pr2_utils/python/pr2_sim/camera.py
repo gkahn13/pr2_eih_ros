@@ -20,7 +20,7 @@ wrist_to_hand = tfx.transform((-0.106925711716, -0.00652973239027, -0.0566985277
 class Camera:
     def __init__(self, arm, sim, tool_to_camera=None,
                  height=480., width=640., focal_length=.01,
-                 fx=525., fy=525., cx=319.5, cy=239.5, max_range=1.5):
+                 fx=525., fy=525., cx=319.5, cy=239.5, min_range=.3, max_range=1.5):
                  #fx=640.*2., fy=480.*2., cx=640./2.+0.5, cy=480./2.+0.5, max_range=1.5):
         self.arm = arm
         self.sim = sim
@@ -36,7 +36,8 @@ class Camera:
                            [ 0,  0,  1]])
         
         self.focal_length = focal_length # TODO: not sure if needed
-        self.max_range = 1.5
+        self.min_range = min_range
+        self.max_range = max_range
         self.height_m = focal_length*(height/fy)
         self.width_m = focal_length*(width/fx)
         
@@ -83,13 +84,16 @@ class Camera:
         pixel = np.array(pixel)
         pixel_centered = pixel - np.array([self.height/2., self.width/2.])
         
-        pixel3d_centered_m = self.max_range*np.array([pixel_centered[1]/self.fx,
-                                                      pixel_centered[0]/self.fy,
-                                                      1])
+        pixel3d_centered_m_min = self.min_range*np.array([pixel_centered[1]/self.fx,
+                                                         pixel_centered[0]/self.fy,
+                                                         1])
+        pixel3d_centered_m_max = self.max_range*np.array([pixel_centered[1]/self.fx,
+                                                         pixel_centered[0]/self.fy,
+                                                         1])
         
         transform = self.get_pose().as_tf()
-        p0 = transform.position.array
-        p1 = (transform*tfx.pose(pixel3d_centered_m)).position.array        
+        p0 = (transform*tfx.pose(pixel3d_centered_m_min)).position.array 
+        p1 = (transform*tfx.pose(pixel3d_centered_m_max)).position.array        
         
         return geometry3d.Segment(p0, p1)
     
@@ -107,11 +111,15 @@ class Camera:
         """
         start_time = time.time()
         
-        frustum = geometry3d.RectangularPyramid(self.get_pose().position.array,
-                                                self.segment_through_pixel([0,self.width]).p1,
-                                                self.segment_through_pixel([0,0]).p1,
-                                                self.segment_through_pixel([self.height,0]).p1,
-                                                self.segment_through_pixel([self.height,self.width]).p1)
+        seg3d_a = self.segment_through_pixel([0,self.width])
+        seg3d_b = self.segment_through_pixel([0,0])
+        seg3d_c = self.segment_through_pixel([self.height,0])
+        seg3d_d = self.segment_through_pixel([self.height,self.width])
+        
+        frustum = geometry3d.ViewFrustum(seg3d_a.p0, seg3d_a.p1,
+                                         seg3d_b.p0, seg3d_b.p1,
+                                         seg3d_c.p0, seg3d_c.p1,
+                                         seg3d_d.p0, seg3d_d.p1)
         
         clipped_triangles3d = list()
         for tri3d in triangles3d:
@@ -208,9 +216,13 @@ class Camera:
             if min_tri3d is not None:
                 tri3d_intersections = [min_tri3d.closest_point_on_segment(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
                 assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
-                pyramids3d.append(geometry3d.Pyramid(camera_position, tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]))
+                pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, tri3d_intersections[0],
+                                                              vertices_seg3d[1].p0, tri3d_intersections[1], 
+                                                              vertices_seg3d[2].p0, tri3d_intersections[2]))
             else:
-                pyramids3d.append(geometry3d.Pyramid(camera_position, vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1))
+                pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
+                                                              vertices_seg3d[1].p0, vertices_seg3d[1].p1,
+                                                              vertices_seg3d[2].p0, vertices_seg3d[2].p1))
                 
         if plot:
             print('Total time: {0}'.format(time.time() - start_time))
@@ -222,7 +234,7 @@ class Camera:
                 tri3d.plot(self.sim, frame='base_link', fill=True, color=(0,0,1))
                 
             for pyramid in pyramids3d:
-                pyramid.plot(self.sim, frame='base_link', fill=True, with_sides=True, color=(0,1,0), alpha=0.1)
+                pyramid.plot(self.sim, frame='base_link', fill=False, with_sides=False, color=(0,1,0), alpha=0.25)
             
             plt.close(1)
             fig = plt.figure(1)
@@ -296,11 +308,16 @@ class Camera:
         :param with_sides: if True, plots side edges too
         :param color: (r,g,b) [0,1]
         """
-        frustum = geometry3d.RectangularPyramid(self.get_pose().position.array,
-                                                self.segment_through_pixel([0,self.width]).p1,
-                                                self.segment_through_pixel([0,0]).p1,
-                                                self.segment_through_pixel([self.height,0]).p1,
-                                                self.segment_through_pixel([self.height,self.width]).p1)
+        seg3d_a = self.segment_through_pixel([0,self.width])
+        seg3d_b = self.segment_through_pixel([0,0])
+        seg3d_c = self.segment_through_pixel([self.height,0])
+        seg3d_d = self.segment_through_pixel([self.height,self.width])
+        
+        frustum = geometry3d.ViewFrustum(seg3d_a.p0, seg3d_a.p1,
+                                         seg3d_b.p0, seg3d_b.p1,
+                                         seg3d_c.p0, seg3d_c.p1,
+                                         seg3d_d.p0, seg3d_d.p1)
+        
         frustum.plot(self.sim, frame=frame, fill=fill, with_sides=with_sides, color=color, alpha=alpha)
             
     
