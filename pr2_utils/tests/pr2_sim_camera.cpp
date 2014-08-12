@@ -39,7 +39,7 @@ void test_signed_distance() {
 
 			pr2_utils::Timer timer;
 			pr2_utils::Timer_tic(&timer);
-			std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
+			std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(cam.get_pose(), triangles3d);
 			double time = pr2_utils::Timer_toc(&timer);
 
 			std::cout << "Truncated frustum time: " << time << " seconds\n";
@@ -85,7 +85,7 @@ void test_truncated_view_frustum() {
 
 	pr2_utils::Timer timer;
 	pr2_utils::Timer_tic(&timer);
-	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(cam.get_pose(), triangles3d);
 	double time = pr2_utils::Timer_toc(&timer);
 
 	std::cout << "Truncated frustum time: " << time << " seconds\n";
@@ -99,7 +99,28 @@ void test_truncated_view_frustum() {
 	std::cin.ignore();
 }
 
+void test_pose() {
+	pr2_sim::Simulator sim(true, false);
+	pr2_sim::Arm arm(pr2_sim::Arm::right, &sim);
+	arm.set_posture(pr2_sim::Arm::Posture::mantis);
+
+	pr2_sim::Camera cam(&arm, &sim);
+
+	Matrix4d arm_pose = arm.get_pose();
+	Matrix4d cam_pose = cam.get_pose();
+
+	std::cout << "arm_pose:\n" << arm_pose << "\n";
+	std::cout << "cam_pose:\n" << cam_pose << "\n";
+
+	sim.plot_transform(sim.transform_from_to(arm_pose, "base_link", "world"));
+	sim.plot_transform(sim.transform_from_to(cam_pose, "base_link", "world"));
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+}
+
 int main() {
 	test_signed_distance();
 //	test_truncated_view_frustum();
+//	test_pose();
 }

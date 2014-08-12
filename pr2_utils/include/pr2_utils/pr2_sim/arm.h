@@ -58,6 +58,9 @@ private:
 	int num_joints;
 	VectorJ lower, upper;
 
+	rave::Transform fk_origin;
+	std::vector<rave::Vector> arm_joint_axes, arm_link_trans;
+
 //	VectorJ _closer_joint_angles(const VectorJ& new_joints, const VectorJ& curr_joints);
 };
 

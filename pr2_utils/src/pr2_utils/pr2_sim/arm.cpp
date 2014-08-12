@@ -25,6 +25,24 @@ Arm::Arm(ArmType a, Simulator *s) : arm_type(a), sim(s) {
 
 	lower = VectorJ(lower_vec.data());
 	upper = VectorJ(upper_vec.data());
+
+	fk_origin = sim->robot->GetLink("torso_lift_link")->GetTransform();
+
+	arm_joint_axes = { rave::Vector(0,0,1),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0) };
+
+	arm_link_trans = { rave::Vector(0, (arm_type == ArmType::left) ? 0.188 : -0.188, 0),
+			rave::Vector(0.1, 0, 0),
+			rave::Vector(0, 0, 0),
+			rave::Vector(0.4, 0, 0),
+			rave::Vector(0, 0, 0),
+			rave::Vector(.321, 0, 0),
+			rave::Vector(.18, 0, 0) };
 }
 
 /**
@@ -148,13 +166,24 @@ void Arm::get_joint_limits(VectorJ& l, VectorJ& u) {
  */
 
 Matrix4d Arm::fk(const VectorJ& joints) {
-	VectorJ curr_joints = get_joints();
+	rave::Transform pose_mat = fk_origin;
 
-	set_joints(joints);
-	Matrix4d pose = get_pose();
+	rave::Transform R;
+	for(int i=0; i < ARM_DIM; ++i) {
+		R.rot = rave::geometry::quatFromAxisAngle(arm_joint_axes[i], joints(i));
+		R.trans = arm_link_trans[i];
+		pose_mat = pose_mat*R;
+	}
 
-	set_joints(curr_joints);
-	return pose;
+	return rave_to_eigen(pose_mat);
+
+//	VectorJ curr_joints = get_joints();
+//
+//	set_joints(joints);
+//	Matrix4d pose = get_pose();
+//
+//	set_joints(curr_joints);
+//	return pose;
 }
 
 /**

@@ -30,16 +30,12 @@ Camera::Camera(Arm* arm, Simulator* sim, double height, double width, double foc
  */
 
 Matrix4d Camera::get_pose() {
-	return sim->transform_from_to(tool_to_camera, arm->tool_frame, "base_link");
+	return arm->get_pose()*tool_to_camera;
 }
 
-//Matrix4d Camera::get_pose(const VectorJ& joints) {
-//	VectorJ curr_joints = arm->get_joints();
-//	arm->set_joints(joints);
-//	Matrix4d pose = sim->transform_from_to(tool_to_camera, arm->tool_frame, "base_link");
-//	arm->set_joints(curr_joints);
-//	return pose;
-//}
+Matrix4d Camera::get_pose(const VectorJ& joints) {
+	return arm->fk(joints)*tool_to_camera;
+}
 
 /**
  * Camera matrix methods
@@ -49,10 +45,9 @@ Matrix4d Camera::get_pose() {
  * \brief Projects point onto image plane (no rounding or boundary checking)
  * \param point in frame "base_link"
  */
-Vector2d Camera::pixel_from_point(const Vector3d& point) {
-	Matrix4d cam_pose, point_pose = Matrix4d::Identity(), point_transform_cam;
+Vector2d Camera::pixel_from_point(const Matrix4d& cam_pose, const Vector3d& point) {
+	Matrix4d point_pose = Matrix4d::Identity(), point_transform_cam;
 
-	cam_pose = get_pose();
 	point_pose.block<3,1>(0,3) = point;
 	point_transform_cam = cam_pose.lu().solve(point_pose);
 
@@ -65,15 +60,14 @@ Vector2d Camera::pixel_from_point(const Vector3d& point) {
 /**
  * \brief Returns segment from camera origin through pixel
  */
-geometry3d::Segment Camera::segment_through_pixel(const Vector2d& pixel) {
+geometry3d::Segment Camera::segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel) {
 	Vector2d pixel_centered = pixel - Vector2d(height/2., width/2.);
 
 	Vector3d pixel3d_centered_m_min = min_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 	Vector3d pixel3d_centered_m_max = max_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 
-	Matrix4d transform = get_pose();
-	Matrix3d rot = transform.block<3,3>(0,0);
-	Vector3d trans = transform.block<3,1>(0,3);
+	Matrix3d rot = cam_pose.block<3,3>(0,0);
+	Vector3d trans = cam_pose.block<3,1>(0,3);
 
 	Vector3d p0 = (rot*pixel3d_centered_m_min + trans);
 	Vector3d p1 = (rot*pixel3d_centered_m_max + trans);
@@ -92,12 +86,13 @@ geometry3d::Segment Camera::segment_through_pixel(const Vector2d& pixel) {
  * \param include_truncated_pyramids for signed-distance gradient, might not want to include truncated pyramids
  *                                   since they don't change because the environment is static (so gradient will be zero)
  */
-std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids) {
+std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const Matrix4d& cam_pose,
+		const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids) {
 	// clip triangles against view frustum
-	geometry3d::Segment seg3d_a = segment_through_pixel({0, width});
-	geometry3d::Segment seg3d_b = segment_through_pixel({0, 0});
-	geometry3d::Segment seg3d_c = segment_through_pixel({height, 0});
-	geometry3d::Segment seg3d_d = segment_through_pixel({height, width});
+	geometry3d::Segment seg3d_a = segment_through_pixel(cam_pose, {0, width});
+	geometry3d::Segment seg3d_b = segment_through_pixel(cam_pose, {0, 0});
+	geometry3d::Segment seg3d_c = segment_through_pixel(cam_pose, {height, 0});
+	geometry3d::Segment seg3d_d = segment_through_pixel(cam_pose, {height, width});
 
 	geometry3d::ViewFrustum frustum(seg3d_a.p0, seg3d_a.p1,
 			seg3d_b.p0, seg3d_b.p1,
@@ -111,7 +106,7 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const s
 	}
 
 	// project clipped triangles to 2d
-	std::vector<geometry2d::Triangle> triangles2d = project_triangles(clipped_triangles3d);
+	std::vector<geometry2d::Triangle> triangles2d = project_triangles(cam_pose, clipped_triangles3d);
 
 	// initialize segments2d with segments from clipped_triangles2d
 	std::unordered_set<geometry2d::Segment, geometry2d::SegmentHash, geometry2d::SegmentEqualTo> segments2d;
@@ -223,10 +218,10 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const s
 	std::vector<geometry3d::TruncatedPyramid> pyramids3d;
 	for(const geometry2d::Triangle& tri2d : partition_triangles2d) {
 		// get 3d segments through triangle2d center and vertices
-		geometry3d::Segment center_seg3d = segment_through_pixel(tri2d.get_center());
+		geometry3d::Segment center_seg3d = segment_through_pixel(cam_pose, tri2d.get_center());
 		std::vector<geometry3d::Segment> vertices_seg3d;
 		for(const Vector2d& vertex : tri2d.get_vertices()) {
-			vertices_seg3d.push_back(segment_through_pixel(vertex));
+			vertices_seg3d.push_back(segment_through_pixel(cam_pose, vertex));
 		}
 
 		// find closest triangle that the center hits
@@ -270,14 +265,14 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const s
 /**
  * \brief Projects triangles onto image plane and returns 2d triangles
  */
-std::vector<geometry2d::Triangle> Camera::project_triangles(const std::vector<geometry3d::Triangle>& triangles3d) {
+std::vector<geometry2d::Triangle> Camera::project_triangles(const Matrix4d& cam_pose, const std::vector<geometry3d::Triangle>& triangles3d) {
 	std::vector<geometry2d::Triangle> triangles2d;
 
 	Vector2d a_proj, b_proj, c_proj;
 	for(const geometry3d::Triangle& triangle3d : triangles3d) {
-		a_proj = pixel_from_point(triangle3d.a);
-		b_proj = pixel_from_point(triangle3d.b);
-		c_proj = pixel_from_point(triangle3d.c);
+		a_proj = pixel_from_point(cam_pose, triangle3d.a);
+		b_proj = pixel_from_point(cam_pose, triangle3d.b);
+		c_proj = pixel_from_point(cam_pose, triangle3d.c);
 
 		triangles2d.push_back(geometry2d::Triangle(a_proj, b_proj, c_proj));
 	}
@@ -306,8 +301,8 @@ double Camera::signed_distance(const Vector3d& point, const std::vector<geometry
  * \brief Returns radial distance error according to http://www.mdpi.com/1424-8220/12/2/1437/htm
  * \return error roughly in meters (roughly because depends on focal_length)
  */
-double Camera::radial_distance_error(const Vector3d& point) {
-	Vector2d pixel = pixel_from_point(point);
+double Camera::radial_distance_error(const Matrix4d& cam_pose, const Vector3d& point) {
+	Vector2d pixel = pixel_from_point(cam_pose, point);
 	Vector2d pixel_centered = pixel - Vector2d(height,width)/2.0;
 	Vector2d pixel_centered_mm = pixel_centered*focal_length;
 	double error = pixel_centered_mm.transpose()*Vector2d(.007, .01).asDiagonal()*pixel_centered_mm;
@@ -315,10 +310,11 @@ double Camera::radial_distance_error(const Vector3d& point) {
 }
 
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {
-	geometry3d::Segment seg3d_a = segment_through_pixel({0, width});
-	geometry3d::Segment seg3d_b = segment_through_pixel({0, 0});
-	geometry3d::Segment seg3d_c = segment_through_pixel({height, 0});
-	geometry3d::Segment seg3d_d = segment_through_pixel({height, width});
+	Matrix4d cam_pose = get_pose();
+	geometry3d::Segment seg3d_a = segment_through_pixel(cam_pose, {0, width});
+	geometry3d::Segment seg3d_b = segment_through_pixel(cam_pose, {0, 0});
+	geometry3d::Segment seg3d_c = segment_through_pixel(cam_pose, {height, 0});
+	geometry3d::Segment seg3d_d = segment_through_pixel(cam_pose, {height, width});
 
 	geometry3d::ViewFrustum frustum(seg3d_a.p0, seg3d_a.p1,
 			seg3d_b.p0, seg3d_b.p1,
