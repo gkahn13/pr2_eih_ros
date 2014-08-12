@@ -28,7 +28,7 @@ class Simulator:
         for arm in [self.larm, self.rarm]:
             self.robot.SetActiveManipulator(arm)
         
-            ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterization.Type.Transform6D)
+            ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterizationType.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
         
@@ -158,10 +158,15 @@ class Simulator:
         
         ee_from_world = pose_mat.dot(link_to_ee)
         
+        self.robot.SetActiveManipulator(manip)
+        ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterizationType.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+            
         if return_all_solns:
-            return manip.FindIKSolutions(ee_from_world, filter_options)
+            return ikmodel.manip.FindIKSolutions(ee_from_world, filter_options)
         else:
-            return manip.FindIKSolution(ee_from_world, filter_options)
+            return ikmodel.manip.FindIKSolution(ee_from_world, filter_options)
     
     ############
     # plotting #

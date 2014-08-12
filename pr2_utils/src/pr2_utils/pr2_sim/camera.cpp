@@ -294,6 +294,18 @@ double Camera::signed_distance(const Vector3d& point, const std::vector<geometry
 	return sd;
 }
 
+/**
+ * \brief Returns radial distance error according to http://www.mdpi.com/1424-8220/12/2/1437/htm
+ * \return error roughly in meters (roughly because depends on focal_length)
+ */
+double Camera::radial_distance_error(const Vector3d& point) {
+	Vector2d pixel = pixel_from_point(point);
+	Vector2d pixel_centered = pixel - Vector2d(height,width)/2.0;
+	Vector2d pixel_centered_mm = pixel_centered*focal_length;
+	double error = pixel_centered_mm.transpose()*Vector2d(.007, .01).asDiagonal()*pixel_centered_mm;
+	return error;
+}
+
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {
 	geometry3d::RectangularPyramid frustum(get_pose().block<3,1>(0,3),
 			segment_through_pixel({0, width}).p1,

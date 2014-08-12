@@ -186,6 +186,33 @@ class Arm:
             joints = self._closer_joint_angles(joints, self.get_joints())
             
         return joints
+    
+    def ik_lookat(self, position, point):
+        """
+        :param position: desired position of tool_frame (tfx.point)
+        :param point: desired point for tool_frame to point at (tfx.point)
+        """
+        assert position.frame == 'base_link'
+        
+        position_world = self.sim.transform_from_to(position.array, 'base_link', 'world')
+        direction_world = np.dot(self.sim.transform_from_to(np.eye(4), 'base_link', 'world')[:3,:3], point.array - position.array)
+        direction_world /= np.linalg.norm(direction_world)
+        
+        red = direction_world
+        red /= np.linalg.norm(red)
+        green = np.cross(red, np.array([0,0,1]))
+        green /= np.linalg.norm(red)
+        blue = np.cross(red, green)
+        blue /= np.linalg.norm(blue)
+        
+        pose_mat = np.eye(4)
+        pose_mat[:3,0] = red
+        pose_mat[:3,1] = green
+        pose_mat[:3,2] = blue
+        pose_mat[:3,3] = position_world
+        
+        pose = tfx.pose(self.sim.transform_from_to(pose_mat, 'world', 'base_link'), frame='base_link')
+        return self.ik(pose)
         
     ##################
     # helper methods #

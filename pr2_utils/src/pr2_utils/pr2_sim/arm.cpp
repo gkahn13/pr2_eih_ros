@@ -173,6 +173,34 @@ bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
 }
 
 /**
+ * \brief Finds a rotation matrix that looks at point from position, then calls usual IK
+ *        (will not always find a solution, even when it should)
+ * \param position desired gripper position in frame "base_link"
+ * \param point 3d point to look at in frame "base_link"
+ */
+bool Arm::ik_lookat(const Vector3d& position, const Vector3d& point, VectorJ& joints) {
+	Vector3d position_world = sim->transform_from_to(position, "base_link", "world");
+	Matrix4d eye = Matrix4d::Identity();
+	Vector3d direction_world = sim->transform_from_to(eye, "base_link", "world").block<3,3>(0,0)*(point - position);
+	direction_world.normalize();
+
+	Vector3d red, green, blue;
+	red = direction_world;
+	red.normalize();
+	green = red.cross(Vector3d(0,0,1));
+	green.normalize();
+	blue = red.cross(green);
+	blue.normalize();
+
+	Matrix4d pose_world = Matrix4d::Identity();
+	pose_world.block<3,3>(0,0) << red, green, blue;
+	pose_world.block<3,1>(0,3) = position_world;
+
+	Matrix4d pose_base = sim->transform_from_to(pose_world, "world", "base_link");
+	return ik(pose_base, joints);
+}
+
+/**
  *
  * Arm private methods
  *

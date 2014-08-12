@@ -45,6 +45,7 @@ public:
 
 	Matrix4d fk(const VectorJ& joints);
 	bool ik(const Matrix4d& pose, VectorJ& joints);
+	bool ik_lookat(const Vector3d& position, const Vector3d& point, VectorJ& joints);
 
 private:
 	ArmType arm_type;

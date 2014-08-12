@@ -29,8 +29,12 @@ public:
 
 	bool is_in_fov(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum);
 	double signed_distance(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum);
+	double radial_distance_error(const Vector3d& point);
 
 	void plot(Vector3d color, std::string frame="base_link", bool fill=false, bool with_sides=true, double alpha=0.25);
+
+	Vector2d get_dimensions() { return Vector2d(height, width); }
+	double get_focal_length() { return focal_length; }
 
 private:
 	Arm *arm;
