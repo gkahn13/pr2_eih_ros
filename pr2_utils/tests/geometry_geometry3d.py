@@ -38,58 +38,29 @@ def test_distance_to_plot():
     sim.plot_point(closest_pt)
     
     IPython.embed()
-    
-def test_pyramid_inside():
-    sim = simulator.Simulator(view=True)
-    
-    base = [.5,0,0]
-    a = [.6, .1, .5]
-    b = [.4, .1, .5]
-    c = [.4, -.1, .5]
-    
-    pyramid = Pyramid(base, a, b, c)
-    pyramid.plot(sim)
-    
-    halfspaces = pyramid.halfspaces
-    for h in halfspaces:
-        h.plot(sim)
-        
-    for i in xrange(1000):
-        p = [np.random.uniform(.4,.6),
-             np.random.uniform(-.1,.1),
-             np.random.uniform(0,.5)]
-        is_inside = pyramid.is_inside(p)
-        print('is_inside: {0}'.format(is_inside))
-        sim.plot_point(p)
-        if is_inside:
-            raw_input()
-        sim.clear_plots(1)
-        
-    
-    IPython.embed()
          
 def test_clip_triangle():
     sim = simulator.Simulator(view=True)
     
-    base = [.5,0,0]
-    a = [.6, .1, .5]
-    b = [.4, .1, .5]
-    c = [.4, -.1, .5]
-    d = [.6, -.1, .5]
+    view_frustum = ViewFrustum((.6,.1,0), (.8,.2,.5),
+                               (.4,.1,0), (.2,.2,.5),
+                               (.4,-.1,0), (.2,-.2,.5),
+                               (.6,-.1,0), (.8,-.2,.5))
+    view_frustum.plot(sim, color=(1,0,0), fill=True, alpha=.25)
     
-    frustum = RectangularPyramid(base, a, b, c, d)
-    frustum.plot(sim)
+    for halfspace in view_frustum.halfspaces:
+        halfspace.plot(sim, color=(0,0,1))
     
 #     triangle = Triangle([.5, 0, .25], [.5, 0, .6], [.52, .02, .25])
 #     triangle = Triangle([.5, 0, .25], [.7, .5, .5], [.9, .1, .6])
-    triangle = Triangle([.6, .1, .6], [.7, .2, .8], [.5, 0, .6])
+    triangle = Triangle([.6, .1, -.2], [.7, .2, .3], [.5, 0, .1])
     triangle.plot(sim, color=(0,0,1))
     
     print('Original triangle, press enter to clip')
     raw_input()
-    sim.clear_plots(3)
+#     sim.clear_plots(3)
     
-    clipped_triangles = frustum.clip_triangle(triangle)
+    clipped_triangles = view_frustum.clip_triangle(triangle)
      
     print('Number of clipped triangles: {0}'.format(len(clipped_triangles)))
     for tri in clipped_triangles:
@@ -113,17 +84,13 @@ def test_point():
 def test_pyramid_sd():
     sim = simulator.Simulator(view=True)
     
-    base = [1,0,0]
-    a = [1.5, .5, 2]
-    b = [.5, .5, 2]
-    c = [.5, -.5, 2]
+    trunc_pyramid = TruncatedPyramid((.8,.2,1), (.8,.2,1.5),
+                                     (.2,.2,1), (.2,.2,1.5),
+                                     (.2,-.2,1), (.2,-.2,1.5))
     
-    pyramid = Pyramid(base, a, b, c)
-    pyramid.plot(sim, frame='base_link')
-    
-    halfspaces = pyramid.halfspaces
-    for h in halfspaces:
-        h.plot(sim)
+    trunc_pyramid.plot(sim, frame='base_link', color=(0,1,0), fill=True, alpha=.25)
+    for halfspace in trunc_pyramid.halfspaces:
+        halfspace.plot(sim, frame='base_link', color=(0,0,1))
         
     pos_step = .01
     delta_position = {'a' : [0, pos_step, 0],
@@ -132,7 +99,7 @@ def test_pyramid_sd():
                       'x' : [-pos_step, 0, 0],
                       '+' : [0, 0, pos_step],
                       '-' : [0, 0, -pos_step]}
-    point = np.array(base, dtype=float)
+    point = np.array((.7,.2,1), dtype=float)
     
     print('Move point around with keyboard to test signed-distance')
     char = ''
@@ -142,10 +109,10 @@ def test_pyramid_sd():
         sim.clear_plots(1)
         if delta_position.has_key(char):
             point += np.array(delta_position[char])
-        sim.plot_point(sim.transform_from_to(point, 'base_link', 'world'), size=.02, color=(0,1,0))
+        sim.plot_point(sim.transform_from_to(point, 'base_link', 'world'), size=.02, color=(0,0,1))
         
-        is_inside = pyramid.is_inside(point)
-        sd = pyramid.signed_distance(point)
+        is_inside = trunc_pyramid.is_inside(point)
+        sd = trunc_pyramid.signed_distance(point)
         print('is inside: {0}'.format(is_inside))
         print('sd: {0}\n'.format(sd))
 
@@ -154,6 +121,23 @@ def test_plotting():
     
     sim.plot_triangle(([1,0,1],[1,0,2],[1.5,0,1.5]),color=(1,0,0),alpha=0.5)
     
+    view_frustum = ViewFrustum((.6,.1,0), (.8,.2,.5),
+                               (.4,.1,0), (.2,.2,.5),
+                               (.4,-.1,0), (.2,-.2,.5),
+                               (.6,-.1,0), (.8,-.2,.5))
+    view_frustum.plot(sim, color=(1,0,0), fill=True, alpha=.25)
+    
+    for halfspace in view_frustum.halfspaces:
+        halfspace.plot(sim, color=(0,0,1))
+        
+    trunc_pyramid = TruncatedPyramid((.6,.1,1), (.8,.2,1.5),
+                                     (.4,.1,1), (.2,.2,1.5),
+                                     (.4,-.1,1), (.2,-.2,1.5))
+    
+    trunc_pyramid.plot(sim, color=(0,1,0), fill=True, alpha=.25)
+    for halfspace in trunc_pyramid.halfspaces:
+        halfspace.plot(sim, color=(0,0,1))
+    
     print('Press enter to exit')
     raw_input()
 
@@ -161,8 +145,8 @@ if __name__ == '__main__':
     #test_align_with()
     #test_distance_to()
     #test_distance_to_plot()
-    #test_pyramid_inside()
-    #test_clip_triangle()
+    test_clip_triangle()
     #test_point()
     #test_pyramid_sd()
-    test_plotting()
+    #test_plotting()
+    

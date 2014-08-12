@@ -129,6 +129,131 @@ class Pyramid:
                 sim.plot_triangle((base, c, a), color=color, alpha=alpha)
                 
             sim.plot_triangle((a, b, c), color=color, alpha=alpha)
+            
+class TruncatedPyramid:
+    def __init__(self, a0, a1, b0, b1, c0, c1):
+        """
+        A truncated pyramid with origin triangle a0, b0, c0
+        and end triangle a1, b1, c1
+        
+            a0          a1
+           /  \        /  \
+          /    \      /    \
+         b0----c0    b1----c1
+        """
+        self.a0 = np.array(a0)
+        self.b0 = np.array(b0)
+        self.c0 = np.array(c0)
+        self.a1 = np.array(a1)
+        self.b1 = np.array(b1)
+        self.c1 = np.array(c1)
+        
+    def is_inside(self, p):
+        """
+        :param p: 3d point as list or np.array
+        :return True if p is inside the pyramid, else False
+        """
+        p = np.array(p)
+        
+        halfspaces = self.halfspaces
+        return np.min([h.contains(p) for h in halfspaces])    
+    
+    def signed_distance(self, point):
+        """
+        :param 3d point as list or np.array
+        :return float signed-distance
+        """
+        point = np.array(point)
+        
+        sign = -1 if self.is_inside(point) else 1
+        dist = min([tri.distance_to(point) for tri in self.faces])
+        
+        return sign*dist
+    
+    @property
+    def halfspaces(self):
+        """
+        :return list of halfspaces representing outward-pointing faces
+        """
+        a0, b0, c0 = self.a0, self.b0, self.c0
+        a1, b1, c1 = self.a1, self.b1, self.c1
+
+        origins = [(a0+b0+c0)/3.0, # closer triangle
+                   (a0+a1+c0+c1)/4.0, # right side
+                   (a0+a1+b0+b1)/4.0, # left side
+                   (b0+b1+c0+c1)/4.0, # bottom side
+                   (a1+b1+c1)/3.0] # further triangle
+
+        normals = [np.cross(b0-c0, a0-c0),
+                   np.cross(a1-a0, c0-a0),
+                   np.cross(b1-b0, a0-b0),
+                   np.cross(c1-c0, b0-c0),
+                   np.cross(a1-c1, b1-c1)]
+        
+        normals = [n/np.linalg.norm(n) for n in normals]
+        
+        center = (a0+b0+c0+a1+b1+c1)/6.
+        hspaces = [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
+        for hspace in hspaces:
+            if not hspace.contains(center):
+                hspace.normal *= -1
+        return hspaces
+    
+    @property
+    def faces(self):
+        """
+        :return list of Triangle representing the faces of the pyramid
+        """
+        return [Triangle(self.a0, self.b0, self.c0),
+                Triangle(self.a0, self.a1, self.c1),
+                Triangle(self.a0, self.c0, self.c1),
+                Triangle(self.a0, self.a1, self.b1),
+                Triangle(self.a0, self.b0, self.b1),
+                Triangle(self.b0, self.b1, self.c1),
+                Triangle(self.b0, self.c0, self.c1),
+                Triangle(self.a1, self.b1, self.c1)]
+    
+    def plot(self, sim, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
+        """
+        Plots edges of the pyramid
+        
+        :param sim: Simulator instance
+        :param frame: frame in which points are defined in
+        :param fill: if True, colors the faces
+        :param with_sides: if True, plots side edges too
+        :param color: (r,g,b) [0,1]
+        :param alpha: if fill is True, alpha of faces
+        """
+        a0 = sim.transform_from_to(self.a0, frame, 'world')
+        b0 = sim.transform_from_to(self.b0, frame, 'world')
+        c0 = sim.transform_from_to(self.c0, frame, 'world')
+        a1 = sim.transform_from_to(self.a1, frame, 'world')
+        b1 = sim.transform_from_to(self.b1, frame, 'world')
+        c1 = sim.transform_from_to(self.c1, frame, 'world')
+        
+        if with_sides:
+            sim.plot_segment(a0, a1, color=color)
+            sim.plot_segment(b0, b1, color=color)
+            sim.plot_segment(c0, c1, color=color)
+            
+        sim.plot_segment(a0, b0, color=color)
+        sim.plot_segment(b0, c0, color=color)
+        sim.plot_segment(c0, a0, color=color)
+        sim.plot_segment(a1, b1, color=color)
+        sim.plot_segment(b1, c1, color=color)
+        sim.plot_segment(c1, a1, color=color)
+        
+        if fill:
+            if with_sides:
+                sim.plot_triangle((a0, a1, c1), color=color, alpha=alpha)
+                sim.plot_triangle((a0, c0, c1), color=color, alpha=alpha)
+                sim.plot_triangle((a0, a1, b1), color=color, alpha=alpha)
+                sim.plot_triangle((a0, b0, b1), color=color, alpha=alpha)
+                sim.plot_triangle((b0, b1, c1), color=color, alpha=alpha)
+                sim.plot_triangle((b0, c0, c1), color=color, alpha=alpha)
+                
+            sim.plot_triangle((a0, b0, c0), color=color, alpha=alpha)
+            sim.plot_triangle((a1, b1, c1), color=color, alpha=alpha)
     
 class RectangularPyramid:
     def __init__(self, base, a, b, c, d):
@@ -189,7 +314,7 @@ class RectangularPyramid:
             # clip all triangles against the halfspace
             for tri in triangles:
                 hyperplane = halfspace.hyperplane
-                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments])
+                intersections = filter(lambda x: x is not None, [(hyperplane.intersection(segment)) for segment in tri.segments])
                 assert len(intersections) == 0 or len(intersections) == 2
                 inside_vertices = [vertex for vertex in tri.vertices if halfspace.contains(vertex)]
                 if len(intersections) == 2:
@@ -250,6 +375,160 @@ class RectangularPyramid:
                 
             sim.plot_triangle((a,b,c), color=color, alpha=alpha)
             sim.plot_triangle((a,c,d), color=color, alpha=alpha)
+    
+class ViewFrustum:
+    def __init__(self, a0, a1, b0, b1, c0, c1, d0, d1):
+        """
+        A truncated pyramid with origin rectangle a0, b0, c0, d0
+        and end rectangle a1, b1, c1, d1 arranged as
+        b0 --- a0       b1 --- a1
+        |      |        |      |
+        |      |        |      |
+        c0 --- d0       c1 --- d1
+        """
+        self.a0 = np.array(a0)
+        self.b0 = np.array(b0)
+        self.c0 = np.array(c0)
+        self.d0 = np.array(d0)
+        self.a1 = np.array(a1)
+        self.b1 = np.array(b1)
+        self.c1 = np.array(c1)
+        self.d1 = np.array(d1)
+        
+    def is_inside(self, p):
+        """
+        :param p: 3d point as list or np.array
+        :return True if p is inside the pyramid, else False
+        """
+        p = np.array(p)
+        
+        halfspaces = self.halfspaces
+        return np.min([h.contains(p) for h in halfspaces])
+    
+    @property
+    def halfspaces(self):
+        """
+        :return list of halfspaces representing outward-pointing faces
+        """
+        a0, b0, c0, d0 = self.a0, self.b0, self.c0, self.d0
+        a1, b1, c1, d1 = self.a1, self.b1, self.c1, self.d1
+
+        origins = [(a0+b0+c0+d0)/4.0, # small rectangle
+                   (a0+a1+d0+d1)/4.0, # right side
+                   (a0+a1+b0+b1)/4.0, # top side
+                   (b0+b1+c0+c1)/4.0, # left side
+                   (c0+c1+d0+d1)/4.0, # bottom side
+                   (a1+b1+c1+d1)/4.0] # big rectangle
+
+        normals = [-np.cross(b0-c0, d0-c0),
+                   -np.cross(a1-a0, d0-a0),
+                   -np.cross(b0-a0, a1-a0),
+                   -np.cross(c1-c0, b0-c0),
+                   -np.cross(d1-d0, c0-d0),
+                   -np.cross(a1-d1, c1-d1)]
+    
+        normals = [n/np.linalg.norm(n) for n in normals]
+        
+        center = (a0+b0+c0+d0+a1+b1+c1+d1)/8.0
+        hspaces = [Halfspace(origin, normal) for origin, normal in zip(origins, normals)]
+        for hspace in hspaces:
+            if not hspace.contains(center):
+                hspace.normal *= -1
+        
+        return hspaces
+        
+    def clip_triangle(self, triangle):
+        """
+        Clips triangle against faces (http://www.cs.uu.nl/docs/vakken/gr/2011/Slides/08-pipeline2.pdf)
+        :param triangle: Triangle
+        :return list of Triangle
+        """
+        triangles = [triangle]
+        for halfspace in self.halfspaces:
+            new_triangles = list()
+            # clip all triangles against the halfspace
+            for tri in triangles:
+                hyperplane = halfspace.hyperplane
+                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments])
+                intersections = list(set([Point(intersection) for intersection in intersections]))
+                intersections = [point.p for point in intersections]
+#                 assert len(intersections) == 0 or len(intersections) == 2
+                inside_vertices = [vertex for vertex in tri.vertices if halfspace.contains(vertex)]
+                if len(intersections) == 2:
+                    assert len(inside_vertices) == 1 or len(inside_vertices) == 2
+                    if len(inside_vertices) == 1:
+                        # then intersections form new border of triangle
+                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
+                    else:
+                        # create two triangles
+                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
+                        if np.linalg.norm(inside_vertices[1] - intersections[0]) < np.linalg.norm(inside_vertices[1] - intersections[1]):
+                            new_triangles.append(Triangle(inside_vertices[1], intersections[0], inside_vertices[0]))
+                        else:
+                            new_triangles.append(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]))
+                elif len(intersections) == 0:
+                    # all/none of triangle in halfspace
+                    assert len(inside_vertices) == 0 or len(inside_vertices) == 3
+                    if len(inside_vertices) == 3:
+                        new_triangles.append(tri) 
+                                                 
+            triangles = new_triangles
+            
+        return triangles
+    
+    def plot(self, sim, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
+        """
+        Plots edges of the pyramid
+        :param sim: Simulator instance
+        :param frame: frame in which points are defined in
+        :param fill: if True, colors the faces
+        :param with_sides: if True, plots side edges too
+        :param color: (r,g,b) [0,1]
+        :param alpha: if fill is True, alpha of faces
+        """
+        a0 = sim.transform_from_to(self.a0, frame, 'world')
+        b0 = sim.transform_from_to(self.b0, frame, 'world')
+        c0 = sim.transform_from_to(self.c0, frame, 'world')
+        d0 = sim.transform_from_to(self.d0, frame, 'world')
+        a1 = sim.transform_from_to(self.a1, frame, 'world')
+        b1 = sim.transform_from_to(self.b1, frame, 'world')
+        c1 = sim.transform_from_to(self.c1, frame, 'world')
+        d1 = sim.transform_from_to(self.d1, frame, 'world')
+        
+        if with_sides:
+            sim.plot_segment(a0, a1, color=color)
+            sim.plot_segment(b0, b1, color=color)
+            sim.plot_segment(c0, c1, color=color)
+            sim.plot_segment(d0, d1, color=color)
+        
+        sim.plot_segment(a0, b0, color=color)
+        sim.plot_segment(b0, c0, color=color)
+        sim.plot_segment(c0, d0, color=color)
+        sim.plot_segment(d0, a0, color=color)
+        sim.plot_segment(a1, b1, color=color)
+        sim.plot_segment(b1, c1, color=color)
+        sim.plot_segment(c1, d1, color=color)
+        sim.plot_segment(d1, a1, color=color)
+        
+        if fill:
+            if with_sides:
+                sim.plot_triangle((a0,a1,d1), color=color, alpha=alpha)
+                sim.plot_triangle((a0,d0,d1), color=color, alpha=alpha)
+                
+                sim.plot_triangle((a0,a1,b1), color=color, alpha=alpha)
+                sim.plot_triangle((a0,b0,b1), color=color, alpha=alpha)
+                
+                sim.plot_triangle((b0,b1,c1), color=color, alpha=alpha)
+                sim.plot_triangle((b0,c0,c1), color=color, alpha=alpha)
+                
+                sim.plot_triangle((c0,c1,d1), color=color, alpha=alpha)
+                sim.plot_triangle((c0,d0,d1), color=color, alpha=alpha)
+                
+            sim.plot_triangle((a0,b0,d0), color=color, alpha=alpha)
+            sim.plot_triangle((b0,c0,d0), color=color, alpha=alpha)
+            
+            sim.plot_triangle((a1,b1,d1), color=color, alpha=alpha)
+            sim.plot_triangle((b1,c1,d1), color=color, alpha=alpha)
     
 class Triangle:
     def __init__(self, a, b, c):
@@ -457,6 +736,10 @@ class Segment:
             return intersection
         else:
             return None
+        
+    @property
+    def length(self):
+        return np.linalg.norm(self.p1 - self.p0)
             
     def plot(self, sim, frame='world', color=(1,0,0)):
         """
