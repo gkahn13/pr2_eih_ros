@@ -6,9 +6,9 @@
 double signed_distance(const VectorJ& j, const Vector3d& point, const std::vector<geometry3d::Triangle>& triangles3d,
 		pr2_sim::Arm& arm, pr2_sim::Camera& cam, pr2_sim::Simulator& sim, bool plot) {
 	arm.set_joints(j);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d, false);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d, false);
 	if (plot) {
-		for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
+		for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
 			pyramid.plot(sim, "base_link", {0,1,0}, true, true, 0.1);
 		}
 	}

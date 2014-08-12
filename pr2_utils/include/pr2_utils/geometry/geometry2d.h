@@ -10,11 +10,6 @@ namespace geometry2d {
 
 const double epsilon = 1e-5;
 
-class Point;
-class Triangle;
-class Segment;
-class Halfspace;
-
 class Halfspace {
 public:
 	Halfspace(const Vector2d& o, const Vector2d& n) : origin(o), normal(n) { }
@@ -32,20 +27,6 @@ private:
 	Vector2d origin, normal;
 };
 
-class Point {
-	/**
-	 * \brief Allows comparing 2d points
-	 */
-public:
-	Point(const Vector2d& point) : p(point) { }
-
-	bool operator<(const Point& other) const {
-		return (atan2(p(0)*other.p(1) - p(1)*other.p(0), p(0)*other.p(0) + p(1)*other.p(1)) > 0);
-	}
-
-private:
-	Vector2d p;
-};
 
 class Segment {
 public:

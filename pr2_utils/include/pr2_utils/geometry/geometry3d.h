@@ -5,6 +5,7 @@
 #include "pr2_utils/pr2_sim/simulator.h"
 
 #include <vector>
+#include <unordered_set>
 
 #include <Eigen/Eigen>
 using namespace Eigen;
@@ -13,15 +14,39 @@ namespace geometry3d {
 
 const double epsilon = 1e-5;
 
-class Segment;
 
-class Hyperplane;
-class Halfspace;
+/**
+ * Classes to allow for use in unordered_set/sorting
+ */
 
-class Point;
-class Triangle;
-class Pyramid;
-class RectangularPyramid;
+
+class PointHash {
+public:
+	long operator()(const Vector3d& x) const {
+		return 0;
+	}
+};
+
+class PointEqualTo {
+public:
+	bool operator()(const Vector3d& a, const Vector3d& b) const {
+		return ((a-b).norm() < epsilon);
+	}
+};
+
+class PointLessThan {
+public:
+	enum Coordinate {x=0, y=1};
+	PointLessThan(Coordinate c) : c(c) { }
+
+	bool operator()(const Vector3d& a, const Vector3d& b) const {
+		return (a(c) < b(c));
+	}
+
+private:
+	Coordinate c;
+};
+
 
 class Segment {
 public:
@@ -133,6 +158,8 @@ private:
 
 class Halfspace {
 public:
+	Vector3d origin, normal;
+
 	Halfspace(const Vector3d& o, const Vector3d n) : origin(o), normal(n) { }
 
 	/**
@@ -151,9 +178,6 @@ public:
 		Vector3d n = sim.transform_from_to(normal, frame, "world");
 		sim.plot_segment(o, o + 0.5*n, color);
 	}
-
-private:
-	Vector3d origin, normal;
 };
 
 
@@ -302,12 +326,20 @@ private:
 	}
 };
 
-class Pyramid {
+class TruncatedPyramid {
 	/**
-	 * A pyramid with origin base and points a, b, c
+	 * A truncated pyramid with origin triangle a0, b0, c0
+     * and end triangle a1, b1, c1
+     *
+     *       a0          a1
+     *      /  \        /  \
+     *     /    \      /    \
+     *    b0----c0    b1----c1
 	 */
 public:
-	Pyramid(const Vector3d& base_pt, const Vector3d& a_pt, const Vector3d& b_pt, const Vector3d& c_pt) : base(base_pt), a(a_pt), b(b_pt), c(c_pt) { }
+	TruncatedPyramid(const Vector3d& a0, const Vector3d& a1,
+			const Vector3d& b0, const Vector3d& b1,
+			const Vector3d& c0, const Vector3d& c1) : a0(a0), a1(a1), b0(b0), b1(b1), c0(c0), c1(c1) { }
 
 	/**
 	 * \brief Checks if point p is inside by comparing against intersection of halfspaces
@@ -336,62 +368,87 @@ public:
 	}
 
 	inline std::vector<Halfspace> get_halfspaces() const {
-		return {Halfspace((base+a+b)/3.0, (a-base).cross(b-base)),
-			Halfspace((base+b+c)/3.0, (b-base).cross(c-base)),
-			Halfspace((base+c+a)/3.0, (c-base).cross(a-base)),
-			Halfspace((a+b+c)/3.0, -(b-a).cross(c-a))};
+		std::vector<Halfspace> halfspaces = {Halfspace((a0+b0+c0)/3.0,  (b0-c0).cross(a0-c0)), // # closer triangle
+				                   Halfspace((a0+a1+c0+c1)/4.0, (a1-a0).cross(c0-a0)), // right side
+				                   Halfspace((a0+a1+b0+b1)/4.0, (b1-b0).cross(a0-b0)), // left side
+				                   Halfspace((b0+b1+c0+c1)/4.0, (c1-c0).cross(b0-c0)), // bottom side
+				                   Halfspace((a1+b1+c1)/3.0, (a1-c1).cross(b1-c1))}; // further triangle
+
+		Vector3d center = (a0+b0+c0+a1+b1+c1)/6.0;
+		for(Halfspace& halfspace : halfspaces) {
+			if (!halfspace.contains(center)) {
+				halfspace.normal *= -1;
+			}
+		}
+
+		return halfspaces;
 	}
 
 	inline std::vector<Triangle> get_faces() const {
-		return {Triangle(base, a, b),
-			Triangle(base, b, c),
-			Triangle(base, c, a),
-			Triangle(a, b, c)};
+		return {Triangle(a0, b0, c0),
+            Triangle(a0, a1, c1),
+            Triangle(a0, c0, c1),
+            Triangle(a0, a1, b1),
+            Triangle(a0, b0, b1),
+            Triangle(b0, b1, c1),
+            Triangle(b0, c0, c1),
+            Triangle(a1, b1, c1)};
 	}
 
 	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool with_sides=false, bool fill=false, double alpha=0.25) const {
-		Vector3d base_world = sim.transform_from_to(base, frame, "world");
-		Vector3d a_world = sim.transform_from_to(a, frame, "world");
-		Vector3d b_world = sim.transform_from_to(b, frame, "world");
-		Vector3d c_world = sim.transform_from_to(c, frame, "world");
+		Vector3d a0_world = sim.transform_from_to(a0, frame, "world");
+		Vector3d b0_world = sim.transform_from_to(b0, frame, "world");
+		Vector3d c0_world = sim.transform_from_to(c0, frame, "world");
+		Vector3d a1_world = sim.transform_from_to(a1, frame, "world");
+		Vector3d b1_world = sim.transform_from_to(b1, frame, "world");
+		Vector3d c1_world = sim.transform_from_to(c1, frame, "world");
 
 		if (with_sides) {
-			sim.plot_segment(base_world, a_world, color);
-			sim.plot_segment(base_world, b_world, color);
-			sim.plot_segment(base_world, c_world, color);
+			sim.plot_segment(a0_world, a1_world, color);
+			sim.plot_segment(b0_world, b1_world, color);
+			sim.plot_segment(c0_world, c1_world, color);
 		}
 
-		sim.plot_segment(a_world, b_world, color);
-		sim.plot_segment(b_world, c_world, color);
-		sim.plot_segment(c_world, a_world, color);
+		sim.plot_segment(a0_world, b0_world, color);
+		sim.plot_segment(b0_world, c0_world, color);
+		sim.plot_segment(c0_world, a0_world, color);
+		sim.plot_segment(a1_world, b1_world, color);
+		sim.plot_segment(b1_world, c1_world, color);
+		sim.plot_segment(c1_world, a1_world, color);
 
 		if (fill) {
 			if (with_sides) {
-				sim.plot_triangle(base_world, a_world, b_world, color, alpha);
-				sim.plot_triangle(base_world, b_world, c_world, color, alpha);
-				sim.plot_triangle(base_world, c_world, a_world, color, alpha);
+				sim.plot_triangle(a0, a1, c1, color, alpha);
+				sim.plot_triangle(a0, c0, c1, color, alpha);
+				sim.plot_triangle(a0, a1, b1, color, alpha);
+				sim.plot_triangle(a0, b0, b1, color, alpha);
+				sim.plot_triangle(b0, b1, c1, color, alpha);
+				sim.plot_triangle(b0, c0, c1, color, alpha);
 			}
 
-			sim.plot_triangle(a_world, b_world, c_world, color, alpha);
+			sim.plot_triangle(a0_world, b0_world, c0_world, color, alpha);
+			sim.plot_triangle(a1_world, b1_world, c1_world, color, alpha);
 		}
 	}
 
 private:
-	Vector3d base, a, b, c;
+	Vector3d a0, a1, b0, b1, c0, c1;
 };
 
-class RectangularPyramid {
+class ViewFrustum {
 	/**
-	 *
-	 * A pyramid with origin base and points a,b,c,d arranged as
-	 * b --- a
-	 * |     |
-	 * |     |
-	 * c --- d
+	 * A truncated pyramid with origin rectangle a0, b0, c0, d0
+     * and end rectangle a1, b1, c1, d1 arranged as
+     *   b0 --- a0       b1 --- a1
+     *   |      |        |      |
+     *   |      |        |      |
+     *   c0 --- d0       c1 --- d1
 	 */
 public:
-	RectangularPyramid(const Vector3d& base_pt, const Vector3d& a_pt, const Vector3d& b_pt,
-			const Vector3d& c_pt, const Vector3d& d_pt) : base(base_pt), a(a_pt), b(b_pt), c(c_pt), d(d_pt) { }
+	ViewFrustum(const Vector3d& a0, const Vector3d& a1,
+			const Vector3d& b0, const Vector3d& b1,
+			const Vector3d& c0, const Vector3d& c1,
+			const Vector3d& d0, const Vector3d& d1) : a0(a0), a1(a1), b0(b0), b1(b1), c0(c0), c1(c1), d0(d0), d1(d1) { }
 
 	/**
 	 * \brief Checks if point p is inside by comparing against intersection of halfspaces
@@ -417,13 +474,17 @@ public:
 			std::vector<Triangle> new_triangles;
 			for(const Triangle& triangle : triangles) {
 				std::vector<Vector3d> intersections;
+				std::unordered_set<Vector3d, PointHash, PointEqualTo> intersections_set;
 				for(const Segment& segment : triangle.get_segments()) {
 					Vector3d intersection;
 					if (hyperplane.intersection(segment, intersection)) {
-						intersections.push_back(intersection);
+						if (intersections_set.count(intersection) == 0) {
+							intersections.push_back(intersection);
+							intersections_set.insert(intersection);
+						}
 					}
 				}
-				assert(intersections.size() == 0 || intersections.size() == 2);
+//				assert(intersections.size() == 0 || intersections.size() == 2);
 
 				std::vector<Vector3d> inside_vertices;
 				for(const Vector3d& vertex : triangle.get_vertices()) {
@@ -446,7 +507,7 @@ public:
 							new_triangles.push_back(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]));
 						}
 					}
-				} else {
+				} else if (intersections.size() == 0){
 					// all/none of the triangle in halfspace
 					assert(inside_vertices.size() == 0 || inside_vertices.size() == 3);
 					if (inside_vertices.size() == 3) {
@@ -462,49 +523,75 @@ public:
 	}
 
 	inline std::vector<Halfspace> get_halfspaces() const {
-		return {Halfspace((base+a+d)/3.0, (a-base).cross(d-base)),
-			Halfspace((base+b+a)/3.0, (b-base).cross(a-base)),
-			Halfspace((base+c+b)/3.0, (c-base).cross(b-base)),
-			Halfspace((base+d+c)/3.0, (d-base).cross(c-base)),
-			Halfspace((a+b+c+d)/4.0, (b-a).cross(d-a))};
+		std::vector<Halfspace> halfspaces = {Halfspace((a0+b0+c0+d0)/4.0, (b0-c0).cross(d0-c0)), // small rectangle
+				Halfspace((a0+a1+d0+d1)/4.0, (a1-a0).cross(d0-a0)), // right side
+				Halfspace((a0+a1+b0+b1)/4.0, (b0-a0).cross(a1-a0)), // top side
+				Halfspace((b0+b1+c0+c1)/4.0, (c1-c0).cross(b0-c0)), // left side
+				Halfspace((c0+c1+d0+d1)/4.0, (d1-d0).cross(c0-d0)), // bottom side
+				Halfspace((a1+b1+c1+d1)/4.0, (a1-d1).cross(c1-d1))}; // big rectangle
+
+		Vector3d center = (a0+b0+c0+d0+a1+b1+c1+d1)/8.0;
+		for(Halfspace& halfspace : halfspaces) {
+			if (!halfspace.contains(center)) {
+				halfspace.normal *= -1;
+			}
+		}
+
+		return halfspaces;
 	}
 
 	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool with_sides=false, bool fill=false, double alpha=0.25) const {
-		Vector3d base_world = sim.transform_from_to(base, frame, "world");
-		Vector3d a_world = sim.transform_from_to(a, frame, "world");
-		Vector3d b_world = sim.transform_from_to(b, frame, "world");
-		Vector3d c_world = sim.transform_from_to(c, frame, "world");
-		Vector3d d_world = sim.transform_from_to(d, frame, "world");
+		Vector3d a0_world = sim.transform_from_to(a0, frame, "world");
+		Vector3d b0_world = sim.transform_from_to(b0, frame, "world");
+		Vector3d c0_world = sim.transform_from_to(c0, frame, "world");
+		Vector3d d0_world = sim.transform_from_to(d0, frame, "world");
+		Vector3d a1_world = sim.transform_from_to(a1, frame, "world");
+		Vector3d b1_world = sim.transform_from_to(b1, frame, "world");
+		Vector3d c1_world = sim.transform_from_to(c1, frame, "world");
+		Vector3d d1_world = sim.transform_from_to(d1, frame, "world");
 
 		if (with_sides) {
-			sim.plot_segment(base_world, a_world, color);
-			sim.plot_segment(base_world, b_world, color);
-			sim.plot_segment(base_world, c_world, color);
-			sim.plot_segment(base_world, d_world, color);
+			sim.plot_segment(a0_world, a1_world, color);
+			sim.plot_segment(b0_world, b1_world, color);
+			sim.plot_segment(c0_world, c1_world, color);
+			sim.plot_segment(d0_world, d1_world, color);
 		}
 
-		sim.plot_segment(a_world, b_world, color);
-		sim.plot_segment(b_world, c_world, color);
-		sim.plot_segment(c_world, d_world, color);
-		sim.plot_segment(d_world, a_world, color);
+		sim.plot_segment(a0_world, b0_world, color);
+		sim.plot_segment(b0_world, c0_world, color);
+		sim.plot_segment(c0_world, d0_world, color);
+		sim.plot_segment(d0_world, a0_world, color);
+		sim.plot_segment(a1_world, b1_world, color);
+		sim.plot_segment(b1_world, c1_world, color);
+		sim.plot_segment(c1_world, d1_world, color);
+		sim.plot_segment(d1_world, a1_world, color);
 
 		if (fill) {
 			if (with_sides) {
-				sim.plot_triangle(base_world, a_world, b_world, color, alpha);
-				sim.plot_triangle(base_world, b_world, c_world, color, alpha);
-				sim.plot_triangle(base_world, c_world, d_world, color, alpha);
-				sim.plot_triangle(base_world, d_world, a_world, color, alpha);
+				sim.plot_triangle(a0_world, a1_world, d1_world, color, alpha);
+				sim.plot_triangle(a0_world, d0_world, d1_world, color, alpha);
+
+				sim.plot_triangle(a0_world, a1_world, b1_world, color, alpha);
+				sim.plot_triangle(a0_world, b0_world, b1_world, color, alpha);
+
+				sim.plot_triangle(b0_world, b1_world, c1_world, color, alpha);
+				sim.plot_triangle(b0_world, c0_world, c1_world, color, alpha);
+
+				sim.plot_triangle(c0_world, c1_world, d1_world, color, alpha);
+				sim.plot_triangle(c0_world, d0_world, d1_world, color, alpha);
 			}
 
-			sim.plot_triangle(a_world, b_world, c_world, color, alpha);
-			sim.plot_triangle(a_world, c_world, d_world, color, alpha);
+			sim.plot_triangle(a0_world, b0_world, c0_world, color, alpha);
+			sim.plot_triangle(a0_world, c0_world, d0_world, color, alpha);
+
+			sim.plot_triangle(a1_world, b1_world, c1_world, color, alpha);
+			sim.plot_triangle(a1_world, c1_world, d1_world, color, alpha);
 		}
 	}
 
 private:
-	Vector3d base, a, b, c, d;
+	Vector3d a0, b0, c0, d0, a1, b1, c1, d1;
 };
-
 
 
 }

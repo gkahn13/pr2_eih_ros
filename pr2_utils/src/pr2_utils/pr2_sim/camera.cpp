@@ -11,9 +11,9 @@ namespace pr2_sim {
  */
 
 Camera::Camera(Arm* arm, Simulator* sim, double height, double width, double focal_length,
-		double fx, double fy, double cx, double cy, double max_range) :
+		double fx, double fy, double cx, double cy, double min_range, double max_range) :
 		arm(arm), sim(sim), height(height), width(width), focal_length(focal_length),
-		fx(fx), fy(fy), cx(cx), cy(cy), max_range(max_range) {
+		fx(fx), fy(fy), cx(cx), cy(cy), min_range(min_range), max_range(max_range) {
 
 	tool_to_camera << 0.04483273, -0.06333954,  0.99698452, -0.10692571,
 					  0.99866063, -0.02295816, -0.04636666, -0.00652973,
@@ -67,14 +67,16 @@ Vector2d Camera::pixel_from_point(const Vector3d& point) {
  */
 geometry3d::Segment Camera::segment_through_pixel(const Vector2d& pixel) {
 	Vector2d pixel_centered = pixel - Vector2d(height/2., width/2.);
-	Vector3d pixel3d_centered_m = max_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 
-	Matrix4d pixel3d_pose_centered_m = Matrix4d::Identity();
-	pixel3d_pose_centered_m.block<3,1>(0,3) = pixel3d_centered_m;
+	Vector3d pixel3d_centered_m_min = min_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
+	Vector3d pixel3d_centered_m_max = max_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 
 	Matrix4d transform = get_pose();
-	Vector3d p0 = transform.block<3,1>(0,3);
-	Vector3d p1 = (transform*pixel3d_pose_centered_m).block<3,1>(0,3);
+	Matrix3d rot = transform.block<3,3>(0,0);
+	Vector3d trans = transform.block<3,1>(0,3);
+
+	Vector3d p0 = (rot*pixel3d_centered_m_min + trans);
+	Vector3d p1 = (rot*pixel3d_centered_m_max + trans);
 
 	return geometry3d::Segment(p0, p1);
 }
@@ -90,13 +92,17 @@ geometry3d::Segment Camera::segment_through_pixel(const Vector2d& pixel) {
  * \param include_truncated_pyramids for signed-distance gradient, might not want to include truncated pyramids
  *                                   since they don't change because the environment is static (so gradient will be zero)
  */
-std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids) {
+std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const std::vector<geometry3d::Triangle>& triangles3d, bool include_truncated_pyramids) {
 	// clip triangles against view frustum
-	geometry3d::RectangularPyramid frustum(get_pose().block<3,1>(0,3),
-			segment_through_pixel({0, width}).p1,
-			segment_through_pixel({0, 0}).p1,
-			segment_through_pixel({height, 0}).p1,
-			segment_through_pixel({height, width}).p1);
+	geometry3d::Segment seg3d_a = segment_through_pixel({0, width});
+	geometry3d::Segment seg3d_b = segment_through_pixel({0, 0});
+	geometry3d::Segment seg3d_c = segment_through_pixel({height, 0});
+	geometry3d::Segment seg3d_d = segment_through_pixel({height, width});
+
+	geometry3d::ViewFrustum frustum(seg3d_a.p0, seg3d_a.p1,
+			seg3d_b.p0, seg3d_b.p1,
+			seg3d_c.p0, seg3d_c.p1,
+			seg3d_d.p0, seg3d_d.p1);
 
 	std::vector<geometry3d::Triangle> clipped_triangles3d;
 	for(const geometry3d::Triangle& tri3d : triangles3d) {
@@ -214,7 +220,7 @@ std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vecto
 	// find out which 3d triangle each projection belongs to
 	// by shooting rays through the 2d triangles
 	Vector3d camera_position = get_pose().block<3,1>(0,3);
-	std::vector<geometry3d::Pyramid> pyramids3d;
+	std::vector<geometry3d::TruncatedPyramid> pyramids3d;
 	for(const geometry2d::Triangle& tri2d : partition_triangles2d) {
 		// get 3d segments through triangle2d center and vertices
 		geometry3d::Segment center_seg3d = segment_through_pixel(tri2d.get_center());
@@ -245,13 +251,15 @@ std::vector<geometry3d::Pyramid> Camera::truncated_view_frustum(const std::vecto
 					tri3d_intersections.push_back(min_tri3d.closest_point_on_segment(vertex_seg3d));
 				}
 
-				pyramids3d.push_back(geometry3d::Pyramid(camera_position,
-						tri3d_intersections[0], tri3d_intersections[1], tri3d_intersections[2]));
+				pyramids3d.push_back(geometry3d::TruncatedPyramid(vertices_seg3d[0].p0,	tri3d_intersections[0],
+						vertices_seg3d[1].p0, tri3d_intersections[1],
+						vertices_seg3d[2].p0, tri3d_intersections[2]));
 			}
 		} else {
 			// no intersection, so pyramid of segments with length max_range
-			pyramids3d.push_back(geometry3d::Pyramid(camera_position,
-					vertices_seg3d[0].p1, vertices_seg3d[1].p1, vertices_seg3d[2].p1));
+			pyramids3d.push_back(geometry3d::TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
+					vertices_seg3d[1].p0, vertices_seg3d[1].p1,
+					vertices_seg3d[2].p0, vertices_seg3d[2].p1));
 		}
 	}
 
@@ -277,8 +285,8 @@ std::vector<geometry2d::Triangle> Camera::project_triangles(const std::vector<ge
 	return triangles2d;
 }
 
-bool Camera::is_in_fov(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum) {
-	for(const geometry3d::Pyramid& pyramid3d : truncated_frustum) {
+bool Camera::is_in_fov(const Vector3d& point, const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum) {
+	for(const geometry3d::TruncatedPyramid& pyramid3d : truncated_frustum) {
 		if (pyramid3d.is_inside(point)) {
 			return true;
 		}
@@ -286,9 +294,9 @@ bool Camera::is_in_fov(const Vector3d& point, const std::vector<geometry3d::Pyra
 	return false;
 }
 
-double Camera::signed_distance(const Vector3d& point, const std::vector<geometry3d::Pyramid>& truncated_frustum) {
+double Camera::signed_distance(const Vector3d& point, const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum) {
 	double sd = INFINITY;
-	for(const geometry3d::Pyramid& pyramid3d : truncated_frustum) {
+	for(const geometry3d::TruncatedPyramid& pyramid3d : truncated_frustum) {
 		sd = std::min(sd, pyramid3d.signed_distance(point));
 	}
 	return sd;
@@ -307,11 +315,15 @@ double Camera::radial_distance_error(const Vector3d& point) {
 }
 
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {
-	geometry3d::RectangularPyramid frustum(get_pose().block<3,1>(0,3),
-			segment_through_pixel({0, width}).p1,
-			segment_through_pixel({0, 0}).p1,
-			segment_through_pixel({height, 0}).p1,
-			segment_through_pixel({height, width}).p1);
+	geometry3d::Segment seg3d_a = segment_through_pixel({0, width});
+	geometry3d::Segment seg3d_b = segment_through_pixel({0, 0});
+	geometry3d::Segment seg3d_c = segment_through_pixel({height, 0});
+	geometry3d::Segment seg3d_d = segment_through_pixel({height, width});
+
+	geometry3d::ViewFrustum frustum(seg3d_a.p0, seg3d_a.p1,
+			seg3d_b.p0, seg3d_b.p1,
+			seg3d_c.p0, seg3d_c.p1,
+			seg3d_d.p0, seg3d_d.p1);
 
 	frustum.plot(*sim, frame, color, with_sides, fill, alpha);
 }

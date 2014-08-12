@@ -234,7 +234,7 @@ class Camera:
                 tri3d.plot(self.sim, frame='base_link', fill=True, color=(0,0,1))
                 
             for pyramid in pyramids3d:
-                pyramid.plot(self.sim, frame='base_link', fill=False, with_sides=False, color=(0,1,0), alpha=0.25)
+                pyramid.plot(self.sim, frame='base_link', fill=True, with_sides=True, color=(0,1,0), alpha=0.25)
             
             plt.close(1)
             fig = plt.figure(1)

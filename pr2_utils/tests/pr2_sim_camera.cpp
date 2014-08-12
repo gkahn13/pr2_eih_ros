@@ -39,7 +39,7 @@ void test_signed_distance() {
 
 			pr2_utils::Timer timer;
 			pr2_utils::Timer_tic(&timer);
-			std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
+			std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
 			double time = pr2_utils::Timer_toc(&timer);
 
 			std::cout << "Truncated frustum time: " << time << " seconds\n";
@@ -56,7 +56,7 @@ void test_signed_distance() {
 			for(const geometry3d::Triangle& tri3d : triangles3d) {
 				tri3d.plot(sim, "base_link", {0,0,1}, true, 0.25);
 			}
-			for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
+			for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
 				pyramid.plot(sim, "base_link", {0,1,0}, true, true, 0.1);
 			}
 
@@ -85,13 +85,13 @@ void test_truncated_view_frustum() {
 
 	pr2_utils::Timer timer;
 	pr2_utils::Timer_tic(&timer);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(triangles3d);
 	double time = pr2_utils::Timer_toc(&timer);
 
 	std::cout << "Truncated frustum time: " << time << " seconds\n";
 
 	std::cout << "Number of frustum pyramids: " << truncated_frustum.size() << "\n";
-	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
+	for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
 		pyramid.plot(sim, "base_link", {0,1,0}, true, true, 0.1);
 	}
 
