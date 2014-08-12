@@ -411,15 +411,6 @@ int main (int argc, char** argv) {
 
 		tsdf.fetchCloudHost(current_cloud);
 
-// 		int i;
-// 		pcl::PointCloud<pcl::PointXYZ>::iterator cloud_iter;
-// 		for(cloud_iter = current_cloud.begin(), i = 0;
-// 				cloud_iter != current_cloud.end();
-// 				cloud_iter++, i++) {
-// //			std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
-// 		}
-// 		std::cout << "number iterated through: " << i << "\n";
-
 
 		#else
 		// new way of doing it, with color

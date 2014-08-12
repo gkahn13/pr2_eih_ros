@@ -9,3 +9,4 @@ tfx/
 *.cbp
 *.layout*
 
+*.settings*
