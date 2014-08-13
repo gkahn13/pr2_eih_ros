@@ -60,10 +60,10 @@ Vector2d Camera::pixel_from_point(const Matrix4d& cam_pose, const Vector3d& poin
 /**
  * \brief Returns segment from camera origin through pixel
  */
-geometry3d::Segment Camera::segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel) {
+geometry3d::Segment Camera::segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel, double start_dist) {
 	Vector2d pixel_centered = pixel - Vector2d(height/2., width/2.);
 
-	Vector3d pixel3d_centered_m_min = min_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
+	Vector3d pixel3d_centered_m_min = start_dist*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 	Vector3d pixel3d_centered_m_max = max_range*Vector3d(pixel_centered(1)/fx, pixel_centered(0)/fy, 1);
 
 	Matrix3d rot = cam_pose.block<3,3>(0,0);
@@ -73,6 +73,10 @@ geometry3d::Segment Camera::segment_through_pixel(const Matrix4d& cam_pose, cons
 	Vector3d p1 = (rot*pixel3d_centered_m_max + trans);
 
 	return geometry3d::Segment(p0, p1);
+}
+
+geometry3d::Segment Camera::segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel) {
+	return segment_through_pixel(cam_pose, pixel, min_range);
 }
 
 /**
@@ -218,7 +222,7 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 	std::vector<geometry3d::TruncatedPyramid> pyramids3d;
 	for(const geometry2d::Triangle& tri2d : partition_triangles2d) {
 		// get 3d segments through triangle2d center and vertices
-		geometry3d::Segment center_seg3d = segment_through_pixel(cam_pose, tri2d.get_center());
+		geometry3d::Segment center_seg3d = segment_through_pixel(cam_pose, tri2d.get_center(), 0); // segment from camera origin
 		std::vector<geometry3d::Segment> vertices_seg3d;
 		for(const Vector2d& vertex : tri2d.get_vertices()) {
 			vertices_seg3d.push_back(segment_through_pixel(cam_pose, vertex));
@@ -239,7 +243,12 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 		}
 
 		// create pyramid from 3d intersections
-		if (min_dist < INFINITY) {
+		if (min_dist == INFINITY) {
+			// no intersection, so pyramid of segments with length max_range
+			pyramids3d.push_back(geometry3d::TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
+					vertices_seg3d[1].p0, vertices_seg3d[1].p1,
+					vertices_seg3d[2].p0, vertices_seg3d[2].p1));
+		} else if (min_dist >= min_range) {
 			if (include_truncated_pyramids) {
 				std::vector<Vector3d> tri3d_intersections;
 				for(const geometry3d::Segment& vertex_seg3d : vertices_seg3d) {
@@ -250,11 +259,6 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 						vertices_seg3d[1].p0, tri3d_intersections[1],
 						vertices_seg3d[2].p0, tri3d_intersections[2]));
 			}
-		} else {
-			// no intersection, so pyramid of segments with length max_range
-			pyramids3d.push_back(geometry3d::TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
-					vertices_seg3d[1].p0, vertices_seg3d[1].p1,
-					vertices_seg3d[2].p0, vertices_seg3d[2].p1));
 		}
 	}
 
@@ -307,6 +311,25 @@ double Camera::radial_distance_error(const Matrix4d& cam_pose, const Vector3d& p
 	Vector2d pixel_centered_mm = pixel_centered*focal_length;
 	double error = pixel_centered_mm.transpose()*Vector2d(.007, .01).asDiagonal()*pixel_centered_mm;
 	return error;
+}
+
+/**
+ * \brief Returns standard deviations (in camera frame) of measuring point according to http://www.mdpi.com/1424-8220/12/2/1437/htm
+ * \param point 3d point in frame base_link
+ */
+Vector3d Camera::measurement_standard_deviation(const Matrix4d& cam_pose, const Vector3d& point) {
+	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
+	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
+	Vector3d point_cam = cam_rot*point + cam_trans;
+	double Z_squared = point_cam(2)*point_cam(2);
+
+	Vector2d pixel_centered = pixel_from_point(cam_pose, point) - Vector2d(height,width)/2.0;
+
+	Vector3d sigmas;
+	sigmas(0) = (fabs(pixel_centered(1))/(fy*fy))*Z_squared;
+	sigmas(1) = (fabs(pixel_centered(0))/(fx*fx))*Z_squared;
+	sigmas(2) = (1/fx)*Z_squared;
+	return sigmas;
 }
 
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {

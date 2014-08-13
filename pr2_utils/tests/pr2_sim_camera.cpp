@@ -83,6 +83,8 @@ void test_truncated_view_frustum() {
 		tri3d.plot(sim, "base_link", {0,0,1}, true, 0.25);
 	}
 
+	arm.teleop();
+
 	pr2_utils::Timer timer;
 	pr2_utils::Timer_tic(&timer);
 	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(cam.get_pose(), triangles3d);
@@ -120,7 +122,7 @@ void test_pose() {
 }
 
 int main() {
-	test_signed_distance();
-//	test_truncated_view_frustum();
+//	test_signed_distance();
+	test_truncated_view_frustum();
 //	test_pose();
 }

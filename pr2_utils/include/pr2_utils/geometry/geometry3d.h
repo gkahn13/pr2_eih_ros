@@ -418,12 +418,12 @@ public:
 
 		if (fill) {
 			if (with_sides) {
-				sim.plot_triangle(a0, a1, c1, color, alpha);
-				sim.plot_triangle(a0, c0, c1, color, alpha);
-				sim.plot_triangle(a0, a1, b1, color, alpha);
-				sim.plot_triangle(a0, b0, b1, color, alpha);
-				sim.plot_triangle(b0, b1, c1, color, alpha);
-				sim.plot_triangle(b0, c0, c1, color, alpha);
+				sim.plot_triangle(a0_world, a1_world, c1_world, color, alpha);
+				sim.plot_triangle(a0_world, c0_world, c1_world, color, alpha);
+				sim.plot_triangle(a0_world, a1_world, b1_world, color, alpha);
+				sim.plot_triangle(a0_world, b0_world, b1_world, color, alpha);
+				sim.plot_triangle(b0_world, b1_world, c1_world, color, alpha);
+				sim.plot_triangle(b0_world, c0_world, c1_world, color, alpha);
 			}
 
 			sim.plot_triangle(a0_world, b0_world, c0_world, color, alpha);
@@ -467,7 +467,9 @@ public:
 	 */
 	inline std::vector<Triangle> clip_triangle(const Triangle& triangle) const {
 		std::vector<Triangle> triangles = {triangle};
-		for(const Halfspace& halfspace : get_halfspaces()) {
+		std::vector<Halfspace> halfspaces = get_halfspaces();
+		for(int i=0; i < halfspaces.size(); ++i) {
+			const Halfspace& halfspace = halfspaces[i];
 			Hyperplane hyperplane = halfspace.get_hyperplane();
 
 			// clip all triangles against the halfspace
@@ -486,10 +488,12 @@ public:
 				}
 //				assert(intersections.size() == 0 || intersections.size() == 2);
 
-				std::vector<Vector3d> inside_vertices;
+				std::vector<Vector3d> inside_vertices, outside_vertices;
 				for(const Vector3d& vertex : triangle.get_vertices()) {
 					if (halfspace.contains(vertex)) {
 						inside_vertices.push_back(vertex);
+					} else {
+						outside_vertices.push_back(vertex);
 					}
 				}
 
@@ -498,6 +502,15 @@ public:
 					if (inside_vertices.size() == 1) {
 						// then intersections form new border of triangle
 						new_triangles.push_back(Triangle(inside_vertices[0], intersections[0], intersections[1]));
+						if (i == 0) {
+							// create two triangles for outside triangles
+							new_triangles.push_back(Triangle(outside_vertices[0], intersections[0], intersections[1]));
+							if ((outside_vertices[1] - intersections[0]).norm() < (outside_vertices[1] - intersections[1]).norm()) {
+								new_triangles.push_back(Triangle(outside_vertices[1], intersections[0], outside_vertices[0]));
+							} else {
+								new_triangles.push_back(Triangle(outside_vertices[1], intersections[1], outside_vertices[0]));
+							}
+						}
 					} else {
 						// create two triangles
 						new_triangles.push_back(Triangle(inside_vertices[0], intersections[0], intersections[1]));
@@ -505,6 +518,10 @@ public:
 							new_triangles.push_back(Triangle(inside_vertices[1], intersections[0], inside_vertices[0]));
 						} else {
 							new_triangles.push_back(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]));
+						}
+						if (i == 0) {
+							// create triangle for outside triangle
+							new_triangles.push_back(Triangle(outside_vertices[0], intersections[0], intersections[1]));
 						}
 					}
 				} else if (intersections.size() == 0){

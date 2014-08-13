@@ -72,7 +72,7 @@ class Camera:
         pixel = np.array([y[1]/float(y[2]), y[0]/float(y[2])])
         return pixel
         
-    def segment_through_pixel(self, pixel):
+    def segment_through_pixel(self, pixel, start_dist=None):
         """
         Returns segment from camera origin through pixel
         
@@ -80,13 +80,14 @@ class Camera:
         :return geometry3d.Segment (with endpoints in frame 'base_link')
         """
         # assert (0 <= pixel[0] <= self.height) and (0 <= pixel[1] <= self.width)
+        start_dist = start_dist if start_dist is not None else self.min_range
         
         pixel = np.array(pixel)
         pixel_centered = pixel - np.array([self.height/2., self.width/2.])
         
-        pixel3d_centered_m_min = self.min_range*np.array([pixel_centered[1]/self.fx,
-                                                         pixel_centered[0]/self.fy,
-                                                         1])
+        pixel3d_centered_m_min = start_dist*np.array([pixel_centered[1]/self.fx,
+                                                      pixel_centered[0]/self.fy,
+                                                      1])
         pixel3d_centered_m_max = self.max_range*np.array([pixel_centered[1]/self.fx,
                                                          pixel_centered[0]/self.fy,
                                                          1])
@@ -124,6 +125,11 @@ class Camera:
         clipped_triangles3d = list()
         for tri3d in triangles3d:
             clipped_triangles3d += frustum.clip_triangle(tri3d)
+            
+        for tri3d in clipped_triangles3d:
+            tri3d.plot(self.sim, color=(0,0,1), fill=True, alpha=0.25)
+        raw_input()
+        self.sim.clear_plots()
             
         triangles2d = self.project_triangles(clipped_triangles3d)
         
@@ -182,7 +188,9 @@ class Camera:
                     if intersection is not None and not tri_seg2d.is_endpoint(intersection):
                         break
                 else:        
-                    new_partition_triangles2d.add(geometry2d.Triangle(p, tri_seg2d.p0, tri_seg2d.p1))
+                    tri2d = geometry2d.Triangle(p, tri_seg2d.p0, tri_seg2d.p1)
+                    if tri2d.area > geometry2d.epsilon:
+                        new_partition_triangles2d.add(tri2d)
             
             # update partition and new segments
             partition_triangles2d.update(new_partition_triangles2d)
@@ -201,7 +209,7 @@ class Camera:
             tri2d_vertices = tri2d.vertices
             center2d = sum(tri2d_vertices)/3.
             
-            center_seg3d = self.segment_through_pixel(center2d)
+            center_seg3d = self.segment_through_pixel(center2d, 0.0) # start at origin
             vertices_seg3d = [self.segment_through_pixel(vertex) for vertex in tri2d_vertices]
             
             min_dist, min_tri3d = np.inf, None
@@ -213,16 +221,16 @@ class Camera:
                         min_dist = dist
                         min_tri3d = tri3d
                     
-            if min_tri3d is not None:
+            if min_tri3d is None:
+                pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
+                                                              vertices_seg3d[1].p0, vertices_seg3d[1].p1,
+                                                              vertices_seg3d[2].p0, vertices_seg3d[2].p1))
+            elif min_dist >= self.min_range:
                 tri3d_intersections = [min_tri3d.closest_point_on_segment(vertex_seg3d) for vertex_seg3d in vertices_seg3d]
                 assert len(filter(lambda x: x is None, tri3d_intersections)) == 0
                 pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, tri3d_intersections[0],
                                                               vertices_seg3d[1].p0, tri3d_intersections[1], 
                                                               vertices_seg3d[2].p0, tri3d_intersections[2]))
-            else:
-                pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
-                                                              vertices_seg3d[1].p0, vertices_seg3d[1].p1,
-                                                              vertices_seg3d[2].p0, vertices_seg3d[2].p1))
                 
         if plot:
             print('Total time: {0}'.format(time.time() - start_time))

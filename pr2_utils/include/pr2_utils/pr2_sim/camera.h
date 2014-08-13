@@ -22,6 +22,7 @@ public:
 	Matrix4d get_pose(const VectorJ& joints);
 
 	Vector2d pixel_from_point(const Matrix4d& cam_pose, const Vector3d& point);
+	geometry3d::Segment segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel, double start_dist);
 	geometry3d::Segment segment_through_pixel(const Matrix4d& cam_pose, const Vector2d& pixel);
 
 	std::vector<geometry3d::TruncatedPyramid> truncated_view_frustum(const Matrix4d& cam_pose,
@@ -30,7 +31,9 @@ public:
 
 	bool is_in_fov(const Vector3d& point, const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum);
 	double signed_distance(const Vector3d& point, const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum);
+
 	double radial_distance_error(const Matrix4d& cam_pose, const Vector3d& point);
+	Vector3d measurement_standard_deviation(const Matrix4d& cam_pose, const Vector3d& point);
 
 	void plot(Vector3d color, std::string frame="base_link", bool fill=false, bool with_sides=true, double alpha=0.25);
 

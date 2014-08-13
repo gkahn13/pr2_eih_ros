@@ -73,6 +73,11 @@ def test_truncated_view_frustum():
     triangles3d.append(geometry3d.Triangle([0,-1,.55], [0,1,.55], [1,1,.55]))
     triangles3d.append(geometry3d.Triangle([0,-1,.55], [1,-1,.55], [1,1,.55]))
     
+    for tri3d in triangles3d:
+        tri3d.plot(sim, color=(0,0,1), fill=True, alpha=0.25)
+    
+    rarm.teleop()
+    sim.clear_plots()
     
     cam.truncated_view_frustum(triangles3d, plot=True)
     

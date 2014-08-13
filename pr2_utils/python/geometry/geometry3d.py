@@ -227,34 +227,32 @@ class ViewFrustum:
         :return list of Triangle
         """
         triangles = [triangle]
-        for halfspace in self.halfspaces:
+        for i, h in enumerate(self.halfspaces):
             new_triangles = list()
             # clip all triangles against the halfspace
-            for tri in triangles:
-                hyperplane = halfspace.hyperplane
-                intersections = filter(lambda x: x is not None, [hyperplane.intersection(segment) for segment in tri.segments])
-                intersections = list(set([Point(intersection) for intersection in intersections]))
-                intersections = [point.p for point in intersections]
-#                 assert len(intersections) == 0 or len(intersections) == 2
-                inside_vertices = [vertex for vertex in tri.vertices if halfspace.contains(vertex)]
-                if len(intersections) == 2:
-                    assert len(inside_vertices) == 1 or len(inside_vertices) == 2
-                    if len(inside_vertices) == 1:
-                        # then intersections form new border of triangle
-                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
-                    else:
-                        # create two triangles
-                        new_triangles.append(Triangle(inside_vertices[0], intersections[0], intersections[1]))
-                        if np.linalg.norm(inside_vertices[1] - intersections[0]) < np.linalg.norm(inside_vertices[1] - intersections[1]):
-                            new_triangles.append(Triangle(inside_vertices[1], intersections[0], inside_vertices[0]))
+            splitting_halfspaces = [h]
+            if i == 0:
+                # keep part in other half
+                splitting_halfspaces.append(h.complement)
+            for halfspace in splitting_halfspaces:
+                for tri in triangles:
+                    tri_segments = tri.segments
+                    clipped_segments = filter(lambda x: x is not None, [halfspace.clip_segment(segment) for segment in tri_segments])
+                    if len(clipped_segments) == 2:
+                        new_triangles.append(Triangle(clipped_segments[0].p0, clipped_segments[1].p0, clipped_segments[0].p1))
+                    elif len(clipped_segments) == 3:
+                        crossing_segments = list()
+                        for seg, clipped_seg in zip(tri_segments, clipped_segments):
+                            if not (halfspace.contains(seg.p0) and halfspace.contains(seg.p1)):
+                                crossing_segments.append(clipped_seg)
+                        assert len(crossing_segments) == 0 or len(crossing_segments) == 2
+                        
+                        if len(crossing_segments) == 2:
+                            new_triangles.append(Triangle(crossing_segments[0].p0, crossing_segments[0].p1, crossing_segments[1].p0))
+                            new_triangles.append(Triangle(crossing_segments[0].p1, crossing_segments[1].p0, crossing_segments[1].p1))
                         else:
-                            new_triangles.append(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]))
-                elif len(intersections) == 0:
-                    # all/none of triangle in halfspace
-                    assert len(inside_vertices) == 0 or len(inside_vertices) == 3
-                    if len(inside_vertices) == 3:
-                        new_triangles.append(tri) 
-                                                 
+                            new_triangles.append(tri)
+
             triangles = new_triangles
             
         return triangles
@@ -489,6 +487,14 @@ class Segment:
             else:
                 return self.p1
             
+    def distance_to(self, x):
+        """
+        Finds distance of closest point on segment to x
+        :param x: 3d list or np.array
+        :return float distance
+        """
+        return np.linalg.norm(np.array(x) - self.closest_point_to(x))
+            
     def intersection(self, other):
         """
         Finds intersection point with another segment
@@ -547,12 +553,39 @@ class Halfspace:
         """
         return np.dot(self.normal, np.array(x) - self.origin) >= 0
     
+    def clip_segment(self, segment):
+        """
+        :param segment Segment
+        :return None if seg is not in halfspace, otherwise new Segment of part in halfspace
+        """
+        contains_p0 = self.contains(segment.p0)
+        contains_p1 = self.contains(segment.p1)
+        
+        if contains_p0 and contains_p1:
+            return Segment(segment.p0, segment.p1)
+        elif not contains_p0 and not contains_p1:
+            return None
+        else:
+            intersection = self.hyperplane.intersection(segment)
+            assert intersection is not None
+            if contains_p0:
+                return Segment(intersection, segment.p0)
+            else:
+                return Segment(intersection, segment.p1)
+    
     @property
     def hyperplane(self):
         """
         :return Hyperplane that defines Halfspace
         """
         return Hyperplane(self.origin, self.normal)
+    
+    @property
+    def complement(self):
+        """
+        :return Halfspace corresponding to other half
+        """
+        return Halfspace(self.origin, -self.normal)
     
     def plot(self, sim, frame='world', color=(0,0,1)):
         """
