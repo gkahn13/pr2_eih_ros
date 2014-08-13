@@ -109,6 +109,13 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 		clipped_triangles3d.insert(clipped_triangles3d.end(), tri3d_clipped.begin(), tri3d_clipped.end());
 	}
 
+	sim->clear_plots();
+	for(const geometry3d::Triangle& tri3d : clipped_triangles3d) {
+		tri3d.plot(*sim, "base_link", {0,1,0}, true, 0.25);
+	}
+	std::cin.ignore();
+	sim->clear_plots();
+
 	// project clipped triangles to 2d
 	std::vector<geometry2d::Triangle> triangles2d = project_triangles(cam_pose, clipped_triangles3d);
 
@@ -119,6 +126,10 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 			segments2d.insert(seg2d);
 		}
 	}
+	segments2d.insert({geometry2d::Segment({0,0},{height,0}),
+			geometry2d::Segment({height,0},{height,width}),
+			geometry2d::Segment({height,width},{0,width}),
+			geometry2d::Segment({0,width},{0,0})}); // needed to add (even though didn't have to in python)
 
 	std::unordered_set<Vector2d, geometry2d::PointHash, geometry2d::PointEqualTo> points2d;
 	// initialize points2d with segments2d image plane corners
@@ -192,7 +203,10 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 			}
 
 			if (check_count == segments2d.size()) {
-				new_partition_triangles2d.insert(geometry2d::Triangle(pt2d, tri_seg2d.p0, tri_seg2d.p1));
+				geometry2d::Triangle tri2d(pt2d, tri_seg2d.p0, tri_seg2d.p1);
+				if (tri2d.area() > geometry2d::epsilon) {
+					new_partition_triangles2d.insert(geometry2d::Triangle(pt2d, tri_seg2d.p0, tri_seg2d.p1));
+				}
 			}
 		}
 
@@ -212,8 +226,18 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 			break;
 		}
 
-
 	}
+
+	sim->clear_plots();
+	Vector3d p0(0,0,2), p1(0,0,2), p2(0,0,2);
+	for(const geometry2d::Triangle& tri2d : partition_triangles2d) {
+		p0.segment<2>(0) = tri2d.a / 1000.0;
+		p1.segment<2>(0) = tri2d.b / 1000.0;
+		p2.segment<2>(0) = tri2d.c / 1000.0;
+		sim->plot_triangle(p0, p1, p2, {0,1,0}, 1);
+	}
+	std::cin.ignore();
+//	sim->clear_plots();
 
 	// now that we have tesselated the projection into triangles
 	// find out which 3d triangle each projection belongs to

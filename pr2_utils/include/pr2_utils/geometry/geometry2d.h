@@ -130,6 +130,8 @@ inline double triangle_area(const Vector2d& a, const Vector2d& b, const Vector2d
 
 class Triangle {
 public:
+	Vector2d a, b, c;
+
 	Triangle(const Vector2d& a_pt, const Vector2d& b_pt, const Vector2d& c_pt) : a(a_pt), b(b_pt), c(c_pt) { }
 
 	/**
@@ -163,9 +165,9 @@ public:
 	 */
 	inline bool is_inside(const Vector2d& x) const {
 		double total_area = area();
-		double area0 = Triangle(a, b, x).area();
-		double area1 = Triangle(b, c, x).area();
-		double area2 = Triangle(c, a, x).area();
+		double area0 = triangle_area(a, b, x);
+		double area1 = triangle_area(b, c, x);
+		double area2 = triangle_area(c, a, x);
 
 		return (fabs(total_area - (area0 + area1 + area2)) < epsilon);
 	}
@@ -186,6 +188,9 @@ public:
 		return {Segment(a, b), Segment(b, c), Segment(c, a)};
 	}
 
+	/**
+	 * \brief Halfspaces of edges point outwards
+	 */
 	inline std::vector<Halfspace> get_halfspaces() const {
 		std::vector<Segment> segments = get_segments();
 		std::vector<Vector2d> other_points = {c, a, b};
@@ -209,9 +214,6 @@ public:
 	// TODO: add plotting
 
 	// TODO: add operator for comparison
-
-private:
-	Vector2d a, b, c;
 };
 
 

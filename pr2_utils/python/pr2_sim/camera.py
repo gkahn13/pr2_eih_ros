@@ -126,6 +126,11 @@ class Camera:
         for tri3d in triangles3d:
             clipped_triangles3d += frustum.clip_triangle(tri3d)
             
+        self.sim.clear_plots()
+        for tri3d in clipped_triangles3d:
+            tri3d.plot(self.sim, frame='base_link', color=(0,1,0), fill=True, alpha=0.25)
+        raw_input()
+            
         triangles2d = self.project_triangles(clipped_triangles3d)
         
         segments2d = set()
@@ -231,13 +236,14 @@ class Camera:
             print('Total time: {0}'.format(time.time() - start_time))
             total_area = sum([tri2d.area for tri2d in partition_triangles2d])
             print('Total area (should be {0}): {1}'.format(self.width*self.height, total_area))
+            print('Number of pyramids: {0}'.format(len(pyramids3d)))
                 
             self.plot(frame='base_link')
             for tri3d in triangles3d:
                 tri3d.plot(self.sim, frame='base_link', fill=True, color=(0,0,1))
                 
             for pyramid in pyramids3d:
-                pyramid.plot(self.sim, frame='base_link', fill=True, with_sides=True, color=(0,1,0), alpha=0.25)
+                pyramid.plot(self.sim, frame='base_link', fill=True, with_sides=True, color=(0,1,0), alpha=1)
             
             plt.close(1)
             fig = plt.figure(1)

@@ -459,7 +459,7 @@ public:
 				sim.plot_triangle(b0_world, c0_world, c1_world, color, alpha);
 			}
 
-			sim.plot_triangle(a0_world, b0_world, c0_world, color, alpha);
+			sim.plot_triangle(a0_world, b0_world, c0_world, color, .9);
 			sim.plot_triangle(a1_world, b1_world, c1_world, color, alpha);
 		}
 	}

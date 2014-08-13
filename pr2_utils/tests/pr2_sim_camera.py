@@ -66,12 +66,18 @@ def test_truncated_view_frustum():
 #                    geometry3d.Triangle(table_center, table_center+np.array([0,-1.4,0]), table_center+np.array([.5,-1.4,0])),
 #                    geometry3d.Triangle(table_center+np.array([.25,-.7,0]), table_center+np.array([.25,-.7,.2]), table_center+np.array([.25,-.9,0]))]
     
-    triangles3d = list()
-    triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.55,.55], [.5,-.55,.65]))
-    triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.5,.65], [.5,-.55,.65]))
-    # table
-    triangles3d.append(geometry3d.Triangle([0,-1,.55], [0,1,.55], [1,1,.55]))
-    triangles3d.append(geometry3d.Triangle([0,-1,.55], [1,-1,.55], [1,1,.55]))
+#     triangles3d = list()
+#     triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.55,.55], [.5,-.55,.65]))
+#     triangles3d.append(geometry3d.Triangle([.5,-.5,.55], [.5,-.5,.65], [.5,-.55,.65]))
+#     # table
+#     triangles3d.append(geometry3d.Triangle([0,-1,.55], [0,1,.55], [1,1,.55]))
+#     triangles3d.append(geometry3d.Triangle([0,-1,.55], [1,-1,.55], [1,1,.55]))
+
+    triangles3d = [geometry3d.Triangle([0,2,.45], [0,-2,.45], [5,0,.45]),
+            geometry3d.Triangle([0.537954, -0.334495,  0.548002], [0.497772, -0.351674,  0.458056], [0.525739, -0.392862, 0.45343]),
+            geometry3d.Triangle([0.537954, -0.334495,  0.548002], [0.565921, -0.375683,  0.543376], [0.525739, -0.392862,   0.45343]),
+            geometry3d.Triangle([0.426088, -0.169742,  0.566509], [0.385906, -0.186921,  0.476563], [0.35794, -0.145733,   0.48119]),
+            geometry3d.Triangle([0.426088, -0.169742,  0.566509], [0.398122, -0.128553,  0.571136], [0.35794, -0.145733,   0.48119])]
     
     for tri3d in triangles3d:
         tri3d.plot(sim, color=(0,0,1), fill=True, alpha=0.25)

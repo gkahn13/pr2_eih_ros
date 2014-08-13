@@ -70,13 +70,19 @@ void test_truncated_view_frustum() {
 	arm.set_posture(pr2_sim::Arm::Posture::mantis);
 
 	pr2_sim::Camera cam(&arm, &sim);
-	//	std::vector<geometry3d::Triangle> triangles3d = {geometry3d::Triangle({.7,0,.8}, {.7,0,1.1}, {.7,-.3,.7})};
-	//	std::vector<geometry3d::Triangle> triangles3d = {geometry3d::Triangle({.5,0,.5}, {.8,0,.6}, {.5,-.3,.9})};
-	Vector3d table_center(.2,.7,.5);
-	std::vector<geometry3d::Triangle> triangles3d = {
-			geometry3d::Triangle(table_center, table_center+Vector3d(.5,-1.4,0), table_center+Vector3d(.5,0,0)),
-			geometry3d::Triangle(table_center, table_center+Vector3d(0,-1.4,0), table_center+Vector3d(.5,-1.4,0)),
-			geometry3d::Triangle(table_center+Vector3d(.25,-.7,0), table_center+Vector3d(.25,-.7,.2), table_center+Vector3d(.25,-.9,0))};
+//	std::vector<geometry3d::Triangle> triangles3d = {geometry3d::Triangle({.7,0,.8}, {.7,0,1.1}, {.7,-.3,.7})};
+//	std::vector<geometry3d::Triangle> triangles3d = {geometry3d::Triangle({.5,0,.5}, {.8,0,.6}, {.5,-.3,.9})};
+//	Vector3d table_center(.2,.7,.5);
+//	std::vector<geometry3d::Triangle> triangles3d = {
+//			geometry3d::Triangle(table_center, table_center+Vector3d(.5,-1.4,0), table_center+Vector3d(.5,0,0)),
+//			geometry3d::Triangle(table_center, table_center+Vector3d(0,-1.4,0), table_center+Vector3d(.5,-1.4,0)),
+//			geometry3d::Triangle(table_center+Vector3d(.25,-.7,0), table_center+Vector3d(.25,-.7,.2), table_center+Vector3d(.25,-.9,0))};
+
+	std::vector<geometry3d::Triangle> triangles3d = {geometry3d::Triangle({0,2,.45}, {0,-2,.45}, {5,0,.45}),
+			geometry3d::Triangle({0.537954, -0.334495,  0.548002}, {0.497772, -0.351674,  0.458056}, {0.525739, -0.392862, 0.45343}),
+			geometry3d::Triangle({0.537954, -0.334495,  0.548002}, {0.565921, -0.375683,  0.543376}, {0.525739, -0.392862,   0.45343}),
+			geometry3d::Triangle({0.426088, -0.169742,  0.566509}, {0.385906, -0.186921,  0.476563}, {0.35794, -0.145733,   0.48119}),
+			geometry3d::Triangle({0.426088, -0.169742,  0.566509}, {0.398122, -0.128553,  0.571136}, {0.35794, -0.145733,   0.48119})};
 
 	cam.plot(Vector3d(1,0,0));
 	for(const geometry3d::Triangle& tri3d : triangles3d) {
@@ -94,7 +100,7 @@ void test_truncated_view_frustum() {
 
 	std::cout << "Number of frustum pyramids: " << truncated_frustum.size() << "\n";
 	for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
-		pyramid.plot(sim, "base_link", {0,1,0}, true, true, 0.1);
+		pyramid.plot(sim, "base_link", {0,1,0}, false, true, .25);
 	}
 
 	std::cout << "Press enter to exit\n";
