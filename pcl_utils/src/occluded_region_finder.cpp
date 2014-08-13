@@ -32,7 +32,7 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 }
 
 int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
-                   pcl_utils::OccludedRegion occ_message)
+                   pcl_utils::OccludedRegion* occ_message)
 {
     Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
@@ -100,12 +100,14 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
             Eigen::Vector3f corner;
             corner = calculate_corner(new_position, max_point_OBB, rotational_matrix_OBB, a1, a2, min_direction);
 
+//            std::cout << "corner: " << std::endl << corner << std::endl;
+
             ss2.str("");
             geometry_msgs::Point32 corner_point;
             corner_point.x = corner(0);
             corner_point.y = corner(1);
             corner_point.z = corner(2);
-            occ_message.front_face.points.push_back(corner_point);
+            occ_message->front_face.points.push_back(corner_point);
 
 //                ss2 << "corner " << j << " " << i;
 //                viewer->addSphere(corner_point, 0.01, ss2.str());
@@ -155,7 +157,7 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher pub, ros::Publisher points_pub, ros::Publisher regions_pub)
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub)
 {
 
     visualization_msgs::MarkerArrayPtr markers = visualization_msgs::MarkerArrayPtr(new visualization_msgs::MarkerArray);
@@ -320,10 +322,10 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
 
 //        viewer->addPointCloud<pcl::PointXYZ> (transformed_current_cloud, ss.str());
-        if (occluded_region->size() > 0 /* && (j == 4 || j == 5 || j == 6) */)
+        if (occluded_region->size() > 0 && (j == 4 || j == 5 || j == 6))
         {
 
-            int direction = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, region);
+            int direction = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
             //direction = 20;
 //            viewer->addPointCloud<pcl::PointXYZ> (transformed_occluded_region, ss2.str());
             std::stringstream ss3;
@@ -398,15 +400,16 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //            std::cout << "number of points: " << transformed_occluded_region->size() << std::endl;
             published_cloud.header.frame_id = "/camera_rgb_optical_frame";
             published_cloud.header.stamp = ros::Time::now();
-	    points_pub.publish(published_cloud);
-	    ros::spinOnce();
+            points_pub.publish(published_cloud);
+            ros::spinOnce();
 
 
             region.points = published_cloud;
 
+            regions.regions.push_back(region);
+
         }
 
-        regions.regions.push_back(region);
 
 //        std::cout << "cluster " << j << " complete" << std::endl << std::endl;
 
@@ -435,13 +438,13 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     std::cout << "occlusion finding: " << Timer_toc(&timer) << std::endl;
 
-    pub.publish(*markers);
+    markers_pub.publish(*markers);
     ros::spinOnce();
 
    regions_pub.publish(regions);
    ros::spinOnce();
 
-    std::cout << "published" << std::endl;
+//    std::cout << "published" << std::endl;
 
 //    std::cout << "done" << std::endl;
 }
@@ -467,12 +470,12 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "occlusion_detection");
     //ros::Duration(2).sleep();
     ros::NodeHandle nh("~");
-    ros::Publisher pub;
+    ros::Publisher markers_pub;
     ros::Publisher points_pub;
     ros::Publisher regions_pub;
-    pub = nh.advertise<visualization_msgs::MarkerArray> ("objects", 1);
+    markers_pub = nh.advertise<visualization_msgs::MarkerArray> ("objects", 1);
     points_pub = nh.advertise<sensor_msgs::PointCloud2> ("occluded_points", 1);
-    regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 10);
+    regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 1);
 
     ros::spinOnce();
 
@@ -500,7 +503,7 @@ int main(int argc, char** argv)
 
     tsdf_converter::read_files(infile1, infile2, tsdf_distances, tsdf_weights);
 
-    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, pub, points_pub, regions_pub);
+    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub);
 
     return 0;
 
