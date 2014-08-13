@@ -38,7 +38,13 @@ Simulator::Simulator(const std::string env_file, bool view, bool use_ros) : use_
 	if (use_ros) {
 		nh_ptr = new ros::NodeHandle();
 		joint_state_sub = nh_ptr->subscribe("/joint_states", 1, &Simulator::_joint_state_callback, this);
+
 		received_joint_state = false;
+		ROS_INFO("Waiting for first joint state in simulator...");
+		while (!received_joint_state && !ros::isShuttingDown()) {
+			ros::Duration(0.1).sleep();
+			ros::spinOnce();
+		}
 	}
 
 	sleep(1);
@@ -55,11 +61,11 @@ Simulator::Simulator(const std::string env_file, bool view, bool use_ros) : use_
  */
 void Simulator::update() {
 	if (!use_ros) {
-		std::cout << "Cannot update, Simulator instantiated not using ROS\n";
+		ROS_INFO("Cannot update, Simulator instantiated not using ROS");
 		return;
 	}
 	if (!received_joint_state) {
-		std::cout << "Cannot update simulator, no joint state message received\n";
+		ROS_INFO("Cannot update simulator, no joint state message received");
 		return;
 	}
 
@@ -255,8 +261,8 @@ void Simulator::plot_gaussian(Vector3d mean, Matrix3d cov, Vector3d color) {
  */
 
 void Simulator::_joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_state) {
-	received_joint_state = true;
 	last_joint_state = *joint_state;
+	received_joint_state = true;
 }
 
 }

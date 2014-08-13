@@ -83,3 +83,4 @@ target_link_libraries(moment_of_intertia ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(occluded_region_finder src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
 target_link_libraries(occluded_region_finder ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})
+add_dependencies(occluded_region_finder pcl_utils_generate_messages_cpp)

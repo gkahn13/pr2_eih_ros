@@ -2,6 +2,7 @@
 #include "pr2_utils/pr2_sim/arm.h"
 #include "pr2_utils/pr2_sim/simulator.h"
 #include "pr2_utils/utils/timer.h"
+#include "pr2_utils/utils/utils.h"
 
 void test_signed_distance() {
 	pr2_sim::Simulator sim(true, false);
@@ -32,7 +33,7 @@ void test_signed_distance() {
 	rave::Vector point = pr2_sim::eigen_to_rave(table_center);
 
 	char c;
-	while ((c = pr2_sim::getch()) != 'q') {
+	while ((c = pr2_utils::getch()) != 'q') {
 
 		if (delta_position.count(c) > 0) {
 			point += delta_position[c];

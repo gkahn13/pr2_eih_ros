@@ -3,6 +3,7 @@
 
 #include "simulator.h"
 #include "utils.h"
+#include "pr2_utils/utils/utils.h"
 
 #include <Eigen/Eigen>
 using namespace Eigen;
