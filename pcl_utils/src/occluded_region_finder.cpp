@@ -398,8 +398,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //            std::cout << "number of points: " << transformed_occluded_region->size() << std::endl;
             published_cloud.header.frame_id = "/camera_rgb_optical_frame";
             published_cloud.header.stamp = ros::Time::now();
-//            points_pub.publish(published_cloud);
-//            ros::spinOnce();
+	    points_pub.publish(published_cloud);
+	    ros::spinOnce();
 
 
             region.points = published_cloud;
@@ -438,8 +438,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     pub.publish(*markers);
     ros::spinOnce();
 
-//    regions_pub.publish(regions);
-//    ros::spinOnce();
+   regions_pub.publish(regions);
+   ros::spinOnce();
 
     std::cout << "published" << std::endl;
 
@@ -471,8 +471,8 @@ int main(int argc, char** argv)
     ros::Publisher points_pub;
     ros::Publisher regions_pub;
     pub = nh.advertise<visualization_msgs::MarkerArray> ("objects", 1);
-    //points_pub = nh.advertise<sensor_msgs::PointCloud2> ("occluded_points", 1);
-    //regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 10);
+    points_pub = nh.advertise<sensor_msgs::PointCloud2> ("occluded_points", 1);
+    regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 10);
 
     ros::spinOnce();
 
