@@ -126,11 +126,6 @@ class Camera:
         for tri3d in triangles3d:
             clipped_triangles3d += frustum.clip_triangle(tri3d)
             
-        self.sim.clear_plots()
-        for tri3d in clipped_triangles3d:
-            tri3d.plot(self.sim, frame='base_link', color=(0,1,0), fill=True, alpha=0.25)
-        raw_input()
-            
         triangles2d = self.project_triangles(clipped_triangles3d)
         
         segments2d = set()

@@ -109,13 +109,6 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 		clipped_triangles3d.insert(clipped_triangles3d.end(), tri3d_clipped.begin(), tri3d_clipped.end());
 	}
 
-	sim->clear_plots();
-	for(const geometry3d::Triangle& tri3d : clipped_triangles3d) {
-		tri3d.plot(*sim, "base_link", {0,1,0}, true, 0.25);
-	}
-	std::cin.ignore();
-	sim->clear_plots();
-
 	// project clipped triangles to 2d
 	std::vector<geometry2d::Triangle> triangles2d = project_triangles(cam_pose, clipped_triangles3d);
 
@@ -227,17 +220,6 @@ std::vector<geometry3d::TruncatedPyramid> Camera::truncated_view_frustum(const M
 		}
 
 	}
-
-	sim->clear_plots();
-	Vector3d p0(0,0,2), p1(0,0,2), p2(0,0,2);
-	for(const geometry2d::Triangle& tri2d : partition_triangles2d) {
-		p0.segment<2>(0) = tri2d.a / 1000.0;
-		p1.segment<2>(0) = tri2d.b / 1000.0;
-		p2.segment<2>(0) = tri2d.c / 1000.0;
-		sim->plot_triangle(p0, p1, p2, {0,1,0}, 1);
-	}
-	std::cin.ignore();
-//	sim->clear_plots();
 
 	// now that we have tesselated the projection into triangles
 	// find out which 3d triangle each projection belongs to
