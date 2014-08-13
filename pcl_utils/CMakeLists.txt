@@ -5,6 +5,11 @@ add_definitions("-Wno-enum-compare")
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
+    visualization_msgs
+    std_msgs
+    geometry_msgs
+    sensor_msgs
+    message_generation
 )
 
 find_package(PCL 1.7 REQUIRED)
@@ -18,7 +23,24 @@ set(TIMER_LIBRARIES "dl;rt")
 
 set(PCL_BUILD_TYPE Release)
 
+add_message_files(
+  FILES
+  Gaussian.msg
+  OccludedRegion.msg
+  OccludedRegionArray.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+  visualization_msgs
+  sensor_msgs
+)
+
+
 catkin_package(
+  CATKIN_DEPENDS message_runtime
 )
 
 include_directories(

@@ -56,6 +56,7 @@ bool downloading;
 int counter;
 bool publish_kinfu_under_cam_depth_reg;
 
+
 namespace carmine {
 	const int WIDTH = 640;
 	const int HEIGHT = 480;

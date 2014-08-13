@@ -10,7 +10,7 @@ void read_files(std::string distance_file, std::string weight_file, std::vector<
     is1.seekg(0, std::ifstream::end);
     long size1 = is1.tellg();
     is1.seekg(0, std::ifstream::beg);
-    std::cout << size1 / sizeof(float) << std::endl;
+//    std::cout << size1 / sizeof(float) << std::endl;
     tsdf_distances->resize(size1 / sizeof(float));
     is1.read(reinterpret_cast<char*>(&((*tsdf_distances)[0])), size1);
     //is1.close();
@@ -19,7 +19,7 @@ void read_files(std::string distance_file, std::string weight_file, std::vector<
     is2.seekg(0, std::ifstream::end);
     long size2 = is2.tellg();
     is2.seekg(0, std::ifstream::beg);
-    std::cout << size2 / sizeof(short) << std::endl;
+//    std::cout << size2 / sizeof(short) << std::endl;
     tsdf_weights->resize(size2 / sizeof(short));
     is2.read(reinterpret_cast<char*>(&((*tsdf_weights)[0])), size2);
     //is2.close();
