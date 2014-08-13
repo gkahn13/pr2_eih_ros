@@ -52,6 +52,7 @@ class Segment {
 public:
 	Vector3d p0, p1;
 
+	Segment() { p0.setZero(); p1.setZero(); }
 	Segment(const Vector3d& p0_pt, const Vector3d& p1_pt) : p0(p0_pt), p1(p1_pt) { }
 
 	/**
@@ -169,8 +170,40 @@ public:
 		return (normal.dot(x - origin) >= 0);
 	}
 
+	/**
+	 * \brief Clips segment against halfspace
+	 * \return false if segment not in halfspace, else true
+	 */
+	inline bool clip_segment(const Segment& segment, Segment& clipped_segment) const {
+		bool contains_p0 = contains(segment.p0);
+		bool contains_p1 = contains(segment.p1);
+
+		if ((!contains_p0) && (!contains_p1)) {
+			return false;
+		}
+
+		if (contains_p0 && contains_p1) {
+			clipped_segment = Segment(segment.p0, segment.p1);
+		} else {
+			Vector3d intersection;
+			bool found_intersection = get_hyperplane().intersection(segment, intersection);
+			assert(found_intersection);
+			if (contains_p0) {
+				clipped_segment = Segment(intersection, segment.p0);
+			} else {
+				clipped_segment = Segment(intersection, segment.p1);
+			}
+		}
+
+		return true;
+	}
+
 	inline Hyperplane get_hyperplane() const {
 		return Hyperplane(origin, normal);
+	}
+
+	inline Halfspace get_complement() const {
+		return Halfspace(origin, -normal);
 	}
 
 	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color) const {
@@ -469,66 +502,48 @@ public:
 		std::vector<Triangle> triangles = {triangle};
 		std::vector<Halfspace> halfspaces = get_halfspaces();
 		for(int i=0; i < halfspaces.size(); ++i) {
-			const Halfspace& halfspace = halfspaces[i];
-			Hyperplane hyperplane = halfspace.get_hyperplane();
+			std::vector<Halfspace> splitting_halfspaces = {halfspaces[i]};
+			if (i == 0) {
+				splitting_halfspaces.push_back(halfspaces[i].get_complement());
+			}
 
 			// clip all triangles against the halfspace
 			std::vector<Triangle> new_triangles;
-			for(const Triangle& triangle : triangles) {
-				std::vector<Vector3d> intersections;
-				std::unordered_set<Vector3d, PointHash, PointEqualTo> intersections_set;
-				for(const Segment& segment : triangle.get_segments()) {
-					Vector3d intersection;
-					if (hyperplane.intersection(segment, intersection)) {
-						if (intersections_set.count(intersection) == 0) {
-							intersections.push_back(intersection);
-							intersections_set.insert(intersection);
+			for (const Halfspace& halfspace : splitting_halfspaces) {
+				for(const Triangle& tri : triangles) {
+					std::vector<Segment> tri_segments = tri.get_segments();
+
+					// clip triangle segments against halfspace
+					std::vector<Segment> clipped_segments;
+					for(const Segment& tri_seg : tri_segments) {
+						Segment clipped_segment;
+						if (halfspace.clip_segment(tri_seg, clipped_segment)) {
+							clipped_segments.push_back(clipped_segment);
 						}
 					}
-				}
-//				assert(intersections.size() == 0 || intersections.size() == 2);
 
-				std::vector<Vector3d> inside_vertices, outside_vertices;
-				for(const Vector3d& vertex : triangle.get_vertices()) {
-					if (halfspace.contains(vertex)) {
-						inside_vertices.push_back(vertex);
-					} else {
-						outside_vertices.push_back(vertex);
-					}
-				}
-
-				if (intersections.size() == 2) {
-					assert(inside_vertices.size() == 1 || inside_vertices.size() == 2);
-					if (inside_vertices.size() == 1) {
-						// then intersections form new border of triangle
-						new_triangles.push_back(Triangle(inside_vertices[0], intersections[0], intersections[1]));
-						if (i == 0) {
-							// create two triangles for outside triangles
-							new_triangles.push_back(Triangle(outside_vertices[0], intersections[0], intersections[1]));
-							if ((outside_vertices[1] - intersections[0]).norm() < (outside_vertices[1] - intersections[1]).norm()) {
-								new_triangles.push_back(Triangle(outside_vertices[1], intersections[0], outside_vertices[0]));
-							} else {
-								new_triangles.push_back(Triangle(outside_vertices[1], intersections[1], outside_vertices[0]));
+					if (clipped_segments.size() == 2) {
+						// only one triangle left
+						new_triangles.push_back(Triangle(clipped_segments[0].p0, clipped_segments[1].p0, clipped_segments[0].p1));
+					} else if (clipped_segments.size() == 3) {
+						// two triangles left
+						// get segments that cross halfspace (i.e. ignore the one fully in the halfspace)
+						std::vector<Segment> crossing_segments;
+						for(int i=0; i < 3; ++i) {
+							const Segment& tri_seg = tri_segments[i];
+							if (!(halfspace.contains(tri_seg.p0) && halfspace.contains(tri_seg.p1))) {
+								crossing_segments.push_back(clipped_segments[i]);
 							}
 						}
-					} else {
-						// create two triangles
-						new_triangles.push_back(Triangle(inside_vertices[0], intersections[0], intersections[1]));
-						if ((inside_vertices[1] - intersections[0]).norm() < (inside_vertices[1] - intersections[1]).norm()) {
-							new_triangles.push_back(Triangle(inside_vertices[1], intersections[0], inside_vertices[0]));
+
+						assert(crossing_segments.size() == 0 || crossing_segments.size() == 2);
+
+						if (crossing_segments.size() == 2) {
+							new_triangles.push_back(Triangle(crossing_segments[0].p0, crossing_segments[0].p1, crossing_segments[1].p0));
+							new_triangles.push_back(Triangle(crossing_segments[0].p1, crossing_segments[1].p0, crossing_segments[1].p1));
 						} else {
-							new_triangles.push_back(Triangle(inside_vertices[1], intersections[1], inside_vertices[0]));
+							new_triangles.push_back(tri);
 						}
-						if (i == 0) {
-							// create triangle for outside triangle
-							new_triangles.push_back(Triangle(outside_vertices[0], intersections[0], intersections[1]));
-						}
-					}
-				} else if (intersections.size() == 0){
-					// all/none of the triangle in halfspace
-					assert(inside_vertices.size() == 0 || inside_vertices.size() == 3);
-					if (inside_vertices.size() == 3) {
-						new_triangles.push_back(triangle);
 					}
 				}
 			}
