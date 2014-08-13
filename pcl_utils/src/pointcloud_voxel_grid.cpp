@@ -10,13 +10,14 @@ PointCloudVoxelGrid::PointCloudVoxelGrid(CloudType::Ptr cloud, double resolution
     y_size = ceil((extremes(4) - extremes(1)) / resolution);
     z_size = ceil((extremes(5) - extremes(2)) / resolution);
 
-    std::cout << "sizes: " << std::endl;
-    std::cout << x_size << std::endl;
-    std::cout << y_size << std::endl;
-    std::cout << z_size << std::endl;
 
-    std::cout << minimum << std::endl;
-    std::cout << maximum << std::endl;
+//    std::cout << "sizes: " << std::endl;
+//    std::cout << x_size << std::endl;
+//    std::cout << y_size << std::endl;
+//    std::cout << z_size << std::endl;
+
+//    std::cout << "minimum: " << minimum << std::endl;
+//    std::cout << "maximum: " << maximum << std::endl;
 
 
 
@@ -40,9 +41,9 @@ void PointCloudVoxelGrid::walk_cloud(CloudType::Ptr cloud) {
 PointCloudVoxelGrid::CloudType PointCloudVoxelGrid::get_inverse_cloud() {
     CloudType output_cloud;
     // TODO: reverse the order of these loops - i.e. x, y, z
-    for (int z = 0; z < z_size; z++) {
+    for (int x = 0; x < x_size; x++) {
         for (int y = 0; y < y_size; y++) {
-            for (int x = 0; x < x_size; x++) {
+            for (int z = 0; z < z_size; z++) {
                 if (!get(x, y, z)) {
                     output_cloud.push_back(voxel_to_point(voxel(x, y, z)));
                 }
@@ -82,29 +83,12 @@ Eigen::Matrix<double, 6, 1> PointCloudVoxelGrid::calculate_extremes(CloudType::P
     CloudType::iterator cloud_iter;
     for (cloud_iter = cloud->begin(); cloud_iter != cloud->end(); cloud_iter++) {
         PointType current = *cloud_iter;
-        if (current.x > max_x) {
-            max_x = current.x;
-        }
-
-        if (current.x < min_x) {
-            min_x = current.x;
-        }
-
-        if (current.y > max_y) {
-            max_y = current.y;
-        }
-
-        if (current.y < min_y) {
-            min_y = current.y;
-        }
-
-        if (current.z > max_z) {
-            max_z = current.z;
-        }
-
-        if (current.z < min_z) {
-            min_z = current.z;
-        }
+        max_x = std::max(max_x, (double) current.x);
+        max_y = std::max(max_y, (double) current.y);
+        max_z = std::max(max_z, (double) current.z);
+        min_x = std::min(min_x, (double) current.x);
+        min_y = std::min(min_y, (double) current.y);
+        min_z = std::min(min_z, (double) current.z);
     }
 
     Eigen::Matrix<double, 6, 1> extremes;

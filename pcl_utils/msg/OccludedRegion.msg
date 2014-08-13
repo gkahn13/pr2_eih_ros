@@ -1,0 +1,3 @@
+sensor_msgs/PointCloud2 points
+geometry_msgs/Polygon front_face
+Gaussian gaussian

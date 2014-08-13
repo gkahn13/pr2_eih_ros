@@ -41,13 +41,13 @@ int main(int argc, char** argv)
     double a = coefficients->values[0], b = coefficients->values[1],
                                             c = coefficients->values[2], d = coefficients->values[3];
 
-    std::cout << "model coefficients: " << std::endl << a << std::endl << b << std::endl << c << std::endl << d << std::endl;
+//    std::cout << "model coefficients: " << std::endl << a << std::endl << b << std::endl << c << std::endl << d << std::endl;
     Eigen::Vector3d n = Eigen::Vector3d(a, b, c);
     Eigen::FullPivLU<Eigen::RowVector3d> lu_decomp(n.transpose());
     Eigen::MatrixXd null_space = lu_decomp.kernel();
 
-    std::cout << "cols: " << null_space.cols() << std::endl;
-    std::cout << "rows: " << null_space.rows() << std::endl;
+//    std::cout << "cols: " << null_space.cols() << std::endl;
+//    std::cout << "rows: " << null_space.rows() << std::endl;
 
     Eigen::Vector3d b1 = null_space.block<3, 1>(0, 0);
     Eigen::Vector3d b2 = null_space.block<3, 1>(0, 1);

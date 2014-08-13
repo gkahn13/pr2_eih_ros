@@ -56,6 +56,7 @@ bool downloading;
 int counter;
 bool publish_kinfu_under_cam_depth_reg;
 
+
 namespace carmine {
 	const int WIDTH = 640;
 	const int HEIGHT = 480;
@@ -257,7 +258,7 @@ pcl::gpu::kinfuLS::KinfuTracker* init_kinfu() {
 	// now published in kinfu.launch, so the tf listener can just read it in
 	tf::StampedTransform kinfu_to_camera;
 	listener->waitForTransform("/kinfu_frame", "/camera_rgb_optical_frame",
-			ros::Time(0), ros::Duration(5));
+			ros::Time(0), ros::Duration(6));
 	listener->lookupTransform("/kinfu_frame", "/camera_rgb_optical_frame",
 			ros::Time(0), kinfu_to_camera);
 
@@ -377,20 +378,39 @@ int main (int argc, char** argv) {
         weight_out.open(weight_file.c_str(), std::ios::out | std::ios::binary);
         weight_out.write(weight_pointer, bytes);
         weight_out.close();
+
+        // TODO: I don't know if these variable names are all correct
+        // i.e. maybe it should be called kinfu_to_rgb, etc.
+
+        // get the transform from from rgb optical frame to kinfu frame
+		tf::StampedTransform rgb_to_kinfu_write;
+		listener->waitForTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					   ros::Time(0), ros::Duration(5));
+		listener->lookupTransform("/camera_rgb_optical_frame", "/kinfu_frame",
+					  ros::Time(0), rgb_to_kinfu_write);
+
+		// transform kinfu points back to rgb optical frame
+		Affine3d current_transform_write;
+		tf::transformTFToEigen(rgb_to_kinfu_write, current_transform_write);
+
+		Matrix4d transformation_matrix = current_transform_write.matrix();
+
+        std::ofstream matrix_outstream;
+        std::string matrix_file = "transform_matrix" + current_stream.str() + ".txt";
+        matrix_outstream.open(matrix_file.c_str());
+        for (int x = 0; x < transformation_matrix.rows(); x++) {
+            for (int y = 0; y < transformation_matrix.cols(); y++) {
+                matrix_outstream << transformation_matrix(x, y) << std::endl;
+            }
+        }
+        matrix_outstream.close();
+
+
         current++;
 		std::cout << "saved!" << std::endl;
         #endif
 
 		tsdf.fetchCloudHost(current_cloud);
-
-// 		int i;
-// 		pcl::PointCloud<pcl::PointXYZ>::iterator cloud_iter;
-// 		for(cloud_iter = current_cloud.begin(), i = 0;
-// 				cloud_iter != current_cloud.end();
-// 				cloud_iter++, i++) {
-// //			std::cout << "(" << cloud_iter->x << ", " << cloud_iter->y << ", " << cloud_iter->z << ")\n";
-// 		}
-// 		std::cout << "number iterated through: " << i << "\n";
 
 
 		#else
@@ -432,7 +452,7 @@ int main (int argc, char** argv) {
 
 		#ifdef USE_COLOR
 		pcl::PointCloud<pcl::PointXYZRGB> transformed_cloud;
-                #else
+        #else
 		pcl::PointCloud<pcl::PointXYZ> transformed_cloud;
 		#endif
 
