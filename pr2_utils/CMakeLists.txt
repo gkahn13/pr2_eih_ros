@@ -6,7 +6,7 @@ add_definitions("-Wno-sign-compare -std=c++11")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp actionlib sensor_msgs control_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp actionlib sensor_msgs trajectory_msgs control_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -83,7 +83,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES pr2_utils
 #  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+#  DEPENDS OpenRAVE Boost
 )
 
 ###########
@@ -104,6 +104,7 @@ add_library(pr2_utils
     src/${PROJECT_NAME}/pr2_sim/arm.cpp
     src/${PROJECT_NAME}/pr2_sim/simulator.cpp
     src/${PROJECT_NAME}/pr2_sim/camera.cpp
+    src/${PROJECT_NAME}/pr2/arm.cpp
 )
 
 ## Declare a cpp executable

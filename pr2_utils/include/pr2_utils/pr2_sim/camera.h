@@ -16,7 +16,7 @@ class Camera {
 public:
 	Camera(Arm *arm, Simulator *sim, double height, double width, double focal_length,
 			double fx, double fy, double cx, double cy, double min_range, double max_range);
-	Camera(Arm *arm, Simulator *sim) : Camera(arm, sim, 480, 640, .01, 525, 525, 319.5, 239.5, 0.4, 1.5) { }
+	Camera(Arm *arm, Simulator *sim) : Camera(arm, sim, 480, 640, .01, 525, 525, 319.5, 239.5, 0.5, 1.5) { }
 
 	Matrix4d get_pose();
 	Matrix4d get_pose(const VectorJ& joints);

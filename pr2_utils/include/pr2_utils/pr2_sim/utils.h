@@ -1,9 +1,6 @@
 #ifndef __PR2_SIM_UTILS__
 #define __PR2_SIM_UTILS__
 
-#include <unistd.h>
-#include <termios.h>
-
 #include <Eigen/Eigen>
 using namespace Eigen;
 

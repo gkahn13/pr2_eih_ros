@@ -324,9 +324,10 @@ double Camera::radial_distance_error(const Matrix4d& cam_pose, const Vector3d& p
  * \param point 3d point in frame base_link
  */
 Vector3d Camera::measurement_standard_deviation(const Matrix4d& cam_pose, const Vector3d& point) {
-	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
-	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
-	Vector3d point_cam = cam_rot*point + cam_trans;
+	Matrix4d cam_pose_inv = cam_pose.inverse();
+	Matrix3d cam_rot_inv = cam_pose_inv.block<3,3>(0,0);
+	Vector3d cam_trans_inv = cam_pose_inv.block<3,1>(0,3);
+	Vector3d point_cam = cam_rot_inv*point + cam_trans_inv;
 	double Z_squared = point_cam(2)*point_cam(2);
 
 	Vector2d pixel_centered = pixel_from_point(cam_pose, point) - Vector2d(height,width)/2.0;
@@ -335,7 +336,7 @@ Vector3d Camera::measurement_standard_deviation(const Matrix4d& cam_pose, const 
 	sigmas(0) = (fabs(pixel_centered(1))/(fy*fy))*Z_squared;
 	sigmas(1) = (fabs(pixel_centered(0))/(fx*fx))*Z_squared;
 	sigmas(2) = (1/fx)*Z_squared;
-	return sigmas;
+	return fx*sigmas; // fx so it is in terms of meters
 }
 
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {
