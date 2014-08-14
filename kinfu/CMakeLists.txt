@@ -13,16 +13,20 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   tf
   tf_conversions
+  pcl_utils
 )
 find_package(PCL 1.7 REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
- 
+set(PCL_LIBRARIES ${PCL_LIBRARIES} "pcl_common")
+
 set(PCL_BUILD_TYPE Release)
 
+
 catkin_package(
+    #CATKIN_DEPENDS pcl_utils
 )
 
 ###########
@@ -66,7 +70,15 @@ include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${PYTHO
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS}
   )
 
-add_executable(kinfu src/kinfu.cpp)
+message(STATUS "PCL UTILS VARIABLES")
+message(STATUS ${pcl_utils_SOURCE_DIR})
+message(STATUS ${pcl_utils_LIBRARIES})
 
-target_link_libraries(kinfu ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(kinfu src/kinfu.cpp ${pcl_utils_SOURCE_DIR}/src/occluded_region_finder.cpp ${pcl_utils_SOURCE_DIR}/src/cluster_projection.cpp
+#    ${pcl_utils_SOURCE_DIR}/src/pointcloud_voxel_grid.cpp ${pcl_utils_SOURCE_DIR}/src/plane_recognition.cpp ${pcl_utils_SOURCE_DIR}/src/cluster_extraction.cpp ${pcl_utils_SOURCE_DIR}/src/tsdf_converter.cpp
+#)
+#target_link_libraries(kinfu ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(kinfu pcl_utils_generate_messages_cpp
+#pcl_utils
+#)
 

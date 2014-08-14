@@ -19,7 +19,7 @@
 
 #include <pcl/io/pcd_io.h>
 
-#include <pointcloud_voxel_grid.h>
+#include <pcl_utils/pointcloud_voxel_grid.h>
 
 namespace tsdf_converter {
 

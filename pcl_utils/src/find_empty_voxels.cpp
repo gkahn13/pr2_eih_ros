@@ -9,7 +9,7 @@
 #include <Eigen/Eigen>
 
 
-#include <plane_recognition.h>
+#include <pcl_utils/plane_recognition.h>
 
 int main(int argc, char** argv)
 {

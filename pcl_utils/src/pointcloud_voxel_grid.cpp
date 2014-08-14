@@ -1,4 +1,4 @@
-#include <pointcloud_voxel_grid.h>
+#include <pcl_utils/pointcloud_voxel_grid.h>
 
 PointCloudVoxelGrid::PointCloudVoxelGrid(CloudType::Ptr cloud, double resolution) {
     res = resolution;
@@ -38,21 +38,17 @@ void PointCloudVoxelGrid::walk_cloud(CloudType::Ptr cloud) {
 }
 
 /** Goes through the grid, creating a cloud of points that have not been visited. */
-PointCloudVoxelGrid::CloudType PointCloudVoxelGrid::get_inverse_cloud() {
-    CloudType output_cloud;
+void PointCloudVoxelGrid::get_inverse_cloud(PointCloudVoxelGrid::CloudType::Ptr cloud) {
     // TODO: reverse the order of these loops - i.e. x, y, z
     for (int x = 0; x < x_size; x++) {
         for (int y = 0; y < y_size; y++) {
             for (int z = 0; z < z_size; z++) {
                 if (!get(x, y, z)) {
-                    output_cloud.push_back(voxel_to_point(voxel(x, y, z)));
+                    cloud->push_back(voxel_to_point(voxel(x, y, z)));
                 }
             }
         }
     }
-
-    return output_cloud;
-
 }
 
 /** Converts a point to an integer voxel. */

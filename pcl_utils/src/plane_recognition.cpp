@@ -1,4 +1,4 @@
-#include <plane_recognition.h>
+#include <pcl_utils/plane_recognition.h>
 #include <pcl/io/pcd_io.h>
 
 using namespace std;
