@@ -1,4 +1,4 @@
-#include <cluster_extraction.h>
+#include <pcl_utils/cluster_extraction.h>
 
 namespace cluster_extraction {
 
@@ -9,8 +9,8 @@ std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pc
 //    std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
 
     // Create the filtering object: downsample the dataset using a leaf size of 1cm
-    pcl::VoxelGrid<pcl::PointXYZ> vg;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloud);
     vg.setLeafSize (0.01f, 0.01f, 0.01f);
     vg.filter (*cloud_filtered);

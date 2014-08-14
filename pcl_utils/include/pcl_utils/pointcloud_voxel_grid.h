@@ -69,7 +69,7 @@ public:
 
     void walk_cloud(CloudType::Ptr cloud);
 
-    CloudType get_inverse_cloud();
+    void get_inverse_cloud(CloudType::Ptr cloud);
 
 
 
