@@ -1,5 +1,5 @@
-#include <tsdf_converter.h>
-#include <timer.h>
+#include <pcl_utils/tsdf_converter.h>
+#include <pcl_utils/timer.h>
 
 namespace tsdf_converter {
 void read_files(std::string distance_file, std::string weight_file, std::vector<float>* tsdf_distances, std::vector<short>* tsdf_weights) {
@@ -59,7 +59,7 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
 
 
     PointCloudVoxelGrid vox_grid = PointCloudVoxelGrid(foreground_cloud, voxel_size);
-    *inverse_cloud = vox_grid.get_inverse_cloud();
+    vox_grid.get_inverse_cloud(inverse_cloud);
 
 
 }
