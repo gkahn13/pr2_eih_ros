@@ -16,7 +16,24 @@
 namespace cluster_projection {
 
 pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ> cluster, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse, pcl::PointCloud<pcl::PointXYZ>::Ptr plane_cloud,
-                                                  Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff) {
+                                                  Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse,
+                                                  pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff,
+                                                  int face_direction, pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB) {
+
+
+    Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
+    Eigen::Vector3f min_vector_rotated = rotational_matrix_OBB * min_vector;
+
+    Eigen::Matrix3f adder0 = Eigen::Matrix3f::Zero();
+    Eigen::Matrix3f adder1 = Eigen::Matrix3f::Zero();
+    Eigen::Matrix3f adder2 = Eigen::Matrix3f::Zero();
+    Eigen::Vector3f major_vector, middle_vector, minor_vector;
+    adder0(0, 0) = 1;
+    adder1(1, 1) = 1;
+    adder2(2, 2) = 1;
+    major_vector = adder0 * min_vector_rotated;
+    middle_vector = adder1 * min_vector_rotated;
+    minor_vector = adder2 * min_vector_rotated;
 
 //    Timer timer = Timer();
     //Timer_tic(&timer);
@@ -41,11 +58,10 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     pcl::transformPointCloud(*transformed_cluster, *projected_cluster, affine_transformation);
 
     // only projects the inverse cloud once, as it will not vary between clusters
-    //if (projected_inverse->size() == 0) {
-        pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse(new pcl::PointCloud<pcl::PointXYZ>);
+    if (projected_inverse->size() == 0) {
         pcl::transformPointCloud(*inverse, *transformed_inverse, transformation_matrix);
         pcl::transformPointCloud(*transformed_inverse, *projected_inverse, affine_transformation);
-    //}
+    }
 
     //std::cout << "transforming and projecting: " << Timer_toc(&timer) << std::endl;
 
@@ -84,20 +100,36 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     pcl::PointCloud<pcl::PointXYZ>::iterator transformed_inverse_iter;
     pcl::PointCloud<pcl::PointXYZ> occluded_region;
     double tol = 25;
+    face_direction = 10;
     for (projected_inverse_iter = projected_inverse->begin(), inverse_iter = inverse->begin(), transformed_inverse_iter = transformed_inverse->begin();
         projected_inverse_iter != projected_inverse->end();
         projected_inverse_iter++, inverse_iter++, transformed_inverse_iter++) {
 
         pcl::PointXYZ current_projected = *projected_inverse_iter;
         pcl::PointXYZ current_inverse = *inverse_iter;
+        Eigen::Vector3f current_inverse_eigen(transformed_inverse_iter->x, transformed_inverse_iter->y, transformed_inverse_iter->z);
+        Eigen::Vector3f current_inverse_rotated = rotational_matrix_OBB * current_inverse_eigen;
         if (current_projected.x / current_projected.z >= extremes(0) / extremes(2) - tol &&
             current_projected.y / current_projected.z >= extremes(1) / extremes(2) - tol &&
             current_projected.x / current_projected.z <= extremes(3) / extremes(5) + tol &&
             current_projected.y / current_projected.z <= extremes(4) / extremes(5) + tol &&
+            /*((face_direction == 0) || (major_vector.dot((current_inverse_rotated - position) - major_vector) >= 0)) &&
+            ((face_direction == 0) || (major_vector.dot(-1 * (current_inverse_rotated - position) - major_vector)) <= 0) &&
+            ((face_direction == 1) || (middle_vector.dot((current_inverse_rotated - position) - middle_vector) <= 0)) &&
+            ((face_direction == 1) || (middle_vector.dot(-1 * (current_inverse_rotated - position) - middle_vector)) >= 0) &&
+            ((face_direction == 2) || (minor_vector.dot((current_inverse_rotated - position) - minor_vector) <= 0)) &&
+            ((face_direction == 2) || (minor_vector.dot(-1 * (current_inverse_rotated - position) - minor_vector)) >= 0) &&*/
             a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 &&
             transformed_inverse_iter->z > 0 &&
             std::pow(transformed_inverse_iter->x, 2) + std::pow(transformed_inverse_iter->y, 2) + std::pow(transformed_inverse_iter->z, 2) >= std::pow(real_extremes.block<3, 1>(0,0).norm(), 2)) {
             occluded_region.push_back(current_inverse);
+            std::cout << "point" << std::endl;
+            std::cout << (major_vector.dot((current_inverse_rotated - position) - major_vector) >= 0) << std::endl;
+            std::cout << ((major_vector.dot(-1 * (current_inverse_rotated - position) - major_vector)) >= 0) << std::endl;
+            std::cout << (middle_vector.dot((current_inverse_rotated - position) - middle_vector) >= 0) << std::endl;
+            std::cout << ((middle_vector.dot(-1 * (current_inverse_rotated - position) - middle_vector)) >= 0) << std::endl;
+            std::cout << (minor_vector.dot((current_inverse_rotated - position) - minor_vector) >= 0) << std::endl;
+            std::cout << ((minor_vector.dot(-1 * (current_inverse_rotated - position) - minor_vector)) >= 0) << std::endl;
         }
     }
 
