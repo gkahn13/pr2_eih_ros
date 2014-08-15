@@ -101,3 +101,4 @@ add_dependencies(occluded_region_finder_standalone pcl_utils_generate_messages_c
 add_executable(kinfu src/kinfu.cpp src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
 target_link_libraries(kinfu ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})
 add_dependencies(kinfu pcl_utils_generate_messages_cpp)
+

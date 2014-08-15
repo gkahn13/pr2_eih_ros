@@ -15,10 +15,10 @@ Camera::Camera(Arm* arm, Simulator* sim, double height, double width, double foc
 		arm(arm), sim(sim), height(height), width(width), focal_length(focal_length),
 		fx(fx), fy(fy), cx(cx), cy(cy), min_range(min_range), max_range(max_range) {
 
-	tool_to_camera << 0.04483273, -0.06333954,  0.99698452, -0.10692571,
-					  0.99866063, -0.02295816, -0.04636666, -0.00652973,
-					  0.02582578,  0.99772793,  0.06222543, -0.05669853,
-					  0.,          0.,          0.,          1.;
+	tool_to_camera << 0.03049961,  0.02284043,  0.99927378, -0.12429939,
+			0.99816662, -0.05298646, -0.0292547 , -0.00993376,
+			0.05227979,  0.99833399, -0.02441462, -0.07102029,
+			0.        ,  0.        ,  0.        ,  1.;
 
 	P << fx, 0,  cx,
 		 0,  fy, cy,
@@ -324,9 +324,10 @@ double Camera::radial_distance_error(const Matrix4d& cam_pose, const Vector3d& p
  * \param point 3d point in frame base_link
  */
 Vector3d Camera::measurement_standard_deviation(const Matrix4d& cam_pose, const Vector3d& point) {
-	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
-	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
-	Vector3d point_cam = cam_rot*point + cam_trans;
+	Matrix4d cam_pose_inv = cam_pose.inverse();
+	Matrix3d cam_rot_inv = cam_pose_inv.block<3,3>(0,0);
+	Vector3d cam_trans_inv = cam_pose_inv.block<3,1>(0,3);
+	Vector3d point_cam = cam_rot_inv*point + cam_trans_inv;
 	double Z_squared = point_cam(2)*point_cam(2);
 
 	Vector2d pixel_centered = pixel_from_point(cam_pose, point) - Vector2d(height,width)/2.0;
@@ -335,7 +336,7 @@ Vector3d Camera::measurement_standard_deviation(const Matrix4d& cam_pose, const 
 	sigmas(0) = (fabs(pixel_centered(1))/(fy*fy))*Z_squared;
 	sigmas(1) = (fabs(pixel_centered(0))/(fx*fx))*Z_squared;
 	sigmas(2) = (1/fx)*Z_squared;
-	return sigmas;
+	return fx*sigmas; // fx so it is in terms of meters
 }
 
 void Camera::plot(Vector3d color, std::string frame, bool fill, bool with_sides, double alpha) {

@@ -26,7 +26,11 @@ Arm::Arm(ArmType a, Simulator *s) : arm_type(a), sim(s) {
 	lower = VectorJ(lower_vec.data());
 	upper = VectorJ(upper_vec.data());
 
-	fk_origin = sim->robot->GetLink("torso_lift_link")->GetTransform();
+	lower(5) = -M_PI/2; // enforce _wrist_flex_joint so carmine doesn't collide
+
+	sim->update(); // must do so the origin transform is correct
+	Matrix4d eye = Matrix4d::Identity();
+	fk_origin = eigen_to_rave(sim->transform_from_to(eye, "torso_lift_link", "base_link"));
 
 	arm_joint_axes = { rave::Vector(0,0,1),
 			rave::Vector(0,1,0),
@@ -127,7 +131,7 @@ void Arm::teleop() {
 	std::cout << manip_name << " teleop\n";
 
 	char c;
-	while ((c = getch()) != 'q') {
+	while ((c = pr2_utils::getch()) != 'q') {
 
 		rave::Transform pose = eigen_to_rave(get_pose());
 		if (delta_position.count(c) > 0) {
@@ -234,6 +238,7 @@ bool Arm::ik_lookat(const Vector3d& position, const Vector3d& point, VectorJ& jo
  * Arm private methods
  *
  */
+
 
 
 }

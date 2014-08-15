@@ -1,9 +1,6 @@
 #ifndef __PR2_SIM_UTILS__
 #define __PR2_SIM_UTILS__
 
-#include <unistd.h>
-#include <termios.h>
-
 #include <Eigen/Eigen>
 using namespace Eigen;
 
@@ -54,30 +51,6 @@ inline Vector3d rave_to_eigen(const rave::Vector& v) {
 
 inline rave::Vector eigen_to_rave(const Vector3d& m) {
 	return rave::Vector(m(0), m(1), m(2));
-}
-
-inline char getch() {
-	char buf = 0;
-	struct termios old = {0};
-	if (tcgetattr(0, &old) < 0) {
-		perror("tcsetattr()");
-	}
-	old.c_lflag &= ~ICANON;
-	old.c_lflag &= ~ECHO;
-	old.c_cc[VMIN] = 1;
-	old.c_cc[VTIME] = 0;
-	if (tcsetattr(0, TCSANOW, &old) < 0) {
-		perror("tcsetattr ICANON");
-	}
-	if (read(0, &buf, 1) < 0) {
-		perror ("read()");
-	}
-	old.c_lflag |= ICANON;
-	old.c_lflag |= ECHO;
-	if (tcsetattr(0, TCSADRAIN, &old) < 0) {
-		perror ("tcsetattr ~ICANON");
-	}
-	return (buf);
 }
 
 }
