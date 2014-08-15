@@ -269,7 +269,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             int face_direction = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
 
             *occluded_region = cluster_projection::calculate_occluded(*current_cloud, inverse_cloud, zero_crossing_cloud, transformation_matrix, transformed_inverse, projected_inverse, plane_coeff,
-                               face_direction, min_point_OBB, max_point_OBB, position, rotational_matrix_OBB);
+                               face_direction, min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers);
 
             if (occluded_region->size() > 0)
             {
