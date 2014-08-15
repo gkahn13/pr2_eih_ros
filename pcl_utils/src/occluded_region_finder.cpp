@@ -228,11 +228,11 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
 
-        if (j == 3)
+        if (true || j == 3)
         {
-            std::cout << "press enter to continue" << std::endl;;
-            std::string unused;
-            getline(cin, unused);
+//            std::cout << "press enter to continue" << std::endl;;
+//            std::string unused;
+//            getline(cin, unused);
             std::cout << j << std::endl;
             pcl::PointCloud<pcl::PointXYZ>::Ptr occluded_region(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);

@@ -19,7 +19,7 @@ using namespace Eigen;
 
 namespace pr2 {
 
-#define DEFAULT_SPEED .01
+#define DEFAULT_SPEED .02
 
 class Arm {
 	std::vector<std::string> joint_name_suffixes = {"_shoulder_pan_joint",
