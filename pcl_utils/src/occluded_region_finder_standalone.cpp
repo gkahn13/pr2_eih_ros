@@ -51,6 +51,10 @@ int main(int argc, char** argv)
 
     tsdf_converter::read_files(infile1, infile2, tsdf_distances, tsdf_weights);
 
+    std::cout << "press enter to start" << std::endl;
+    std::string unused;
+    getline(cin, unused);
+
     occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub);
 
     return 0;
