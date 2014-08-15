@@ -120,7 +120,8 @@ add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/
 														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
 add_executable(pr2_arm			   tests/test_arm.cpp       src/${PROJECT_NAME}/pr2/arm.cpp
                                                             src/${PROJECT_NAME}/pr2_sim/arm.cpp
-                                                            src/${PROJECT_NAME}/pr2_sim/simulator.cpp)                                                     
+                                                            src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+                                                            src/${PROJECT_NAME}/pr2_sim/camera.cpp)                                                     
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

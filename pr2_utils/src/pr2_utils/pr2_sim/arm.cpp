@@ -26,6 +26,8 @@ Arm::Arm(ArmType a, Simulator *s) : arm_type(a), sim(s) {
 	lower = VectorJ(lower_vec.data());
 	upper = VectorJ(upper_vec.data());
 
+	lower(5) = -M_PI/2; // enforce _wrist_flex_joint so carmine doesn't collide
+
 	sim->update(); // must do so the origin transform is correct
 	Matrix4d eye = Matrix4d::Identity();
 	fk_origin = eigen_to_rave(sim->transform_from_to(eye, "torso_lift_link", "base_link"));
@@ -236,6 +238,7 @@ bool Arm::ik_lookat(const Vector3d& position, const Vector3d& point, VectorJ& jo
  * Arm private methods
  *
  */
+
 
 
 }

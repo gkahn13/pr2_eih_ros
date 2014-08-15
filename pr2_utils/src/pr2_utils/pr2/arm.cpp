@@ -10,7 +10,7 @@ namespace pr2 {
 
 Arm::Arm(ArmType a) : arm_type(a){
 
-	sim = new pr2_sim::Simulator(true, true);
+	sim = new pr2_sim::Simulator(false, true);
 	if (a == ArmType::right) {
 		arm_sim = new pr2_sim::Arm(pr2_sim::Arm::ArmType::right, sim);
 	} else {
@@ -250,6 +250,11 @@ void Arm::_joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_sta
 				new_joints(i) = joint_state->position[j];
 			}
 		}
+	}
+
+	// mod 4 and 6 (roll joints) to -pi to +pi
+	for(const int& index : {4, 6}) {
+		new_joints(index) = fmod(new_joints(index) + M_PI, 2*M_PI) - M_PI;
 	}
 
 	current_joints = new_joints;
