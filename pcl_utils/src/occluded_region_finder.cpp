@@ -35,7 +35,7 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 }
 
 Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
-                               pcl_utils::OccludedRegion* occ_message)
+                               pcl_utils::OccludedRegion* occ_message, std::vector<Eigen::Vector3f> *corners)
 {
     Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
@@ -119,6 +119,7 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
             corner_point.y = corner(1);
             corner_point.z = corner(2);
             occ_message->front_face.points.push_back(corner_point);
+            corners->push_back(corner);
 
 //                ss2 << "corner " << j << " " << i;
 //                viewer->addSphere(corner_point, 0.01, ss2.str());
@@ -232,7 +233,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
 
-        if (j == 2 || true)
+        if (j == 4 && true)
         {
 //            std::cout << "press enter to continue" << std::endl;;
 //            std::string unused;
@@ -272,15 +273,17 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             std::cout << "cluster feature extraction: " << Timer_toc(&timer2) << std::endl;
 
             Eigen::Vector3f position (position_OBB.x, position_OBB.y, position_OBB.z);
+            std::vector<Eigen::Vector3f> corners;
 
             Timer_tic(&timer2);
-            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
+            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region, &corners);
+            std::cout << "corners size: " << corners.size() << std::endl;
             std::cout << "calculate front face: " << Timer_toc(&timer2) << std::endl;
 
 
             Timer_tic(&timer2);
             *occluded_region = cluster_projection::calculate_occluded(*current_cloud, inverse_cloud, zero_crossing_cloud, transformation_matrix, transformed_inverse, projected_inverse, plane_coeff,
-                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers);
+                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers, corners);
             std::cout << "cluster projection: " << Timer_toc(&timer2) << std::endl;
             std::cout << "occluded_region size: " << occluded_region->size() << std::endl;
 

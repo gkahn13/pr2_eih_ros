@@ -21,7 +21,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
         Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse,
         pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff,
         int face_direction, int forward_back, pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB,
-        visualization_msgs::MarkerArrayPtr markers)
+        visualization_msgs::MarkerArrayPtr markers, std::vector<Eigen::Vector3f> corners)
 {
 
 
@@ -107,6 +107,21 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
 
     //std::cout << "plane coefficients: " << a << ", " << b << ", " << c << ", " << d << std::endl;
 
+    std::vector<Eigen::Vector3f> normal_vectors;
+    for (int i = 0; i < 4; i++) {
+        Eigen::Vector3f current_normal;
+        current_normal = corners[i].cross(corners[(i+1) % 4]);
+        if (current_normal.dot(position - corners[i]) > 0) {
+            current_normal = -1 * current_normal;
+        }
+        normal_vectors.push_back(current_normal);
+    }
+//    current_normal = (corners[3] - corners[0]).cross(corners[1] - corners[0]);
+//    if (current_normal.dot(position - corners[0]) > 0) {
+//        current_normal = -1 * current_normal;
+//    }
+//    normal_vectors.push_back(current_normal);
+
     Timer_tic(&timer);
     // loop through the clouds, finding the intersection of the inverse cloud and the bounding box
     // of the projected object
@@ -138,12 +153,20 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
             ((face_direction == 2) || (minor_vector_normalized.dot((current_inverse_eigen - position) - minor_vector) <= 0)) &&
             ((face_direction == 2) || (minor_vector_normalized.dot(-1 * (current_inverse_eigen - position) - minor_vector)) <= 0) &&*/
 
-            (((face_direction == 0 && forward_back == -1) || (major_vector_normalized.dot((current_inverse_eigen - position) - major_vector) <= 0)) &&
+            /*(((face_direction == 0 && forward_back == -1) || (major_vector_normalized.dot((current_inverse_eigen - position) - major_vector) <= 0)) &&
             ((face_direction == 0 && forward_back == 1) || (major_vector_normalized.dot(-1 * (current_inverse_eigen - position) - major_vector)) <= 0) &&
             ((face_direction == 1 && forward_back == -1) || (middle_vector_normalized.dot((current_inverse_eigen - position) - middle_vector) <= 0)) &&
             ((face_direction == 1 && forward_back == 1) || (middle_vector_normalized.dot(-1 * (current_inverse_eigen - position) - middle_vector)) <= 0) &&
             ((face_direction == 2 && forward_back == -1) || (minor_vector_normalized.dot((current_inverse_eigen - position) - minor_vector) <= 0)) &&
-            ((face_direction == 2 && forward_back == 1) || (minor_vector_normalized.dot(-1 * (current_inverse_eigen - position) - minor_vector)) <= 0))) &&
+            ((face_direction == 2 && forward_back == 1) || (minor_vector_normalized.dot(-1 * (current_inverse_eigen - position) - minor_vector)) <= 0))*/
+            (normal_vectors[0].dot(current_inverse_eigen - corners[0]) <= 0 &&
+             normal_vectors[1].dot(current_inverse_eigen - corners[1]) <= 0 &&
+             normal_vectors[2].dot(current_inverse_eigen - corners[2]) <= 0 &&
+             normal_vectors[3].dot(current_inverse_eigen - corners[3]) <= 0 /*&&
+             normal_vectors[4].dot(current_inverse_eigen - corners[0]) <= 0*/)
+
+             ) &&
+
 
             a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 &&
             transformed_inverse_iter->z > 0 &&
