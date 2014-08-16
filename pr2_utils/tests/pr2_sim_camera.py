@@ -79,13 +79,13 @@ def test_truncated_view_frustum():
             geometry3d.Triangle([0.426088, -0.169742,  0.566509], [0.385906, -0.186921,  0.476563], [0.35794, -0.145733,   0.48119]),
             geometry3d.Triangle([0.426088, -0.169742,  0.566509], [0.398122, -0.128553,  0.571136], [0.35794, -0.145733,   0.48119])]
     
-    for tri3d in triangles3d:
-        tri3d.plot(sim, color=(0,0,1), fill=True, alpha=0.25)
+#     for tri3d in triangles3d:
+#         tri3d.plot(sim, color=(0,0,1), fill=True, alpha=0.25)
+#     
+#     rarm.teleop()
+#     sim.clear_plots()
     
-    rarm.teleop()
-    sim.clear_plots()
-    
-    cam.truncated_view_frustum(triangles3d, plot=True)
+    cam.truncated_view_frustum_regions(triangles3d, plot=True)
     
     print('Press enter to exit')
     raw_input()
