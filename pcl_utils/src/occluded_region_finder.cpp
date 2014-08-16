@@ -34,8 +34,8 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 
 }
 
-int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
-                   pcl_utils::OccludedRegion* occ_message)
+Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
+                               pcl_utils::OccludedRegion* occ_message)
 {
     Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
@@ -164,7 +164,8 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
 
     markers->markers.push_back(marker);
 
-    return min_direction;
+    Eigen::Vector2i output(min_direction, forward_back);
+    return output;
 }
 
 
@@ -185,6 +186,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     PointCloudVoxelGrid::CloudType::Ptr inverse_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 
     Timer timer = Timer();
+    Timer timer2 = Timer();
 
     int jump = 1;
     double voxel_size = 0.02;
@@ -205,7 +207,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud, cluster_tolerance, min_cluster_size, max_cluster_size);
 
-//    std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
+    std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
+
     Timer_tic(&timer);
 
 //    std::cout << "extracted positive clusters" << std::endl;
@@ -225,15 +228,16 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     int j = 1;
     std::vector<pcl::PointCloud<pcl::PointXYZ> >::iterator cluster_iter;
+    std::cout << "number of clusters: " << clusters.size() << std::endl;
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
 
-        if (true || j == 3)
+        if (j == 2 || true)
         {
 //            std::cout << "press enter to continue" << std::endl;;
 //            std::string unused;
 //            getline(cin, unused);
-            std::cout << j << std::endl;
+            std::cout << std::endl << "cluster: " << j << std::endl;
             pcl::PointCloud<pcl::PointXYZ>::Ptr occluded_region(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_occluded_region(new pcl::PointCloud<pcl::PointXYZ>);
@@ -245,6 +249,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
             pcl::transformPointCloud(*current_cloud, *transformed_current_cloud, transformation_matrix);
 
+            Timer_tic(&timer2);
             pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
 //        feature_extractor.setInputCloud (transformed_occluded_region);
             feature_extractor.setInputCloud(transformed_current_cloud);
@@ -264,16 +269,24 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
             feature_extractor.getMassCenter (mass_center);
 
+            std::cout << "cluster feature extraction: " << Timer_toc(&timer2) << std::endl;
+
             Eigen::Vector3f position (position_OBB.x, position_OBB.y, position_OBB.z);
 
-            int face_direction = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
+            Timer_tic(&timer2);
+            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
+            std::cout << "calculate front face: " << Timer_toc(&timer2) << std::endl;
 
+
+            Timer_tic(&timer2);
             *occluded_region = cluster_projection::calculate_occluded(*current_cloud, inverse_cloud, zero_crossing_cloud, transformation_matrix, transformed_inverse, projected_inverse, plane_coeff,
-                               face_direction, min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers);
+                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers);
+            std::cout << "cluster projection: " << Timer_toc(&timer2) << std::endl;
+            std::cout << "occluded_region size: " << occluded_region->size() << std::endl;
 
             if (occluded_region->size() > 0)
             {
-                std::cout << "occluded region size: " << occluded_region->size() << std::endl;
+//                std::cout << "occluded region size: " << occluded_region->size() << std::endl;
                 pcl::transformPointCloud(*occluded_region, *transformed_occluded_region, transformation_matrix);
 
 //        sensor_msgs::PointCloud2 published_cloud;
@@ -282,10 +295,11 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //        published_cloud.header.stamp = ros::Time(0);
 //        points_pub.publish(published_cloud);
 
-
+                Timer_tic(&timer2);
                 pcl::compute3DCentroid(*transformed_occluded_region, mean);
 //        pcl::computeCovarianceMatrix(*transformed_occluded_region, mean, covariance);
                 pcl::computeCovarianceMatrixNormalized(*transformed_occluded_region, mean, covariance); // ????
+                std::cout << "calculate mean/cov: " << Timer_toc(&timer2) << std::endl;
 
 
                 means.push_back(mean);
@@ -357,7 +371,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //            viewer->addPointCloud<pcl::PointXYZ> (transformed_occluded_region, ss2.str());
 
 
-
+                    Timer_tic(&timer2);
                     feature_extractor.setInputCloud (transformed_occluded_region);
 //            feature_extractor.setInputCloud(transformed_current_cloud);
                     feature_extractor.compute ();
@@ -375,6 +389,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
                     feature_extractor.getEigenValues (major_value, middle_value, minor_value);
                     feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
                     feature_extractor.getMassCenter (mass_center);
+
+                    std::cout << "occluded region feature extraction: " << Timer_toc(&timer2) << std::endl;
 
                     Eigen::Matrix3f eigenvector_rotation;
                     eigenvector_rotation.block<3,1>(0, 0) = major_vector;
@@ -447,7 +463,10 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
                     marker.color.g = 0.0;
                     marker.color.b = 0.0;
 
+                    std::cout << "mass center: " << mass_center << std::endl;
+
                     markers->markers.push_back(marker);
+
 
 //            std::cout << "point: " << transformed_occluded_region->at(0) << std::endl;
 
@@ -464,7 +483,17 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
                     regions.regions.push_back(region);
 
+                } else {
+                    std::cout << "cloud " << j << "isn't behind its occlusion" << std::endl;
+                    std::cout << markers->markers.size() << std::endl;
+                    markers->markers.pop_back();
+                    std::cout << markers->markers.size() << std::endl;
                 }
+            } else {
+                std::cout << "cloud " << j << "is too small" << std::endl;
+                std::cout << markers->markers.size() << std::endl;
+                markers->markers.pop_back();
+                std::cout << markers->markers.size() << std::endl;
             }
         }
 
@@ -488,7 +517,9 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     if (saving)
     {
-        pcl::io::savePCDFileASCII(outfile + "_zero.pcd", *zero_crossing_cloud);
+        pcl::PointCloud<pcl::PointXYZ> transformed_zero_crossing;
+        pcl::transformPointCloud(*zero_crossing_cloud, transformed_zero_crossing, transformation_matrix);
+        pcl::io::savePCDFileASCII(outfile + "_zero.pcd", transformed_zero_crossing);
 //        pcl::io::savePCDFileASCII(outfile + "_foreground.pcd", *foreground_cloud);
 //        pcl::io::savePCDFileASCII(outfile + "_inverse.pcd", *inverse_cloud);
     }

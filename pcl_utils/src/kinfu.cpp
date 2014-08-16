@@ -49,7 +49,7 @@ typedef short WeightT;
 #define N_SUB (W_SUB*H_SUB)
 
 //#define USE_COLOR
-//#define SAVE_TSDF
+#define SAVE_TSDF
 #define FIND_OCCLUSIONS
 
 #ifdef FIND_OCCLUSIONS

@@ -7,6 +7,15 @@ namespace plane_recognition
 {
 void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients)
 {
+
+    std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::VoxelGrid<pcl::PointXYZ> vg;
+    vg.setInputCloud (cloud);
+    vg.setLeafSize (0.01f, 0.01f, 0.01f);
+    vg.filter (*cloud_filtered);
+    std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
+
     // Create the segmentation object
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     // Optional
@@ -18,7 +27,7 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     seg.setDistanceThreshold (0.01);
 
     // input cloud
-    seg.setInputCloud (cloud);
+    seg.setInputCloud (cloud_filtered);
 
     seg.segment (*inliers, *coefficients);
 
