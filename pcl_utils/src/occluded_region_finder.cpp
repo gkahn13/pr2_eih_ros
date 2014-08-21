@@ -233,7 +233,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
 
-        if (j == 4 && true)
+        if (j == 6 || true)
         {
 //            std::cout << "press enter to continue" << std::endl;;
 //            std::string unused;

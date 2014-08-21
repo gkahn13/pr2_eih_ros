@@ -51,6 +51,7 @@ typedef short WeightT;
 //#define USE_COLOR
 #define SAVE_TSDF
 #define FIND_OCCLUSIONS
+#define PUBLISH_WEIGHTS
 
 #ifdef FIND_OCCLUSIONS
 #include <pcl_utils/occluded_region_finder.h>
@@ -111,7 +112,7 @@ void get_occluded(const std_msgs::EmptyConstPtr& str) {
 
 
 
-        #if defined(FIND_OCCLUSIONS) || defined(SAVE_TSDF)
+        #if defined(FIND_OCCLUSIONS) || defined(SAVE_TSDF) || defined(PUBLISH_WEIGHTS)
         // TODO: I don't know if these variable names are all correct
         // i.e. maybe it should be called kinfu_to_rgb, etc.
 
@@ -137,7 +138,11 @@ void get_occluded(const std_msgs::EmptyConstPtr& str) {
 		tf::transformTFToEigen(rgb_to_kinfu_write, current_transform_write);
 
 		Matrix4d transformation_matrix = current_transform_write.matrix();
-		#endif // defined(FIND_OCCLUSIONS) || defined(SAVE_TSDF)
+		#endif // defined(FIND_OCCLUSIONS) || defined(SAVE_TSDF) || defined(PUBLISH_WEIGHTS)
+
+		#ifdef PUBLISH_WEIGHTS
+        // TODO: fill this in later with code to publish weighted cloud -- currently in separate file (get_weight_cloud.cpp)
+		#endif
 
 		#ifdef FIND_OCCLUSIONS
 //		pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
