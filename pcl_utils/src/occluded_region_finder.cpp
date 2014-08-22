@@ -188,6 +188,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     Timer timer = Timer();
     Timer timer2 = Timer();
+    Timer timer3 = Timer();
 
     int jump = 1;
     double voxel_size = 0.02;
@@ -232,7 +233,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     std::cout << "number of clusters: " << clusters.size() << std::endl;
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
-
+        Timer_tic(&timer3);
         if (j == 6 || true)
         {
 //            std::cout << "press enter to continue" << std::endl;;
@@ -247,13 +248,23 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             pcl_utils::OccludedRegion region;
 
             *current_cloud = *cluster_iter;
+            std::cout << "number of points: " << current_cloud->size() << std::endl;
 
             pcl::transformPointCloud(*current_cloud, *transformed_current_cloud, transformation_matrix);
+
+            // Create the filtering object: downsample the dataset using a leaf size of 1cm
+//            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+//            pcl::VoxelGrid<pcl::PointXYZ> vg;
+//            vg.setInputCloud (transformed_current_cloud);
+//            float leaf_size = 0.05f;
+//            vg.setLeafSize (leaf_size, leaf_size, leaf_size);
+//            vg.filter (*cloud_filtered);
 
             Timer_tic(&timer2);
             pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
 //        feature_extractor.setInputCloud (transformed_occluded_region);
             feature_extractor.setInputCloud(transformed_current_cloud);
+//            feature_extractor.setInputCloud(cloud_filtered);
             feature_extractor.compute ();
 
 
@@ -434,9 +445,9 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
                     marker.pose.orientation.y = eigen_quat.y();
                     marker.pose.orientation.z = eigen_quat.z();
                     marker.pose.orientation.w = eigen_quat.w();
-                    marker.scale.x = 2 * sqrt(major_value);
-                    marker.scale.y = 2 * sqrt(middle_value); //(min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
-                    marker.scale.z = 2 * sqrt(minor_value); //(min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
+                    marker.scale.x = isnanf(2 * sqrt(major_value)) ? 0 : (2 * sqrt(major_value));
+                    marker.scale.y = isnanf(2 * sqrt(middle_value)) ? 0 : (2 * sqrt(middle_value)); //(min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
+                    marker.scale.z = isnanf(2 * sqrt(minor_value)) ? 0 : (2 * sqrt(minor_value)); //(min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
                     marker.color.a = 0.3;
                     marker.color.r = 0.0;
                     marker.color.g = 0.0;
@@ -466,7 +477,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
                     marker.color.g = 0.0;
                     marker.color.b = 0.0;
 
-                    std::cout << "mass center: " << mass_center << std::endl;
+//                    std::cout << "mass center: " << mass_center << std::endl;
 
                     markers->markers.push_back(marker);
 
@@ -501,9 +512,9 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
         }
 
 //        std::cout << "cluster " << j << " complete" << std::endl << std::endl;
+        std::cout << "cluster " << j << " total time: " << Timer_toc(&timer3) << std::endl;
 
         j++;
-
 
     }
 

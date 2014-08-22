@@ -119,7 +119,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
         }
         current_normal.normalize();
         normal_vectors.push_back(current_normal);
-        std::cout << "[" << current_normal(0) << "," << current_normal(1) << "," << corners[i](2) << "]" << "   [" << corners[i](0) << "," << corners[i](1) << "," << corners[i](2) << "]" << std::endl;
+//        std::cout << "[" << current_normal(0) << "," << current_normal(1) << "," << corners[i](2) << "]" << "   [" << corners[i](0) << "," << corners[i](1) << "," << corners[i](2) << "]" << std::endl;
     }
     current_normal = (corners[3] - corners[0]).cross(corners[1] - corners[0]);
     if (current_normal.dot(position - corners[0]) > 0) {
