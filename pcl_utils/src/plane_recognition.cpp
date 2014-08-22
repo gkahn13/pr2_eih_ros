@@ -12,7 +12,7 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloud);
-    float leaf_size = 0.01f; // TODO: find the right value for this - could be pretty high I think?
+    float leaf_size = 0.05f; // TODO: find the right value for this - could be pretty high I think?
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
     vg.filter (*cloud_filtered);
     std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
