@@ -1,6 +1,12 @@
 #include <pcl_utils/tsdf_converter.h>
 #include <pcl_utils/timer.h>
 #include <climits>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/variate_generator.hpp>
+
 
 namespace tsdf_converter {
 void read_files(std::string distance_file, std::string weight_file, std::vector<float>* tsdf_distances, std::vector<short>* tsdf_weights) {
@@ -34,8 +40,14 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
     double resolution = 512;
     double size = 2;
 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_full (new pcl::PointCloud<pcl::PointXYZ>);
+
+    int prob = 100;
+    boost::mt19937 gen;
+    boost::random::uniform_int_distribution<> dist(1, prob);
 
 
+    int i = 0;
     for (int z = 0; z < resolution; z = z + jump) {
         for (int y = 0; y < resolution; y = y + jump) {
             for (int x = 0; x < resolution; x = x + jump) {
@@ -51,16 +63,39 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
                 }
 
                 if (current_weight > 0 && current_distance > 0.5) {
+                //if (current_weight > 0.1 && current_distance > 0.5) {
                     foreground_cloud->push_back(current);
                 }
+
+                if ((current_weight < 50 && current_weight > 0 && dist(gen) % prob == 0) /*|| (current_weight == 0 && dist(gen) % prob == 0)*/) {
+                    inverse_full->push_back(current);
+                    //inverse_cloud->push_back(current);
+                }
+
+                i++;
             }
         }
     }
 
+//    pcl::VoxelGrid<pcl::PointXYZ> vg;
+//    vg.setInputCloud (inverse_full);
+//    float leaf_size = 0.01f;
+//    vg.setLeafSize (leaf_size, leaf_size, leaf_size);
+//    vg.filter (*inverse_cloud);
+////    *inverse_cloud = *inverse_full;
 
 
     PointCloudVoxelGrid vox_grid = PointCloudVoxelGrid(foreground_cloud, voxel_size);
     vox_grid.get_inverse_cloud(inverse_cloud);
+
+    std::cout << "number of points in inverse cloud: " << inverse_cloud->size() << std::endl;
+
+    pcl::PointCloud<pcl::PointXYZ>::iterator iter;
+    for (iter = inverse_full->begin(); iter != inverse_full->end(); iter++) {
+        inverse_cloud->push_back(*iter);
+    }
+
+    std::cout << "number of points in inverse cloud (after adding low weight points): " << inverse_cloud->size() << std::endl;
 
 
 }

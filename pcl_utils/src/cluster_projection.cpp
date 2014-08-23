@@ -97,6 +97,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
         // fit a plane to the zero-crossing points to find a table top
         pcl::PointIndices::Ptr unused(new pcl::PointIndices);
         plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff);
+        std::cout << "plane coefficients: " << *plane_coeff << std::endl;
     }
 
     std::cout << "\tplane fitting: " << Timer_toc(&timer) << std::endl;
