@@ -34,8 +34,8 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 
 }
 
-int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
-                   pcl_utils::OccludedRegion* occ_message)
+Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
+                               pcl_utils::OccludedRegion* occ_message, std::vector<Eigen::Vector3f> *corners)
 {
     Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
@@ -43,6 +43,7 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
 
     Eigen::Quaternionf quat (rotational_matrix_OBB);
 
+//    double min_norm = INFINITY;
     double max_norm = -INFINITY;
     int min_direction = 0;
     int forward_back = -1;
@@ -57,24 +58,24 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
         ss3 << "sphere min corner" << j << i;
 
         double current_norm;
-        //Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector + position;
+//        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector + position;
         Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector;
         current_norm = current_vector.norm();
         current_point.x = current_vector(0);
         current_point.y = current_vector(1);
         current_point.z = current_vector(2);
-        //viewer->addSphere(current_point, 0.005, ss3.str());
-        //if (current_norm < min_norm)
+//        if (current_norm < min_norm)
         if (current_vector(2) / current_norm > max_norm)
         {
-            //min_norm = current_norm;
+//            min_norm = current_norm;
             max_norm = current_vector(2) / current_norm;
             min_direction = i;
             forward_back = -1;
+//            forward_back = 1;
         }
 
 
-        //current_vector = position - rotational_matrix_OBB * adder * max_vector; // not sure why this is minus, but it works
+//        current_vector = position - rotational_matrix_OBB * adder * max_vector; // not sure why this is minus, but it works
         current_vector = -1 * rotational_matrix_OBB * adder * max_vector;
         current_point.x = current_vector(0);
         current_point.y = current_vector(1);
@@ -84,13 +85,14 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
         ss3 << "sphere max corner" << j << i;
         //viewer->addSphere(current_point, 0.005, ss3.str());
 
-        //if (current_norm < min_norm)
+//        if (current_norm < min_norm)
         if (current_vector(2) / current_norm > max_norm)
         {
-            //min_norm = current_norm;
+//            min_norm = current_norm;
             max_norm = current_vector(2) / current_norm;
             min_direction = i;
             forward_back = 1;
+//            forward_back = -1;
         }
 
         adder(i, i) = 0;
@@ -119,6 +121,7 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
             corner_point.y = corner(1);
             corner_point.z = corner(2);
             occ_message->front_face.points.push_back(corner_point);
+            corners->push_back(corner);
 
 //                ss2 << "corner " << j << " " << i;
 //                viewer->addSphere(corner_point, 0.01, ss2.str());
@@ -164,7 +167,8 @@ int calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eig
 
     markers->markers.push_back(marker);
 
-    return min_direction;
+    Eigen::Vector2i output(min_direction, forward_back);
+    return output;
 }
 
 
@@ -185,10 +189,12 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     PointCloudVoxelGrid::CloudType::Ptr inverse_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 
     Timer timer = Timer();
+    Timer timer2 = Timer();
+    Timer timer3 = Timer();
 
     int jump = 1;
     double voxel_size = 0.02;
-    double cluster_tolerance = 0.02;
+    double cluster_tolerance = 0.01;
     int min_cluster_size = 100;
     int max_cluster_size = 25000;
 
@@ -205,7 +211,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud, cluster_tolerance, min_cluster_size, max_cluster_size);
 
-//    std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
+    std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
+
     Timer_tic(&timer);
 
 //    std::cout << "extracted positive clusters" << std::endl;
@@ -225,15 +232,16 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     int j = 1;
     std::vector<pcl::PointCloud<pcl::PointXYZ> >::iterator cluster_iter;
+    std::cout << "number of clusters: " << clusters.size() << std::endl;
     for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
     {
-
-        if (true || j == 3)
+        Timer_tic(&timer3);
+        if (j == 1 || true)
         {
 //            std::cout << "press enter to continue" << std::endl;;
 //            std::string unused;
 //            getline(cin, unused);
-            std::cout << j << std::endl;
+            std::cout << std::endl << "cluster: " << j << std::endl;
             pcl::PointCloud<pcl::PointXYZ>::Ptr occluded_region(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);
             pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_occluded_region(new pcl::PointCloud<pcl::PointXYZ>);
@@ -242,12 +250,23 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             pcl_utils::OccludedRegion region;
 
             *current_cloud = *cluster_iter;
+            std::cout << "number of points: " << current_cloud->size() << std::endl;
 
             pcl::transformPointCloud(*current_cloud, *transformed_current_cloud, transformation_matrix);
 
+            // Create the filtering object: downsample the dataset using a leaf size of 1cm
+//            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+//            pcl::VoxelGrid<pcl::PointXYZ> vg;
+//            vg.setInputCloud (transformed_current_cloud);
+//            float leaf_size = 0.05f;
+//            vg.setLeafSize (leaf_size, leaf_size, leaf_size);
+//            vg.filter (*cloud_filtered);
+
+            Timer_tic(&timer2);
             pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
 //        feature_extractor.setInputCloud (transformed_occluded_region);
             feature_extractor.setInputCloud(transformed_current_cloud);
+//            feature_extractor.setInputCloud(cloud_filtered);
             feature_extractor.compute ();
 
 
@@ -264,16 +283,26 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
             feature_extractor.getMassCenter (mass_center);
 
+            std::cout << "cluster feature extraction: " << Timer_toc(&timer2) << std::endl;
+
             Eigen::Vector3f position (position_OBB.x, position_OBB.y, position_OBB.z);
+            std::vector<Eigen::Vector3f> corners;
 
-            int face_direction = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region);
+            Timer_tic(&timer2);
+            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region, &corners);
+            std::cout << "corners size: " << corners.size() << std::endl;
+            std::cout << "calculate front face: " << Timer_toc(&timer2) << std::endl;
 
+
+            Timer_tic(&timer2);
             *occluded_region = cluster_projection::calculate_occluded(*current_cloud, inverse_cloud, zero_crossing_cloud, transformation_matrix, transformed_inverse, projected_inverse, plane_coeff,
-                               face_direction, min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers);
+                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers, corners);
+            std::cout << "cluster projection: " << Timer_toc(&timer2) << std::endl;
+            std::cout << "occluded_region size: " << occluded_region->size() << std::endl;
 
             if (occluded_region->size() > 0)
             {
-                std::cout << "occluded region size: " << occluded_region->size() << std::endl;
+//                std::cout << "occluded region size: " << occluded_region->size() << std::endl;
                 pcl::transformPointCloud(*occluded_region, *transformed_occluded_region, transformation_matrix);
 
 //        sensor_msgs::PointCloud2 published_cloud;
@@ -282,10 +311,11 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //        published_cloud.header.stamp = ros::Time(0);
 //        points_pub.publish(published_cloud);
 
-
+                Timer_tic(&timer2);
                 pcl::compute3DCentroid(*transformed_occluded_region, mean);
 //        pcl::computeCovarianceMatrix(*transformed_occluded_region, mean, covariance);
                 pcl::computeCovarianceMatrixNormalized(*transformed_occluded_region, mean, covariance); // ????
+                std::cout << "calculate mean/cov: " << Timer_toc(&timer2) << std::endl;
 
 
                 means.push_back(mean);
@@ -357,7 +387,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //            viewer->addPointCloud<pcl::PointXYZ> (transformed_occluded_region, ss2.str());
 
 
-
+                    Timer_tic(&timer2);
                     feature_extractor.setInputCloud (transformed_occluded_region);
 //            feature_extractor.setInputCloud(transformed_current_cloud);
                     feature_extractor.compute ();
@@ -376,21 +406,27 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
                     feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
                     feature_extractor.getMassCenter (mass_center);
 
-                    Eigen::Matrix3f eigenvector_rotation;
-                    eigenvector_rotation.block<3,1>(0, 0) = major_vector;
-                    eigenvector_rotation.block<3,1>(0, 1) = middle_vector;
-                    eigenvector_rotation.block<3,1>(0, 2) = minor_vector;
 
-                    Eigen::Quaternion<float> eigen_quat(eigenvector_rotation);
+                    std::cout << "occluded region feature extraction: " << Timer_toc(&timer2) << std::endl;
+
+                    if (major_value != 0 && middle_value != 0 && minor_value != 0)
+                    {
+
+                        Eigen::Matrix3f eigenvector_rotation;
+                        eigenvector_rotation.block<3,1>(0, 0) = major_vector;
+                        eigenvector_rotation.block<3,1>(0, 1) = middle_vector;
+                        eigenvector_rotation.block<3,1>(0, 2) = minor_vector;
+
+                        Eigen::Quaternion<float> eigen_quat(eigenvector_rotation);
 
 
-                    std::stringstream ss3;
-                    ss3 << "sphere" << j;
+                        std::stringstream ss3;
+                        ss3 << "sphere" << j;
 //            viewer->addSphere(position_OBB, 0.005, ss3.str());
-                    pcl::PointXYZ p;
-                    p.x = mass_center(0);
-                    p.y = mass_center(1);
-                    p.z = mass_center(2);
+                        pcl::PointXYZ p;
+                        p.x = mass_center(0);
+                        p.y = mass_center(1);
+                        p.z = mass_center(2);
 //            ss3 << "sphere max corner" << j;
 //            viewer->addSphere(max_point_OBB, 0.005, ss3.str());
 //            ss3 << "sphere min corner" << j;
@@ -399,79 +435,104 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 //            std::cout << "min: " << std::endl << min_point_OBB << std::endl;
 //            std::cout << "max: " << std::endl << max_point_OBB << std::endl;
 
-                    //Eigen::Quaternionf quat (rotational_matrix_OBB);
+                        //Eigen::Quaternionf quat (rotational_matrix_OBB);
 
-                    visualization_msgs::Marker marker;
-                    marker.header.frame_id = "/camera_rgb_optical_frame";
-                    marker.header.stamp = ros::Time::now();
-                    //marker.header.seq = j;
-                    marker.id = j + 500;
-                    marker.type = visualization_msgs::Marker::SPHERE;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.pose.position.x = mass_center(0);
-                    marker.pose.position.y = mass_center(1);
-                    marker.pose.position.z = mass_center(2);
-                    marker.pose.orientation.x = eigen_quat.x();
-                    marker.pose.orientation.y = eigen_quat.y();
-                    marker.pose.orientation.z = eigen_quat.z();
-                    marker.pose.orientation.w = eigen_quat.w();
-                    marker.scale.x = 2 * sqrt(major_value);
-                    marker.scale.y = 2 * sqrt(middle_value); //(min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
-                    marker.scale.z = 2 * sqrt(minor_value); //(min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
-                    marker.color.a = 0.3;
-                    marker.color.r = 0.0;
-                    marker.color.g = 0.0;
-                    marker.color.b = 1.0;
+                        visualization_msgs::Marker marker;
+                        marker.header.frame_id = "/camera_rgb_optical_frame";
+                        marker.header.stamp = ros::Time::now();
+                        //marker.header.seq = j;
+                        marker.id = j + 500;
+                        marker.type = visualization_msgs::Marker::SPHERE;
+                        marker.action = visualization_msgs::Marker::ADD;
+                        marker.pose.position.x = mass_center(0);
+                        marker.pose.position.y = mass_center(1);
+                        marker.pose.position.z = mass_center(2);
+                        marker.pose.orientation.x = eigen_quat.x();
+                        marker.pose.orientation.y = eigen_quat.y();
+                        marker.pose.orientation.z = eigen_quat.z();
+                        marker.pose.orientation.w = eigen_quat.w();
+                        marker.scale.x = isnanf(2 * sqrt(major_value)) ? 0 : (2 * sqrt(major_value));
+                        marker.scale.y = isnanf(2 * sqrt(middle_value)) ? 0 : (2 * sqrt(middle_value)); //(min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
+                        marker.scale.z = isnanf(2 * sqrt(minor_value)) ? 0 : (2 * sqrt(minor_value)); //(min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
+                        marker.color.a = 0.3;
+                        marker.color.r = 0.0;
+                        marker.color.g = 0.0;
+                        marker.color.b = 1.0;
 
-                    markers->markers.push_back(marker);
+                        markers->markers.push_back(marker);
 
-                    //visualization_msgs::Marker marker;
-                    marker.header.frame_id = "/camera_rgb_optical_frame";
-                    marker.header.stamp = ros::Time::now();
-                    //marker.header.
-                    marker.id = j + 20000;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.pose.position.x = mass_center(0);
-                    marker.pose.position.y = mass_center(1);
-                    marker.pose.position.z = mass_center(2);
-                    marker.pose.orientation.x = 0;
-                    marker.pose.orientation.y = 0;
-                    marker.pose.orientation.z = 0;
-                    marker.pose.orientation.w = 1;
-                    marker.scale.x = 0.01;
-                    marker.scale.y = 0.01;
-                    marker.scale.z = 0.01;
-                    marker.color.a = 0.5;
-                    marker.color.r = 1.0;
-                    marker.color.g = 0.0;
-                    marker.color.b = 0.0;
+                        //visualization_msgs::Marker marker;
+                        marker.header.frame_id = "/camera_rgb_optical_frame";
+                        marker.header.stamp = ros::Time::now();
+                        //marker.header.
+                        marker.id = j + 20000;
+                        marker.type = visualization_msgs::Marker::CUBE;
+                        marker.action = visualization_msgs::Marker::ADD;
+                        marker.pose.position.x = mass_center(0);
+                        marker.pose.position.y = mass_center(1);
+                        marker.pose.position.z = mass_center(2);
+                        marker.pose.orientation.x = 0;
+                        marker.pose.orientation.y = 0;
+                        marker.pose.orientation.z = 0;
+                        marker.pose.orientation.w = 1;
+                        marker.scale.x = 0.01;
+                        marker.scale.y = 0.01;
+                        marker.scale.z = 0.01;
+                        marker.color.a = 0.5;
+                        marker.color.r = 1.0;
+                        marker.color.g = 0.0;
+                        marker.color.b = 0.0;
 
-                    markers->markers.push_back(marker);
+//                    std::cout << "mass center: " << mass_center << std::endl;
+
+                        markers->markers.push_back(marker);
+
 
 //            std::cout << "point: " << transformed_occluded_region->at(0) << std::endl;
 
-                    sensor_msgs::PointCloud2 published_cloud;
-                    toROSMsg(*transformed_occluded_region, published_cloud);
+                        sensor_msgs::PointCloud2 published_cloud;
+                        toROSMsg(*transformed_occluded_region, published_cloud);
 //            std::cout << "number of points: " << transformed_occluded_region->size() << std::endl;
-                    published_cloud.header.frame_id = "/camera_rgb_optical_frame";
-                    published_cloud.header.stamp = ros::Time::now();
-                    points_pub.publish(published_cloud);
-                    ros::spinOnce();
+                        published_cloud.header.frame_id = "/camera_rgb_optical_frame";
+                        published_cloud.header.stamp = ros::Time::now();
+                        points_pub.publish(published_cloud);
+                        ros::spinOnce();
+
+                        // also publish the clusters themselves. TODO: make this a separate publisher?
+                        toROSMsg(*transformed_current_cloud, published_cloud);
+                        published_cloud.header.frame_id = "/camera_rgb_optical_frame";
+                        published_cloud.header.stamp = ros::Time::now();
+                        points_pub.publish(published_cloud);
+                        ros::spinOnce();
 
 
-                    region.points = published_cloud;
+                        region.points = published_cloud;
 
-                    regions.regions.push_back(region);
+                        regions.regions.push_back(region);
+                    } // all eigenvalues non-zero
 
                 }
+                else
+                {
+                    std::cout << "cloud " << j << "isn't behind its occlusion" << std::endl;
+                    std::cout << markers->markers.size() << std::endl;
+                    markers->markers.pop_back();
+                    std::cout << markers->markers.size() << std::endl;
+                }
+            }
+            else
+            {
+                std::cout << "cloud " << j << "is too small" << std::endl;
+                std::cout << markers->markers.size() << std::endl;
+                markers->markers.pop_back();
+                std::cout << markers->markers.size() << std::endl;
             }
         }
 
 //        std::cout << "cluster " << j << " complete" << std::endl << std::endl;
+        std::cout << "cluster " << j << " total time: " << Timer_toc(&timer3) << std::endl;
 
         j++;
-
 
     }
 
@@ -488,7 +549,9 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     if (saving)
     {
-        pcl::io::savePCDFileASCII(outfile + "_zero.pcd", *zero_crossing_cloud);
+        pcl::PointCloud<pcl::PointXYZ> transformed_zero_crossing;
+        pcl::transformPointCloud(*zero_crossing_cloud, transformed_zero_crossing, transformation_matrix);
+        pcl::io::savePCDFileASCII(outfile + "_zero.pcd", transformed_zero_crossing);
 //        pcl::io::savePCDFileASCII(outfile + "_foreground.pcd", *foreground_cloud);
 //        pcl::io::savePCDFileASCII(outfile + "_inverse.pcd", *inverse_cloud);
     }
