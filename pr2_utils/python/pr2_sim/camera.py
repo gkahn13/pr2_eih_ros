@@ -151,11 +151,8 @@ class Camera:
                 if intersection is not None:
                     points2d.add(geometry2d.Point(intersection))
                     
-#         print('len(points2d): {0}'.format(len(points2d)))
         partition_triangles2d = set()
-        for pt2d in points2d:            
-#             print('len(segments2d): {0}'.format(len(segments2d)))
-            
+        for pt2d in points2d:
             # find other points that don't cross anything in segments2d
             p = pt2d.p
             points_in_los = set()
@@ -238,7 +235,8 @@ class Camera:
             print('3d time: {0}'.format(time_3d))
             total_area = sum([tri2d.area for tri2d in partition_triangles2d])
             print('Total area (should be {0}): {1}'.format(self.width*self.height, total_area))
-            print('Number of pyramids: {0}'.format(len(pyramids3d)))
+            print('Number of points: {0}'.format(len(points2d)))
+            print('Number of triangles: {0}'.format(len(partition_triangles2d)))
                 
             self.plot(frame='base_link')
             for tri3d in triangles3d:
@@ -276,175 +274,6 @@ class Camera:
             
         return pyramids3d
             
-    def truncated_view_frustum_borders(self, triangles3d, plot=False):
-        start_time = time.time()
-        
-        seg3d_a = self.segment_through_pixel([0,self.width])
-        seg3d_b = self.segment_through_pixel([0,0])
-        seg3d_c = self.segment_through_pixel([self.height,0])
-        seg3d_d = self.segment_through_pixel([self.height,self.width])
-        
-        frustum = geometry3d.ViewFrustum(seg3d_a.p0, seg3d_a.p1,
-                                         seg3d_b.p0, seg3d_b.p1,
-                                         seg3d_c.p0, seg3d_c.p1,
-                                         seg3d_d.p0, seg3d_d.p1)
-        
-        clipped_triangles3d = list()
-        for tri3d in triangles3d:
-            clipped_triangles3d += frustum.clip_triangle(tri3d)
-            
-        triangles2d = self.project_triangles(clipped_triangles3d)
-        
-        segments2d = set()
-        for tri2d in triangles2d:
-            segments2d.update(tri2d.segments)
-            
-        class Float:
-            def __init__(self, val):
-                self.val = val
-                
-            def __hash__(self):
-                return 0
-            
-            def __eq__(self, other):
-                if isinstance(other, Float):
-                    return np.abs(self.val - other.val) < 1e-5
-                elif isinstance(other, float):
-                    return np.abs(self.val - other) < 1e-5
-                else:
-                    return False
-            
-        # form vertical lines from vertices    
-        vert_lines2d = {Float(0), Float(self.width)} # store width values
-        for seg2d in segments2d:
-            for other_seg2d in segments2d:
-                if seg2d != other_seg2d:
-                    intersection = seg2d.intersection(other_seg2d)
-                    if intersection is not None:
-                        vert_lines2d.add(Float(intersection[1]))
-                    
-        vert_lines2d_sorted = sorted(vert_lines2d, key=lambda l: l.val)
-        
-        left_borders2d = [[np.array([0,width.val]), np.array([self.height, width.val])] for width in vert_lines2d_sorted]
-        right_borders2d = [[np.array([0,width.val]), np.array([self.height, width.val])] for width in vert_lines2d_sorted]
-        for seg2d in segments2d:
-            p0, p1 = seg2d.p0, seg2d.p1
-            if p1[1] < p0[1]:
-                p0, p1 = p1, p0
-                
-            start, end = vert_lines2d_sorted.index(Float(p0[1])), vert_lines2d_sorted.index(Float(p1[1]))
-            left_borders2d[start].append(p0)
-            right_borders2d[end].append(p1)
-            
-            start_width = vert_lines2d_sorted[start].val
-            end_width = vert_lines2d_sorted[end].val
-            total_width = end_width - start_width
-            for i in xrange(start+1, end):
-                curr_width = vert_lines2d_sorted[i].val
-                t = (curr_width - start_width) / total_width
-                p = t*(p1-p0) + p0
-                if np.linalg.norm(p - p0) > geometry2d.epsilon:
-                    left_borders2d[i].append(p)
-                if np.linalg.norm(p - p1) > geometry2d.epsilon:
-                    right_borders2d[i].append(p)
-        
-#         # for each segment, form borders
-#         borders2d = [[np.array([0,width]), np.array([self.height, width])] for width in vert_lines2d_sorted]
-#         for seg2d in segments2d:
-#             p0, p1 = seg2d.p0, seg2d.p1
-#             if p1[1] < p0[1]:
-#                 p0, p1 = p1, p0
-#             
-#             start, end = vert_lines2d_sorted.index(p0[1]), vert_lines2d_sorted.index(p1[1])
-#             borders2d[start].append(p0)
-#             borders2d[end].append(p1)
-#             
-#             start_width = vert_lines2d_sorted[start]
-#             end_width = vert_lines2d_sorted[end]
-#             total_width = end_width - start_width
-#             for i in xrange(start, end+1):
-#                 curr_width = vert_lines2d_sorted[i]
-#                 t = (curr_width - start_width) / total_width
-#                 borders2d[i].append(t*(p1-p0) + p0)
-            
-        for borders2d in [left_borders2d, right_borders2d]:
-            for i, border2d in enumerate(borders2d):
-                borders2d[i] = sorted(border2d, key=lambda x: x[0])
-            
-        partition_triangles2d = list()
-        for i in xrange(len(borders2d)-1):
-            left_border, right_border = left_borders2d[i], right_borders2d[i+1]
-            left_bottom_index, right_bottom_index = 0, 0
-            while True:
-                left_height, right_height = left_border[left_bottom_index][0], right_border[right_bottom_index][0]
-                choose_left = False
-#                 if np.abs(left_height - right_height) < geometry2d.epsilon:
-#                     if left_bottom_index < len(left_border)-1 and right_bottom_index < len(right_border)-1:
-#                         choose_left = left_border[left_bottom_index+1][1] < right_border[right_bottom_index-1][1]
-#                     else:
-#                         choose_left = left_bottom_index < right_bottom_index # TODO: look at next one
-                
-                    
-                if left_height <= right_height or choose_left:
-                    left_bottom_index += 1
-                    if left_bottom_index >= len(left_border):
-                        break
-                    partition_triangles2d.append(geometry2d.Triangle(left_border[left_bottom_index], left_border[left_bottom_index-1], right_border[right_bottom_index]))
-                else:
-                    right_bottom_index += 1
-                    if right_bottom_index >= len(right_border):
-                        break
-                    partition_triangles2d.append(geometry2d.Triangle(right_border[right_bottom_index], right_border[right_bottom_index-1], left_border[left_bottom_index]))
-                
-        partition_triangles2d = filter(lambda tri2d: tri2d.area > 2, partition_triangles2d)
-                
-        if plot:
-            print('Total time: {0}'.format(time.time() - start_time))
-            print('Number of triangles: {0}'.format(len(partition_triangles2d)))
-            
-            print('vert_lines2d_sorted')
-            for vert_line2d in vert_lines2d_sorted:
-                print(vert_line2d.val)
-            
-            for i, border2d in enumerate(borders2d):
-                print('border {0} length: {1}'.format(i, len(border2d)))
-            
-            plt.close(1)
-            fig = plt.figure(1)
-            axes = fig.add_subplot(111)
-            
-            for tri2d in triangles2d:
-                for segment in tri2d.segments:
-                    p0, p1 = segment.p0, segment.p1
-                    p0_flip = [p0[1], self.height - p0[0]]
-                    p1_flip = [p1[1], self.height - p1[0]]
-                    axes.plot([p0_flip[0], p1_flip[0]], [p0_flip[1], p1_flip[1]], 'y--o', linewidth=3.0)
-                    
-            for width in vert_lines2d_sorted:
-                axes.plot([width.val, width.val], [0, self.height], 'r')
-                
-            for border2d in borders2d:
-                for pt2d in border2d:
-                    axes.plot(pt2d[1], self.height-pt2d[0], 'gx', markersize=10.0)
-                 
-#             axes.plot([0, 0, self.width, self.width, 0], [0, self.height, self.height, 0, 0], 'b--o', linewidth=2.0)
-#             
-#             for pt2d in points2d:
-#                 axes.plot(pt2d.p[1], self.height - pt2d.p[0], 'rx', markersize=10.0)
-#                 
-            plt.xlim((-10, self.width+10))
-            plt.ylim((-10, self.height+10))
-             
-            colors = plt.cm.jet(np.linspace(0, 1, len(partition_triangles2d)))
-            random.shuffle(colors)
-            for i, tri2d in enumerate(partition_triangles2d):
-                x = [p[1] for p in tri2d.vertices]
-                y = [self.height - p[0] for p in tri2d.vertices]
-                axes.fill(x, y, color=colors[i], edgecolor=(1,1,1))
-            
-                plt.show(block=False)
-#                 print(tri2d.area)
-#                 raw_input()
         
     def truncated_view_frustum_regions(self, triangles3d, plot=False):
         start_time = time.time()
@@ -505,6 +334,19 @@ class Camera:
         for i, region2d in enumerate(regions2d):
             regions2d[i] = sorted(region2d, key=lambda seg2d: (seg2d.p0[0] + seg2d.p1[0])/2.0)
             
+#         triangle_regions2d = [list() for region2d in regions2d]
+#         for region2d, triangle_region2d in zip(regions2d, triangle_regions2d):
+#             for i in xrange(len(region2d)-1):
+#                 curr_seg2d = region2d[i]
+#                 next_seg2d = region2d[i+1]
+#                 # know curr_seg2d and next_seg2d go from left to right
+#                 tri2d_0 = geometry2d.Triangle(curr_seg2d.p0, curr_seg2d.p1, next_seg2d.p0)
+#                 tri2d_1 = geometry2d.Triangle(next_seg2d.p0, next_seg2d.p1, curr_seg2d.p1)
+#                 if tri2d_0.area > geometry2d.epsilon:
+#                     triangle_region2d.append(tri2d_0)
+#                 if tri2d_1.area > geometry2d.epsilon:
+#                     triangle_region2d.append(tri2d_1)
+            
         partition_triangles2d = list()
         for region2d in regions2d:
             for i in xrange(len(region2d)-1):
@@ -518,6 +360,12 @@ class Camera:
                 if tri2d_1.area > geometry2d.epsilon:
                     partition_triangles2d.append(tri2d_1)
                     
+#         camera_position = self.get_pose().position.array
+#         pyramids3d = list()
+#         for i, triangle_region2d in enumerate(triangle_regions2d):
+#             lower, upper = vert_lines_2d_sorted[i], vert_lines2d_sorted[i+1]
+#             
+                    
         start_time_3d = time.time()
         # now that we have tesselated the projection into triangles
         # find out which 3d triangle each projection belongs to
@@ -527,10 +375,10 @@ class Camera:
         for tri2d in partition_triangles2d:
             tri2d_vertices = tri2d.vertices
             center2d = sum(tri2d_vertices)/3.
-            
+             
             center_seg3d = self.segment_through_pixel(center2d, 0.0) # start at origin
             vertices_seg3d = [self.segment_through_pixel(vertex) for vertex in tri2d_vertices]
-            
+             
             min_dist, min_tri3d = np.inf, None
             for tri3d in triangles3d:
                 intersection = tri3d.intersection(center_seg3d)
@@ -539,7 +387,7 @@ class Camera:
                     if dist < min_dist:
                         min_dist = dist
                         min_tri3d = tri3d
-                    
+                     
             if min_tri3d is None:
                 pyramids3d.append(geometry3d.TruncatedPyramid(vertices_seg3d[0].p0, vertices_seg3d[0].p1,
                                                               vertices_seg3d[1].p0, vertices_seg3d[1].p1,
@@ -561,8 +409,8 @@ class Camera:
             print('3d time: {0}'.format(time_3d))
             
             print('Number of regions: {0}'.format(len(regions2d)))
-            for i, region2d in enumerate(regions2d):
-                print('Number segments in region {0}: {1}'.format(i, len(region2d)))
+#             for i, region2d in enumerate(regions2d):
+#                 print('Number segments in region {0}: {1}'.format(i, len(region2d)))
                 
             print('Number of triangles: {0}'.format(len(partition_triangles2d)))
             

@@ -85,7 +85,7 @@ def test_truncated_view_frustum():
 #     rarm.teleop()
 #     sim.clear_plots()
     
-    cam.truncated_view_frustum_regions(triangles3d, plot=True)
+    cam.truncated_view_frustum(triangles3d, plot=True)
     
     print('Press enter to exit')
     raw_input()
