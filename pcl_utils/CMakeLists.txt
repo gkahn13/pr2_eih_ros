@@ -24,6 +24,7 @@ add_definitions(${PCL_DEFINITIONS})
 set(PCL_LIBRARIES ${PCL_LIBRARIES} "pcl_common")
 
 find_package(CUDA) # remove this with kinfu
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 set(TIMER_LIBRARIES "dl;rt")
 
@@ -55,11 +56,16 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     include
     ${CUDA_INCLUDE_DIRS} # remove this with kinfu
+    ${Boost_INCLUDE_DIRS}
 )
 
 
-link_directories(#${Boost_LIBRARY_DIRS}
+link_directories(${Boost_LIBRARY_DIRS}
   )
+
+message("Boost include dirs: ${Boost_INCLUDE_DIRS}")
+message("Boost libraries: ${Boost_LIBRARIES}")
+message("Boost library dirs: ${Boost_LIBRARY_DIRS}")
 
 
 add_executable(boundary_detection src/boundary_detection.cpp)
@@ -95,10 +101,12 @@ target_link_libraries(moment_of_intertia ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 #add_dependencies(occluded_region_finder pcl_utils_generate_messages_cpp)
 
 add_executable(occluded_region_finder_standalone src/occluded_region_finder_standalone.cpp src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
-target_link_libraries(occluded_region_finder_standalone ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})
+target_link_libraries(occluded_region_finder_standalone ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES} ${Boost_LIBRARIES})
 add_dependencies(occluded_region_finder_standalone pcl_utils_generate_messages_cpp)
 
 add_executable(kinfu src/kinfu.cpp src/occluded_region_finder.cpp src/cluster_projection.cpp src/pointcloud_voxel_grid.cpp src/plane_recognition.cpp src/cluster_extraction.cpp src/tsdf_converter.cpp)
 target_link_libraries(kinfu ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})
 add_dependencies(kinfu pcl_utils_generate_messages_cpp)
 
+add_executable(save_weight_cloud src/save_weight_cloud.cpp src/tsdf_converter.cpp src/pointcloud_voxel_grid.cpp)
+target_link_libraries(save_weight_cloud ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${TIMER_LIBRARIES})

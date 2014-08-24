@@ -1,5 +1,12 @@
 #include <pcl_utils/tsdf_converter.h>
 #include <pcl_utils/timer.h>
+#include <climits>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/variate_generator.hpp>
+
 
 namespace tsdf_converter {
 void read_files(std::string distance_file, std::string weight_file, std::vector<float>* tsdf_distances, std::vector<short>* tsdf_weights) {
@@ -28,13 +35,19 @@ void read_files(std::string distance_file, std::string weight_file, std::vector<
 
 void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_cloud,
                   int jump, double voxel_size) {
-    // loop the pointcloud, finding zero crossing points and (optionally) "foreground" points
+    // loop the pointcloud, finding zero crossing points and "foreground" points
 
     double resolution = 512;
     double size = 2;
 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_full (new pcl::PointCloud<pcl::PointXYZ>);
+
+    int prob = 100;
+    boost::mt19937 gen;
+    boost::random::uniform_int_distribution<> dist(1, prob);
 
 
+    int i = 0;
     for (int z = 0; z < resolution; z = z + jump) {
         for (int y = 0; y < resolution; y = y + jump) {
             for (int x = 0; x < resolution; x = x + jump) {
@@ -50,17 +63,68 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
                 }
 
                 if (current_weight > 0 && current_distance > 0.5) {
+                //if (current_weight > 0.1 && current_distance > 0.5) {
                     foreground_cloud->push_back(current);
                 }
+
+                if ((current_weight < 50 && current_weight > 0 && dist(gen) % prob == 0) /*|| (current_weight == 0 && dist(gen) % prob == 0)*/) {
+                    inverse_full->push_back(current);
+                    //inverse_cloud->push_back(current);
+                }
+
+                i++;
             }
         }
     }
 
+//    pcl::VoxelGrid<pcl::PointXYZ> vg;
+//    vg.setInputCloud (inverse_full);
+//    float leaf_size = 0.01f;
+//    vg.setLeafSize (leaf_size, leaf_size, leaf_size);
+//    vg.filter (*inverse_cloud);
+////    *inverse_cloud = *inverse_full;
 
 
     PointCloudVoxelGrid vox_grid = PointCloudVoxelGrid(foreground_cloud, voxel_size);
     vox_grid.get_inverse_cloud(inverse_cloud);
 
+    std::cout << "number of points in inverse cloud: " << inverse_cloud->size() << std::endl;
+
+    pcl::PointCloud<pcl::PointXYZ>::iterator iter;
+    for (iter = inverse_full->begin(); iter != inverse_full->end(); iter++) {
+        inverse_cloud->push_back(*iter);
+    }
+
+    std::cout << "number of points in inverse cloud (after adding low weight points): " << inverse_cloud->size() << std::endl;
+
+
+}
+
+void get_weight_cloud(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZRGB>::Ptr weights_cloud, int jump) {
+    double resolution = 512;
+    double size = 2;
+
+
+    for (int z = 0; z < resolution; z = z + jump) {
+        for (int y = 0; y < resolution; y = y + jump) {
+            for (int x = 0; x < resolution; x = x + jump) {
+                float current_distance = tsdf_distances[resolution * resolution * z + resolution * y + x];
+                short current_weight = tsdf_weights[resolution * resolution * z + resolution * y + x];
+                pcl::PointXYZRGB current;
+                current.x = x * size / resolution;
+                current.y = y * size / resolution;
+                current.z = z * size / resolution;
+
+
+                if (current_weight > 0 && current_weight < 1000 && current_distance > 0.1 && current_distance < 0.9) {
+                    current.g = (current_weight / 128.0) * 70 + 15;
+                    current.r = 0;
+                    current.b = 0;
+                    weights_cloud->push_back(current);
+                }
+            }
+        }
+    }
 
 }
 
