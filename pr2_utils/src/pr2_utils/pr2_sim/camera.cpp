@@ -15,10 +15,10 @@ Camera::Camera(Arm* arm, Simulator* sim, double height, double width, double foc
 		arm(arm), sim(sim), height(height), width(width), focal_length(focal_length),
 		fx(fx), fy(fy), cx(cx), cy(cy), min_range(min_range), max_range(max_range) {
 
-	tool_to_camera << 0.03049961,  0.02284043,  0.99927378, -0.12429939,
-			0.99816662, -0.05298646, -0.0292547 , -0.00993376,
-			0.05227979,  0.99833399, -0.02441462, -0.07102029,
-			0.        ,  0.        ,  0.        ,  1.;
+	tool_to_camera << 0.03460594, -0.12259148,  0.9918537 , -0.11148716,
+	        0.99835676, -0.04111674, -0.0399148 , -0.00684135,
+	        0.045675  ,  0.99160513,  0.12096715, -0.06884246,
+	        0.        ,  0.        ,  0.        ,  1.;
 
 	P << fx, 0,  cx,
 		 0,  fy, cy,

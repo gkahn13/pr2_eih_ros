@@ -300,7 +300,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             std::cout << "cluster projection: " << Timer_toc(&timer2) << std::endl;
             std::cout << "occluded_region size: " << occluded_region->size() << std::endl;
 
-            if (occluded_region->size() > 0)
+            if (occluded_region->size() > 0) // TODO: filter based on number of points?
             {
 //                std::cout << "occluded region size: " << occluded_region->size() << std::endl;
                 pcl::transformPointCloud(*occluded_region, *transformed_occluded_region, transformation_matrix);

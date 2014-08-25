@@ -1,7 +1,7 @@
 <launch>
 
   <!--
-  <node pkg="pointcloud_publisher" type="example" name="example">
+  <node pkg="pointcloud_publisher" type="carmine" name="carmine">
     <param name="pointcloud_topic" value="/hand_kinect_points" />
   </node>
   -->

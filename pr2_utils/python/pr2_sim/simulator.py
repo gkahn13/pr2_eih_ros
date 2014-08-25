@@ -4,6 +4,8 @@ import sensor_msgs.msg as sm
 import openravepy as rave
 import numpy as np
 
+import time
+
 import IPython
 
 class Simulator:
@@ -15,6 +17,8 @@ class Simulator:
         self.env = rave.Environment()
         self.env.StopSimulation()
         self.env.Load(env_file)
+        
+        self.added_kinbody_names = list()
         
         self.handles = list()
         self.view = view
@@ -167,6 +171,27 @@ class Simulator:
             return ikmodel.manip.FindIKSolutions(ee_from_world, filter_options)
         else:
             return ikmodel.manip.FindIKSolution(ee_from_world, filter_options)
+        
+    ######################
+    # update environment #
+    ######################
+    
+    def clear_kinbodies(self):
+        for name in self.added_kinbody_names:
+            self.env.Remove(self.env.GetKinBody(name))
+    
+    def add_kinbody(self, vertices, triangles, name=None):
+        name = name if name is not None else 'kinbody'+str(time.time())
+        self.added_kinbody_names.append(name)
+        
+        body = rave.RaveCreateKinBody(self.env, "")
+        body.InitFromTrimesh(trimesh=rave.TriMesh(vertices, triangles), draw=True) 
+        body.SetName(name) 
+        self.env.Add(body)
+        
+        randcolor = np.random.rand(3)
+        body.GetLinks()[0].GetGeometries()[0].SetAmbientColor(randcolor)
+        body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(randcolor)
     
     ############
     # plotting #

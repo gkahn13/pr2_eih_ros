@@ -36,13 +36,13 @@ def kinect_transform_publisher():
     rospy.Subscriber("/hand_kinect_ar_kinect_pose", ARMarkers, hand_callback)
     rospy.Subscriber("/head_kinect_ar_kinect_pose", ARMarkers, head_callback)
     transformer = tfx.TransformListener()
-    r = rospy.Rate(1)
+    r = rospy.Rate(5)
 
     #head_pose = True # REMOVE THIS
     #head_pose = False # REMOVE THIS
     i = 0
     transforms = []
-    while not rospy.is_shutdown() and i < 50:
+    while not rospy.is_shutdown() and i < 500:
         if head_pose and hand_pose:
             head_transform = tfx.transform(head_pose, parent='camera_rgb_optical_frame', child='ar_frame')#.as_transform()
             hand_transform = tfx.transform(hand_pose, parent='hand_kinect_optical_frame', child='ar_frame')#.as_transform()
@@ -55,7 +55,8 @@ def kinect_transform_publisher():
             #rospy.loginfo(head_to_ar)
             #rospy.loginfo(ar_to_hand)
             #print head_to_hand
-            wrist_to_head = tfx.transform(transformer.lookupTransform('r_gripper_tool_frame', 'camera_rgb_optical_frame', rospy.Time()), child = 'camera_rgb_optical_frame', parent = 'r_gripper_tool_frame')
+            wrist_to_head = tfx.lookupTransform('r_gripper_tool_frame', 'camera_rgb_optical_frame')
+            #wrist_to_head = tfx.transform(transformer.lookupTransform('r_gripper_tool_frame', 'camera_rgb_optical_frame', rospy.Time()), child='camera_rgb_optical_frame', parent='r_gripper_tool_frame')
             wrist_to_hand = tfx.transform(wrist_to_head.matrix * head_to_hand.matrix, parent='r_gripper_tool_frame', child='hand_kinect_optical_frame')
             #print wrist_to_head
             print wrist_to_hand
@@ -66,6 +67,12 @@ def kinect_transform_publisher():
             #pub.sendTransform(head_to_hand.position, head_to_hand.rotation, rospy.Time(), head_to_hand.child, head_to_hand.parent)
             transforms.append(wrist_to_hand)
             i += 1
+        else:
+            if head_pose is None:
+                print('Head pose is None')
+            if hand_pose is None:
+                print('Hand pose is None')
+            print('')
         r.sleep()
     transform = transforms[0]
     for i in range(1, len(transforms)):

@@ -174,7 +174,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
              ) &&
 
 
-            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 &&
+            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 && // 0.05
             transformed_inverse_iter->z > 0 &&
             std::pow(transformed_inverse_iter->x, 2) + std::pow(transformed_inverse_iter->y, 2) + std::pow(transformed_inverse_iter->z, 2) >= std::pow(real_extremes.block<3, 1>(0,0).norm(), 2))
         {

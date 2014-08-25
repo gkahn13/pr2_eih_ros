@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 
 
-//	test_movement();
+	test_movement();
 //	test_match_transforms();
-	print_joints();
+//	print_joints();
 }
