@@ -1,5 +1,6 @@
 #include <pcl_utils/plane_recognition.h>
 #include <pcl/io/pcd_io.h>
+#include "ros/ros.h"
 
 using namespace std;
 
@@ -8,11 +9,14 @@ namespace plane_recognition
 void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients)
 {
 
+    float leaf_size, distance_threshold;
+    ros::param::param<float>("/occlusion_parameters/plane_recognition_leaf_size", leaf_size, 0.05f); // TODO: find the right value for this - could be pretty high I think?
+    ros::param::param<float>("/occlusion_parameters/plane_recognition_distance_threshold", distance_threshold, 0.01f);
+
     std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloud);
-    float leaf_size = 0.05f; // TODO: find the right value for this - could be pretty high I think?
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
     vg.filter (*cloud_filtered);
     std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
@@ -25,7 +29,7 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_MLESAC);
 //    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (0.01);
+    seg.setDistanceThreshold (distance_threshold);
 
     // input cloud
     seg.setInputCloud (cloud_filtered);

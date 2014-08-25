@@ -172,7 +172,8 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub) //,
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub,
+                           ros::NodeHandle nh) //,
 //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud)
 {
 
@@ -192,14 +193,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     Timer timer2 = Timer();
     Timer timer3 = Timer();
 
-    int jump = 1;
-    double voxel_size = 0.02;
-    double cluster_tolerance = 0.01;
-    int min_cluster_size = 100;
-    int max_cluster_size = 25000;
-
     Timer_tic(&timer);
-    tsdf_converter::convert_tsdf(tsdf_distances, tsdf_weights, zero_crossing_cloud, foreground_cloud, inverse_cloud, jump, voxel_size);
+    tsdf_converter::convert_tsdf(tsdf_distances, tsdf_weights, zero_crossing_cloud, foreground_cloud, inverse_cloud, nh);
     std::cout << "convert tsdf: " << Timer_toc(&timer) << std::endl;
 
     std::cout << "converted tsdf vectors" << std::endl;
@@ -209,7 +204,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     Timer_tic(&timer);
 
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud, cluster_tolerance, min_cluster_size, max_cluster_size);
+    std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud);
 
     std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
 

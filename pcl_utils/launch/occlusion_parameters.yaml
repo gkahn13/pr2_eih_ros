@@ -1,0 +1,25 @@
+# parameters for tsdf_converter.cpp
+tsdf_converter_jump: 1
+voxel_size: 0.02
+downsampling_rate: 100
+
+min_x: 0.25
+max_x: 2
+min_y: 0.5
+max_y: 1.5
+min_z: 0.25
+max_z: 1.5
+
+# cluster_extraction.cpp
+cluster_extraction_leaf_size: 0.01
+cluster_tolerance: 0.01
+min_cluster_size: 100
+max_cluster_size: 25000
+cluster_extraction_distance_threshold: 0.02
+
+# cluster_projection.cpp
+table_tolerance: 0.05
+
+# plane_recognition.cpp
+plane_recognition_leaf_size: 0.05
+plane_recognition_distance_threshold: 0.01

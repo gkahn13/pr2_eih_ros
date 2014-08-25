@@ -25,6 +25,10 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
 {
 
 
+    float table_tolerance;
+    ros::param::param<float>("/occlusion_parameters/table_tolerance", table_tolerance, 0.05f);
+    std::cout << "table_tolerance: " << table_tolerance << std::endl;
+
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
     //Eigen::Vector3f min_vector_rotated = rotational_matrix_OBB * min_vector;
 
@@ -135,7 +139,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     pcl::PointCloud<pcl::PointXYZ>::iterator inverse_iter;
     pcl::PointCloud<pcl::PointXYZ>::iterator transformed_inverse_iter;
     pcl::PointCloud<pcl::PointXYZ> occluded_region;
-    double tol = 25;
+    //double tol = 25;
     //std::cout << "face_direction: " << face_direction << std::endl;
     //face_direction = 10;
     for (projected_inverse_iter = projected_inverse->begin(), inverse_iter = inverse->begin(), transformed_inverse_iter = transformed_inverse->begin();
@@ -174,7 +178,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
              ) &&
 
 
-            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 &&
+            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + table_tolerance >= 0 &&
             transformed_inverse_iter->z > 0 &&
             std::pow(transformed_inverse_iter->x, 2) + std::pow(transformed_inverse_iter->y, 2) + std::pow(transformed_inverse_iter->z, 2) >= std::pow(real_extremes.block<3, 1>(0,0).norm(), 2))
         {

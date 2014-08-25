@@ -2,7 +2,15 @@
 
 namespace cluster_extraction {
 
-std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double cluster_tolerance, int min_cluster_size, int max_cluster_size) {
+std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+
+
+    float leaf_size, cluster_tolerance;
+    int min_cluster_size, max_cluster_size;
+    ros::param::param<float>("/occlusion_parameters/cluster_extraction_leaf_size", leaf_size, 0.01f);
+    ros::param::param<float>("/occlusion_parameters/cluster_tolerance", cluster_tolerance, 0.01f);
+    ros::param::param<int>("/occlusion_parameters/min_cluster_size", min_cluster_size, 100);
+    ros::param::param<int>("/occlusion_parameters/max_cluster_size", max_cluster_size, 25000);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -12,7 +20,6 @@ std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pc
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloud);
-    float leaf_size = 0.01f;
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
     vg.filter (*cloud_filtered);
 //    std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*

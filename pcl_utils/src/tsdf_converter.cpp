@@ -34,15 +34,28 @@ void read_files(std::string distance_file, std::string weight_file, std::vector<
 }
 
 void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_cloud,
-                  int jump, double voxel_size) {
+                  ros::NodeHandle nh) {
     // loop the pointcloud, finding zero crossing points and "foreground" points
 
     double resolution = 512;
     double size = 2;
 
+    // get parameters
+    int jump, prob;
+    float voxel_size, min_x, max_x, min_y, max_y, min_z, max_z;
+    ros::param::param<int>("/occlusion_parameters/tsdf_converter_jump", jump, 1);
+    ros::param::param<float>("/occlusion_parameters/voxel_size", voxel_size, 0.02f);
+    ros::param::param<int>("/occlusion_parameters/downsampling_rate", prob, 100);
+    ros::param::param<float>("/occlusion_parameters/min_x", min_x, 0);
+    ros::param::param<float>("/occlusion_parameters/max_x", max_x, 2);
+    ros::param::param<float>("/occlusion_parameters/min_y", min_y, 0);
+    ros::param::param<float>("/occlusion_parameters/max_y", max_y, 2);
+    ros::param::param<float>("/occlusion_parameters/min_z", min_z, 0);
+    ros::param::param<float>("/occlusion_parameters/max_z", max_z, 2);
+
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_full (new pcl::PointCloud<pcl::PointXYZ>);
 
-    int prob = 100;
     boost::mt19937 gen;
     boost::random::uniform_int_distribution<> dist(1, prob);
 
@@ -58,18 +71,23 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
                 current.y = y * size / resolution;
                 current.z = z * size / resolution;
 
-                if (current_weight > 0 && current_distance > 0.2 && current_distance < 0.8) {
-                    zero_crossing_cloud->push_back(current);
-                }
+                if (current.x >= min_x && current.x <= max_x &&
+                    current.y >= min_y && current.y <= max_y &&
+                    current.z >= min_z && current.z <= max_z) {
 
-                if (current_weight > 0 && current_distance > 0.5) {
-                //if (current_weight > 0.1 && current_distance > 0.5) {
-                    foreground_cloud->push_back(current);
-                }
+                    if (current_weight > 0 && current_distance > 0.2 && current_distance < 0.8) {
+                        zero_crossing_cloud->push_back(current);
+                    }
 
-                if ((current_weight < 50 && current_weight > 0 && dist(gen) % prob == 0) /*|| (current_weight == 0 && dist(gen) % prob == 0)*/) {
-                    inverse_full->push_back(current);
-                    //inverse_cloud->push_back(current);
+                    if (current_weight > 0 && current_distance > 0.5) {
+                    //if (current_weight > 0.1 && current_distance > 0.5) {
+                        foreground_cloud->push_back(current);
+                    }
+
+                    if ((current_weight < 50 && current_weight > 0 && dist(gen) % prob == 0) /*|| (current_weight == 0 && dist(gen) % prob == 0)*/) {
+                        inverse_full->push_back(current);
+                        //inverse_cloud->push_back(current);
+                    }
                 }
 
                 i++;

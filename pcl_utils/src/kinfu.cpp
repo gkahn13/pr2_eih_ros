@@ -66,7 +66,7 @@ bool publish_kinfu_under_cam_depth_reg;
 pcl::PointCloud<pcl::PointXYZRGB> last_cloud;
 int current;
 pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker;
-
+ros::NodeHandle nh;
 
 namespace carmine {
 	const int WIDTH = 640;
@@ -148,7 +148,7 @@ void get_occluded(const std_msgs::EmptyConstPtr& str) {
 //		pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 //        pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 //        PointCloudVoxelGrid::CloudType::Ptr inverse_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
-        occluded_region_finder::find_occluded_regions(tsdf_vector, tsdf_weights, transformation_matrix, false, "kinfu", markers_pub, points_pub, regions_pub); //,
+        occluded_region_finder::find_occluded_regions(tsdf_vector, tsdf_weights, transformation_matrix, false, "kinfu", markers_pub, points_pub, regions_pub, nh); //,
                                                       //zero_crossing_cloud, foreground_cloud, inverse_cloud);
         #endif // FIND_OCCLUSIONS
 
@@ -447,7 +447,7 @@ int main (int argc, char** argv) {
 	// Initialize ROS
 
 	ros::init(argc, argv, "kinfu");
-	ros::NodeHandle nh("~");
+	nh = ros::NodeHandle("~");
 	//ros::Duration(2).sleep();
 	std::string dev;
 	// fill in tf listener
