@@ -183,7 +183,7 @@ class Simulator:
         for name in self.added_kinbody_names:
             self.env.Remove(self.env.GetKinBody(name))
     
-    def add_kinbody(self, vertices, triangles, name=None):
+    def add_kinbody(self, vertices, triangles, name=None, check_collision=False):
         name = name if name is not None else 'kinbody'+str(time.time())
         self.added_kinbody_names.append(name)
         
@@ -195,6 +195,11 @@ class Simulator:
         randcolor = np.random.rand(3)
         body.GetLinks()[0].GetGeometries()[0].SetAmbientColor(randcolor)
         body.GetLinks()[0].GetGeometries()[0].SetDiffuseColor(randcolor)
+        
+        if check_collision:
+            if self.env.CheckCollision(self.robot, body):
+                self.env.Remove(body)
+                self.added_kinbody_names = self.added_kinbody_names[:-1]
     
     ############
     # plotting #

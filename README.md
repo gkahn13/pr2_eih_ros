@@ -57,7 +57,7 @@ bsp:
 grasping:
 	input:
 		/handle_detector/avg_handle_poses
-		/kinfu/graspable_points
+		/handle_detector/cloud_points
 		/kinfu/table_pose
 	outline:
 		1. convex decomposition of pointcloud - add table from table pose

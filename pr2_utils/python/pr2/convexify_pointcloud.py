@@ -32,13 +32,13 @@ def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_comp
     """
     transform_world = sim.transform_from_to(transform, 'base_link', 'world')
     
-    full_cloud = pc2_to_cloudprocpy(pc2, cam_pose_world)
+    full_cloud = pc2_to_cloudprocpy(pc2, transform_world)
     cloud = cloudprocpy.downsampleCloud(full_cloud, .01)
 
     big_mesh = generate_mesh(cloud)
     convex_meshes = cloudprocpy.convexDecompHACD(big_mesh, num_cd_components)
     for i, mesh in enumerate(convex_meshes):
-        sim.add_kinbody(mesh.getVertices(), mesh.getTriangles(), 'mesh_{0}'.format(i))
+        sim.add_kinbody(mesh.getVertices(), mesh.getTriangles(), name='mesh_{0}'.format(i), check_collision=True)
 
 def pc2_to_cloudprocpy(pc2, transform_world):
     """

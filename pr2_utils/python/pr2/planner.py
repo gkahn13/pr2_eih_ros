@@ -1,6 +1,7 @@
 import openravepy as rave
 import trajoptpy
 import trajoptpy.kin_utils as ku
+from trajoptpy.check_traj import traj_is_safe
 import json
 
 import rospy
@@ -43,7 +44,7 @@ class Planner:
         :param start_joints: list of initial joints
         :param target_pose: desired pose of tool_frame (tfx.pose)
         :param n_steps: trajopt discretization
-        :return list of joint values
+        :return None if traj not collision free, else list of joint values
         """
         assert len(start_joints) == len(self.joint_indices)
         assert target_pose.frame.count('base_link') == 1
@@ -76,7 +77,11 @@ class Planner:
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)
         
-        return result.GetTraj()
+        prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
+        if not traj_is_safe(result.GetTraj()[:-1], self.robot): # Check that trajectory is collision free
+            return None
+        else:
+            return result.GetTraj()
         
     def _get_trajopt_request(self, xyz_target, quat_target, init_joint_target, n_steps, ignore_orientation=False):
         """
@@ -102,8 +107,8 @@ class Planner:
                 {
                     "type" : "collision",
                     "params" : {
-                        "coeffs" : [20],
-                        "dist_pen" : [0.025] 
+                        "coeffs" : [20], # 20
+                        "dist_pen" : [0.01] # .025 
                         }
                     },
                 {
