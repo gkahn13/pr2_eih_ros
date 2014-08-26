@@ -35,6 +35,7 @@ add_message_files(
   Gaussian.msg
   OccludedRegion.msg
   OccludedRegionArray.msg
+  BoundingBox.msg
 )
 
 generate_messages(
@@ -80,8 +81,8 @@ target_link_libraries(generate_boundary_pointcloud ${PCL_LIBRARIES} ${catkin_LIB
 #add_executable(plane_recognition src/plane_recognition.cpp)
 #target_link_libraries(plane_recognition ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(find_empty_voxels src/find_empty_voxels.cpp src/plane_recognition.cpp)
-target_link_libraries(find_empty_voxels ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(find_empty_voxels src/find_empty_voxels.cpp src/plane_recognition.cpp)
+#target_link_libraries(find_empty_voxels ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 #add_executable(cluster_extraction src/cluster_extraction.cpp)
 #target_link_libraries(cluster_extraction ${PCL_LIBRARIES} ${catkin_LIBRARIES})

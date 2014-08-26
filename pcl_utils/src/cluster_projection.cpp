@@ -21,7 +21,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
         Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse,
         pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff,
         int face_direction, int forward_back, pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB,
-        visualization_msgs::MarkerArrayPtr markers, std::vector<Eigen::Vector3f> corners)
+        visualization_msgs::MarkerArrayPtr markers, std::vector<Eigen::Vector3f> corners, ros::Publisher plane_pub)
 {
 
 
@@ -93,18 +93,19 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     Eigen::Matrix<double, 6, 1> real_extremes = PointCloudVoxelGrid::calculate_extremes(transformed_cluster);
 
 
-    Timer_tic(&timer);
-
-    // only do this once
-    if (plane_coeff->values.size() == 0)
-    {
-        // fit a plane to the zero-crossing points to find a table top
-        pcl::PointIndices::Ptr unused(new pcl::PointIndices);
-        plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff);
-        std::cout << "plane coefficients: " << *plane_coeff << std::endl;
-    }
-
-    std::cout << "\tplane fitting: " << Timer_toc(&timer) << std::endl;
+    // MOVED TO occluded_region_finder.cpp
+//    Timer_tic(&timer);
+//
+//    // only do this once
+//    if (plane_coeff->values.size() == 0)
+//    {
+//        // fit a plane to the zero-crossing points to find a table top
+//        pcl::PointIndices::Ptr unused(new pcl::PointIndices);
+//        plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff, plane_pub);
+//        std::cout << "plane coefficients: " << *plane_coeff << std::endl;
+//    }
+//
+//    std::cout << "\tplane fitting: " << Timer_toc(&timer) << std::endl;
 
     double a = plane_coeff->values[0], b = plane_coeff->values[1],
                                            c = plane_coeff->values[2], d = plane_coeff->values[3];
@@ -191,6 +192,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
 //            std::cout << (minor_vector.dot((current_inverse_eigen - position) - minor_vector) <= 0) << std::endl;
 //            std::cout << ((minor_vector.dot(-1 * (current_inverse_eigen - position) - minor_vector)) >= 0) << std::endl;
         }
+
     }
 
     std::cout << "\toccluded region loop: " << Timer_toc(&timer) << std::endl;

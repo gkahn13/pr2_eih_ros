@@ -1,9 +1,40 @@
 #include <pcl_utils/occluded_region_finder.h>
 #include <pcl/common/transforms.h>
 #include <pcl_utils/timer.h>
+#include <pcl_utils/plane_recognition.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
 
 namespace occluded_region_finder
 {
+
+void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::ModelCoefficients::Ptr plane_coeff, ros::Publisher object_points_pub) {
+    float table_cutoff;
+    ros::param::param<float>("/occlusion_parameters/table_cutoff_above", table_cutoff, 0.005f);
+    pcl::PointCloud<pcl::PointXYZ> new_points;
+    tf::TransformListener listener;
+    tf::StampedTransform tf_transform;
+    listener.waitForTransform("/kinfu_frame", "/base_link", ros::Time(0), ros::Duration(5));
+    listener.lookupTransform("/kinfu_frame", "/base_link", ros::Time(0), tf_transform);
+    Eigen::Affine3d transform_affine;
+    tf::transformTFToEigen(tf_transform, transform_affine);
+    for (pcl::PointCloud<pcl::PointXYZ>::iterator iter = zero_crossing_cloud->begin();
+         iter != zero_crossing_cloud->end(); iter++)
+    {
+        if (plane_coeff->values[0] * iter->x + plane_coeff->values[1] * iter->y + plane_coeff->values[2] * iter->z + plane_coeff->values[3] - table_cutoff >= 0) {
+            pcl::PointXYZ new_point;
+            new_point = pcl::transformPoint(*iter, transform_affine.inverse());
+            new_points.push_back(new_point);
+        }
+    }
+
+    sensor_msgs::PointCloud2 cloud_msg;
+    pcl::toROSMsg(new_points, cloud_msg);
+    cloud_msg.header.stamp = ros::Time::now();
+    cloud_msg.header.frame_id = "/base_link";
+    object_points_pub.publish(cloud_msg);
+}
 
 
 Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max_point_OBB, Eigen::Matrix3f rotational_matrix_OBB, int a1, int a2, int min_direction)
@@ -172,7 +203,8 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub) //,
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub,
+                           ros::Publisher plane_pub, ros::Publisher object_points_pub) //,
 //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud)
 {
 
@@ -201,6 +233,13 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     std::cout << "foreground: " << foreground_cloud->width << std::endl;
     std::cout << "inverse crossing: " << inverse_cloud->width << std::endl;
 
+    // fit a plane to the zero-crossing points to find a table top
+    pcl::ModelCoefficients::Ptr plane_coeff(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr unused(new pcl::PointIndices);
+    plane_recognition::calculate_plane(zero_crossing_cloud, unused, plane_coeff, plane_pub, markers);
+
+    occluded_region_finder::publish_graspable(zero_crossing_cloud, plane_coeff, object_points_pub);
+
     Timer_tic(&timer);
 
     std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud);
@@ -213,7 +252,6 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::ModelCoefficients::Ptr plane_coeff(new pcl::ModelCoefficients);
 
 
     std::vector<Eigen::Matrix<double, 4, 1> > means;
@@ -290,7 +328,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
             Timer_tic(&timer2);
             *occluded_region = cluster_projection::calculate_occluded(*current_cloud, inverse_cloud, zero_crossing_cloud, transformation_matrix, transformed_inverse, projected_inverse, plane_coeff,
-                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers, corners);
+                               directions(0), directions(1), min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, markers, corners, plane_pub);
             std::cout << "cluster projection: " << Timer_toc(&timer2) << std::endl;
             std::cout << "occluded_region size: " << occluded_region->size() << std::endl;
 

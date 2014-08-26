@@ -1,12 +1,18 @@
 #include <pcl_utils/plane_recognition.h>
 #include <pcl/io/pcd_io.h>
 #include "ros/ros.h"
+#include <pcl_utils/BoundingBox.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
+#include <pcl/common/transforms.h>
+#include <pcl/features/moment_of_inertia_estimation.h>
 
 using namespace std;
 
 namespace plane_recognition
 {
-void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients)
+void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients, ros::Publisher plane_pub, visualization_msgs::MarkerArrayPtr markers)
 {
 
     float leaf_size, distance_threshold;
@@ -35,6 +41,84 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     seg.setInputCloud (cloud_filtered);
 
     seg.segment (*inliers, *coefficients);
+
+    pcl::PointCloud<pcl::PointXYZ> plane_points;
+
+    for (std::vector<int>::iterator iter = inliers->indices.begin();
+        iter != inliers->indices.end(); iter++) {
+        plane_points.push_back(cloud_filtered->points[*iter]);
+    }
+
+
+    tf::TransformListener listener;
+    tf::StampedTransform kinfu_to_base;
+    listener.waitForTransform("/kinfu_frame", "/base_link",
+                               ros::Time(0), ros::Duration(5));
+    listener.lookupTransform("/kinfu_frame", "/base_link",
+                              ros::Time(0), kinfu_to_base);
+
+    Eigen::Affine3d kinfu_to_base_affine;
+    tf::transformTFToEigen(kinfu_to_base, kinfu_to_base_affine);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_points_base_link = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::transformPointCloud(plane_points, *plane_points_base_link, kinfu_to_base_affine.inverse());
+
+
+    pcl::MomentOfInertiaEstimation <pcl::PointXYZ> feature_extractor;
+    feature_extractor.setInputCloud(plane_points_base_link);
+    feature_extractor.compute ();
+
+
+    pcl::PointXYZ min_point_OBB;
+    pcl::PointXYZ max_point_OBB;
+    pcl::PointXYZ position_OBB;
+    Eigen::Matrix3f rotational_matrix_OBB;
+
+    feature_extractor.getOBB (min_point_OBB, max_point_OBB, position_OBB, rotational_matrix_OBB);
+    Eigen::Vector3f max_point_eigen(max_point_OBB.x, max_point_OBB.y, max_point_OBB.z);
+
+    Eigen::Matrix3f vectors = rotational_matrix_OBB * max_point_eigen.asDiagonal();
+
+    pcl_utils::BoundingBox bb_msg;
+    bb_msg.header.stamp = ros::Time::now();
+    bb_msg.header.frame_id = "/base_link";
+    bb_msg.center.x = position_OBB.x;
+    bb_msg.center.y = position_OBB.y;
+    bb_msg.center.z = position_OBB.z;
+    for (int i = 0; i < 3; i++) {
+        geometry_msgs::Vector3 current_vector;
+        current_vector.x = vectors(0, i);
+        current_vector.y = vectors(1, i);
+        current_vector.z = vectors(2, i);
+        bb_msg.vectors.push_back(current_vector);
+    }
+
+    plane_pub.publish(bb_msg);
+
+    Eigen::Quaternionf quat (rotational_matrix_OBB);
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "/base_link";
+    marker.header.stamp = ros::Time::now();
+    marker.id = 1000000;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = position_OBB.x;
+    marker.pose.position.y = position_OBB.y;
+    marker.pose.position.z = position_OBB.z;
+    marker.pose.orientation.x = quat.x();
+    marker.pose.orientation.y = quat.y();
+    marker.pose.orientation.z = quat.z();
+    marker.pose.orientation.w = quat.w();
+    marker.scale.x = max_point_OBB.x - min_point_OBB.x;
+    marker.scale.y = max_point_OBB.y - min_point_OBB.y;
+    marker.scale.z = max_point_OBB.z - min_point_OBB.z;
+    marker.color.a = 1;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+
+    markers->markers.push_back(marker);
 
 }
 }
