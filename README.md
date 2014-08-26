@@ -60,37 +60,6 @@ rosrun handle_poses_publisher
 > 	d. move back
 > 	e. drop off
 
-bsp:
-	outline:
-		1. get ___ closest regions from kinfu
-		2. initialize BSP optimization trajectory
-		3. run bsp
-		4. execute controls
-		5. if no good handles to grasp:
-		    6. go to 1
-		7. else:
-		   8. trajectory <- /check_handle_grasps/trajectory [on callback]
-		   9. execute grasp
-		      a. move in
-		      b. close gripper
-		      c. move up
-		      d. move back
-		      e. drop off
-	to run:
-		
-	   
-grasping:
-	input:
-		/handle_detector/avg_handle_poses
-		/handle_detector/cloud_points
-		/kinfu/table_pose
-	outline:
-		1. convex decomposition of pointcloud - add table from table pose
-		2. for each handle pose:
-		   call trajopt (with collisions)
-		   if no collision && reaches handle:
-		      publish pose trajectory [/check_handle_grasps/trajectory]
-=======
 #### to run:
 (TBD)
 
