@@ -29,7 +29,7 @@ rostopic pub /get_occlusions std_msgs/Empty -1 [this will make kinfu download it
 to be added:
 ```
 /kinfu/graspable_points [all points above table]
-/kinfu/table_pose
+/kinfu/plane_bounding_box
 ```
 
 ## handle detector
