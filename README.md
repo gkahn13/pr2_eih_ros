@@ -77,3 +77,6 @@ rosrun handle_poses_publisher
 >     2. if no collision && reaches handle:
 >     3. publish pose trajectory [/check_handle_grasps/trajectory]
 
+#### publishes:
+    /check_handle_grasps/trajectory
+
