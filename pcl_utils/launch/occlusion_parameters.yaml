@@ -23,3 +23,6 @@ table_tolerance: 0.05
 # plane_recognition.cpp
 plane_recognition_leaf_size: 0.05
 plane_recognition_distance_threshold: 0.01
+
+# kinfu
+using_head_camera: false

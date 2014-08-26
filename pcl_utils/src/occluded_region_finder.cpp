@@ -172,8 +172,7 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub,
-                           ros::NodeHandle nh) //,
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub) //,
 //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud)
 {
 
@@ -194,7 +193,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     Timer timer3 = Timer();
 
     Timer_tic(&timer);
-    tsdf_converter::convert_tsdf(tsdf_distances, tsdf_weights, zero_crossing_cloud, foreground_cloud, inverse_cloud, nh);
+    tsdf_converter::convert_tsdf(tsdf_distances, tsdf_weights, zero_crossing_cloud, foreground_cloud, inverse_cloud);
     std::cout << "convert tsdf: " << Timer_toc(&timer) << std::endl;
 
     std::cout << "converted tsdf vectors" << std::endl;
