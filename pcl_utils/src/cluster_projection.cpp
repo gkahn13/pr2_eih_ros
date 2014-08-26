@@ -21,9 +21,13 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
         Eigen::Matrix4d transformation_matrix, pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_inverse,
         pcl::PointCloud<pcl::PointXYZ>::Ptr projected_inverse, pcl::ModelCoefficients::Ptr plane_coeff,
         int face_direction, int forward_back, pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB,
-        visualization_msgs::MarkerArrayPtr markers, std::vector<Eigen::Vector3f> corners)
+        visualization_msgs::MarkerArrayPtr markers, std::vector<Eigen::Vector3f> corners, ros::Publisher plane_pub)
 {
 
+
+    float table_tolerance;
+    ros::param::param<float>("/occlusion_parameters/table_tolerance", table_tolerance, 0.05f);
+    std::cout << "table_tolerance: " << table_tolerance << std::endl;
 
     Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
     //Eigen::Vector3f min_vector_rotated = rotational_matrix_OBB * min_vector;
@@ -89,18 +93,19 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     Eigen::Matrix<double, 6, 1> real_extremes = PointCloudVoxelGrid::calculate_extremes(transformed_cluster);
 
 
-    Timer_tic(&timer);
-
-    // only do this once
-    if (plane_coeff->values.size() == 0)
-    {
-        // fit a plane to the zero-crossing points to find a table top
-        pcl::PointIndices::Ptr unused(new pcl::PointIndices);
-        plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff);
-        std::cout << "plane coefficients: " << *plane_coeff << std::endl;
-    }
-
-    std::cout << "\tplane fitting: " << Timer_toc(&timer) << std::endl;
+    // MOVED TO occluded_region_finder.cpp
+//    Timer_tic(&timer);
+//
+//    // only do this once
+//    if (plane_coeff->values.size() == 0)
+//    {
+//        // fit a plane to the zero-crossing points to find a table top
+//        pcl::PointIndices::Ptr unused(new pcl::PointIndices);
+//        plane_recognition::calculate_plane(plane_cloud, unused, plane_coeff, plane_pub);
+//        std::cout << "plane coefficients: " << *plane_coeff << std::endl;
+//    }
+//
+//    std::cout << "\tplane fitting: " << Timer_toc(&timer) << std::endl;
 
     double a = plane_coeff->values[0], b = plane_coeff->values[1],
                                            c = plane_coeff->values[2], d = plane_coeff->values[3];
@@ -135,7 +140,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
     pcl::PointCloud<pcl::PointXYZ>::iterator inverse_iter;
     pcl::PointCloud<pcl::PointXYZ>::iterator transformed_inverse_iter;
     pcl::PointCloud<pcl::PointXYZ> occluded_region;
-    double tol = 25;
+    //double tol = 25;
     //std::cout << "face_direction: " << face_direction << std::endl;
     //face_direction = 10;
     for (projected_inverse_iter = projected_inverse->begin(), inverse_iter = inverse->begin(), transformed_inverse_iter = transformed_inverse->begin();
@@ -174,7 +179,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
              ) &&
 
 
-            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + 0.05 >= 0 && // 0.05
+            a * current_inverse.x + b * current_inverse.y + c * current_inverse.z + d + table_tolerance >= 0 &&
             transformed_inverse_iter->z > 0 &&
             std::pow(transformed_inverse_iter->x, 2) + std::pow(transformed_inverse_iter->y, 2) + std::pow(transformed_inverse_iter->z, 2) >= std::pow(real_extremes.block<3, 1>(0,0).norm(), 2))
         {
@@ -187,6 +192,7 @@ pcl::PointCloud<pcl::PointXYZ> calculate_occluded(pcl::PointCloud<pcl::PointXYZ>
 //            std::cout << (minor_vector.dot((current_inverse_eigen - position) - minor_vector) <= 0) << std::endl;
 //            std::cout << ((minor_vector.dot(-1 * (current_inverse_eigen - position) - minor_vector)) >= 0) << std::endl;
         }
+
     }
 
     std::cout << "\toccluded region loop: " << Timer_toc(&timer) << std::endl;

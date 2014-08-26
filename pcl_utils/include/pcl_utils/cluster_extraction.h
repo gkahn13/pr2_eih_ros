@@ -1,6 +1,7 @@
 #ifndef CLUSTER_EXTRACTION_H_INCLUDED
 #define CLUSTER_EXTRACTION_H_INCLUDED
 
+#include "ros/ros.h"
 #include <pcl/ModelCoefficients.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -16,7 +17,7 @@
 
 namespace cluster_extraction {
 
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double cluster_tolerance, int min_cluster_size, int max_cluster_size);
+    std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 }
 
