@@ -1,7 +1,7 @@
 import openravepy as rave
 import trajoptpy
 import trajoptpy.kin_utils as ku
-from trajoptpy.check_traj import traj_is_safe
+from trajoptpy.check_traj import traj_is_safe, traj_collisions
 import json
 
 import rospy
@@ -78,7 +78,8 @@ class Planner:
         result = trajoptpy.OptimizeProblem(prob)
         
         prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
-        if not traj_is_safe(result.GetTraj()[:-1], self.robot): # Check that trajectory is collision free
+        if len(traj_collisions(result.GetTraj(), self.robot, n=100)) > 3:
+        #if not traj_is_safe(result.GetTraj()[:], self.robot): # Check that trajectory is collision free
             return None
         else:
             return result.GetTraj()

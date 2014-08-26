@@ -13,8 +13,8 @@ from geometry import geometry2d, geometry3d
 from pr2_sim import simulator, arm
 from utils import utils
 
-wrist_to_hand = tfx.transform((-0.111487159047, -0.00684135348587, -0.0688424618769),
-                              (0.488557961505, 0.448137859998, 0.530913821985, 0.527839076151))
+wrist_to_hand = tfx.transform((-0.109680130608, -0.00962609518519, -0.0956984605775),
+                              (0.49708796669, 0.462401115475, 0.522493632434, 0.515838313666))
 
 class Camera:
     def __init__(self, arm, sim, tool_to_camera=None,
