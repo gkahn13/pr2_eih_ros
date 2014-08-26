@@ -21,16 +21,16 @@ _DATATYPES[sm.PointField.UINT32] = ('I', 4)
 _DATATYPES[sm.PointField.FLOAT32] = ('f', 4)
 _DATATYPES[sm.PointField.FLOAT64] = ('d', 8)
 
-def add_convexified_pointcloud_to_env(sim, pc2, cam_pose_base_link, num_cd_components=20):
+def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_components=20):
     """
     Convexifies point cloud and adds to openrave environment
     
     :param sim: pr2_sim.simulator.Simulator
     :param pc2: the point cloud to read from
     :type  pc2: sensor_msgs.PointCloud2
-    :param cam_pose_base_link: 4x4 np.ndarray of camera pose for cloud in frame base_link
+    :param transform: 4x4 np.ndarray of transform for cloud in frame base_link
     """
-    cam_pose_world = sim.transform_from_to(cam_pose_base_link, 'base_link', 'world')
+    transform_world = sim.transform_from_to(transform, 'base_link', 'world')
     
     full_cloud = pc2_to_cloudprocpy(pc2, cam_pose_world)
     cloud = cloudprocpy.downsampleCloud(full_cloud, .01)
@@ -40,16 +40,16 @@ def add_convexified_pointcloud_to_env(sim, pc2, cam_pose_base_link, num_cd_compo
     for i, mesh in enumerate(convex_meshes):
         sim.add_kinbody(mesh.getVertices(), mesh.getTriangles(), 'mesh_{0}'.format(i))
 
-def pc2_to_cloudprocpy(pc2, cam_pose_world):
+def pc2_to_cloudprocpy(pc2, transform_world):
     """
     :param pc2: the point cloud to read from
     :type  pc2: sensor_msgs.PointCloud2
-    :param cam_pose_world: 4x4 np.ndarray of camera pose for cloud in frame world
+    :param cam_pose_world: 4x4 np.ndarray of transform for cloud in frame world
     """
     points_gen = read_points(pc2, skip_nans=False)
     
-    rot = cam_pose_world[:3,:3]
-    trans = cam_pose_world[:3,3]
+    rot = transform_world[:3,:3]
+    trans = transform_world[:3,3]
     points = list()
     for pt in points_gen:
         pt = list(np.dot(rot, pt) + trans)
@@ -145,7 +145,7 @@ def generate_mesh(cloud, decimation_rate=0.5):
     """
     cloud_with_normals = cloudprocpy.mlsAddNormals(cloud, .02)
     big_mesh = cloudprocpy.meshGP3(cloud_with_normals, search_radius=0.02) # 0.04
-    #simple_mesh = cloudprocpy.quadricSimplifyVTK(big_mesh, decimation_rate) # decimate mesh with VTK function
-    #return simple_mesh
+#     simple_mesh = cloudprocpy.quadricSimplifyVTK(big_mesh, decimation_rate) # decimate mesh with VTK function
+#     return simple_mesh
     return big_mesh
 

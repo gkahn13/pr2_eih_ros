@@ -8,14 +8,22 @@
 #include "Eigen/Core"
 #include <iostream>
 #include "handle_detector/messages.h"
+
+
 //#include <pcl_conversions/pcl_conversions.h>
-//#include <pcl_conversions.h>
+#include <pcl_conversions.h>
 //#include <pcl_ros/point_cloud.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/common/transforms.h>
+
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
+
 #include <sstream>
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,8 +36,11 @@
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-std::string RANGE_SENSOR_FRAME; // "/camera_rgb_optical_frame";
+std::string OUTPUT_FRAME; // "/base_link"
+//std::string OUTPUT_FRAME; // "/camera_rgb_optical_frame";
 std::string RANGE_SENSOR_TOPIC; // "/camera/depth_registered/points";
+
+boost::shared_ptr<tf::TransformListener> listener;
 
 // input and output ROS topic data
 PointCloud::Ptr g_cloud(new PointCloud);
@@ -45,37 +56,33 @@ bool g_has_read = false;
 void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 	if (omp_get_wtime() - g_prev_time < g_update_interval) { return; }
 
-	// check whether input frame is equivalent to range sensor frame constant
-	std::string input_frame = input->header.frame_id;
-	if (input_frame.compare(RANGE_SENSOR_FRAME) != 0) { // TODO: don't exit, just transform point-cloud
-		printf("Input frame %s is not equivalent to output frame %s ! Exiting ...\n", input_frame.c_str(), RANGE_SENSOR_FRAME.c_str());
-		std::exit(EXIT_FAILURE);
-	}
-	printf("input frame: %s, output frame: %s\n", input_frame.c_str(), RANGE_SENSOR_FRAME.c_str());
-
 	// convert ROS sensor message to PCL point cloud
 	PointCloud::Ptr cloud(new PointCloud);
-	pcl::fromROSMsg(*input, *cloud);
+	fromROSMsg(*input, *cloud);
 	g_has_read = true;
 
-//	// organize point cloud for Organized Nearest Neighbors Search
-//	g_cloud->width = 640;
-//	g_cloud->height = 480;
-//	g_cloud->points.resize(g_cloud->width * g_cloud->height);
-//	for (int i = 0; i < g_cloud->height; i++)
-//	{
-//		for (int j = 0; j < g_cloud->width; j++)
-//		{
-//			g_cloud->points[i * g_cloud->width + j] = cloud->points[i * g_cloud->width + j];
-//		}
-//	}
+	// check whether input frame is equivalent to range sensor frame constant
+	std::string input_frame = input->header.frame_id;
+	if (input_frame.compare(OUTPUT_FRAME) != 0) {
+		std::cout << "Input frame and output frame are different\n";
+		std::cout << "Transforming from " << input_frame << " to " << OUTPUT_FRAME << "\n";
+		PointCloud::Ptr transformed_cloud(new PointCloud);
+		tf::StampedTransform tf_transform;
+		listener->waitForTransform(OUTPUT_FRAME, input_frame,
+				ros::Time(0), ros::Duration(5));
+		listener->lookupTransform(OUTPUT_FRAME, input_frame,
+				ros::Time(0), tf_transform);
+
+		Eigen::Affine3d transform;
+		tf::transformTFToEigen(tf_transform, transform);
+
+		pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
+		cloud = transformed_cloud;
+	} else {
+		std::cout << "Input and output frame are: " << input_frame << "\n";
+	}
 
 	g_cloud = cloud;
-
-//	store data to file
-//	~ pcl::PointCloud<pcl::PointXYZRGB>::Ptr stored_cloud;
-//	~ pcl::fromROSMsg(*input, *stored_cloud);
-//	~ pcl::io::savePCDFileASCII("/home/andreas/test_pcd.pcd", *stored_cloud);
 
 	// search grasp affordances
 	g_cylindrical_shells = g_affordances.searchAffordances(g_cloud);
@@ -101,21 +108,23 @@ int main(int argc, char** argv) {
 	ros::init(argc, argv, "handle_detector");
 	ros::NodeHandle node("~");
 
+	listener.reset(new tf::TransformListener(ros::Duration(20.0)));
+
 	// set point cloud update interval from launch file
 	node.param("update_interval", g_update_interval, 10.0);
 
 	// read parameters
 	g_affordances.initParams(node);
 
-	std::string range_sensor_frame;
+	std::string output_frame;
 	ros::Subscriber sub;
 
-	node.param("camera_frame", RANGE_SENSOR_FRAME, std::string("/camera_rgb_optical_frame"));
+	node.param("output_frame", OUTPUT_FRAME, std::string("/base_link"));
 	node.param("camera_topic", RANGE_SENSOR_TOPIC, std::string("/camera/depth_registered/points"));
 
 	// point cloud read from sensor
 	printf("Reading point cloud data from sensor topic: %s\n", RANGE_SENSOR_TOPIC.c_str());
-	range_sensor_frame = RANGE_SENSOR_FRAME;
+	output_frame = OUTPUT_FRAME;
 	sub = node.subscribe(RANGE_SENSOR_TOPIC, 10, chatterCallback);
 
 	// visualization of point cloud, grasp affordances, and handles
@@ -153,19 +162,19 @@ int main(int argc, char** argv) {
 			ROS_INFO("update cloud");
 
 			// create cylinder messages for visualization and ROS topic
-			marker_array_msg = visualizer.createCylinders(g_cylindrical_shells, range_sensor_frame);
-			cylinder_list_msg = messages.createCylinderArray(g_cylindrical_shells, range_sensor_frame);
+			marker_array_msg = visualizer.createCylinders(g_cylindrical_shells, output_frame);
+			cylinder_list_msg = messages.createCylinderArray(g_cylindrical_shells, output_frame);
 			ROS_INFO("update visualization");
 
 			// create handle messages for visualization and ROS topic
-			handle_list_msg = messages.createHandleList(g_handles, range_sensor_frame);
-			visualizer.createHandles(g_handles, range_sensor_frame, marker_arrays,
+			handle_list_msg = messages.createHandleList(g_handles, output_frame);
+			visualizer.createHandles(g_handles, output_frame, marker_arrays,
 					marker_array_msg_handles);
 			handle_pubs.resize(g_handles.size());
 			for (int i=0; i < handle_pubs.size(); i++)
 				handle_pubs[i] = node.advertise<visualization_msgs::MarkerArray>("visualization_handle_" + boost::lexical_cast<std::string>(i), 10);
 
-			marker_array_msg_handle_numbers = visualizer.createHandleNumbers(g_handles, range_sensor_frame);
+			marker_array_msg_handle_numbers = visualizer.createHandleNumbers(g_handles, output_frame);
 
 			ROS_INFO("update messages");
 
@@ -173,9 +182,9 @@ int main(int argc, char** argv) {
 		}
 
 		// publish point cloud
-		pcl::toROSMsg(*cloud_vis, pc2msg);
+		toROSMsg(*cloud_vis, pc2msg);
 		pc2msg.header.stamp = ros::Time::now();
-		pc2msg.header.frame_id = range_sensor_frame;
+		pc2msg.header.frame_id = output_frame;
 		pcl_pub.publish(pc2msg);
 
 		// publish cylinders for visualization

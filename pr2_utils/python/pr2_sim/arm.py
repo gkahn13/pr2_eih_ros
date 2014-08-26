@@ -56,6 +56,8 @@ class Arm:
         self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm   
         self.tool_frame_link = self.robot.GetLink(self.tool_frame)
         
+        self.gripper_joint = self.robot.GetJoint('{0}_gripper_l_finger_joint'.format(arm_name[0]))
+        
         self.joint_indices = self.manip.GetArmIndices()
 
     #####################
@@ -129,6 +131,24 @@ class Arm:
                 print('teleop: IK invalid')
             
         print('{0} arm end teleop'.format(self.arm_name))
+        
+    def open_gripper(self):
+        self.set_gripper(1.0)
+    
+    def close_gripper(self):
+        self.set_gripper(0.0)
+    
+    def set_gripper(self, pct):
+        """
+        Set gripper to percentage open
+        
+        :param pct: [0,1] amount the gripper is open
+        """
+        lower, upper = self.gripper_joint.GetLimits()
+        value = pct*(upper[0] - lower[0]) + lower[0]
+        index = self.gripper_joint.GetDOFIndex()
+        self.robot.SetDOFValues([value], [index])
+        
     
     #######################
     # state info methods  #

@@ -29,6 +29,16 @@ def test_ik():
         sim.plot_transform(sim.transform_from_to(np.array(rarm.get_pose().matrix), 'base_link', 'world'))
         raw_input()
         sim.clear_plots()
+        
+def test_gripper():
+    sim = simulator.Simulator(view=True)
+    larm = arm.Arm('left',sim=sim)
+    larm.set_posture('mantis')
+    rarm = arm.Arm('right',sim=sim)
+    rarm.set_posture('mantis')
+    
+    IPython.embed()
 
 if __name__ == '__main__':
-    test_ik()
+    #test_ik()
+    test_gripper()

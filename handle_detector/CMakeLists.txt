@@ -7,12 +7,22 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs 
 	message_generation   
   roscpp 
-	pcl_ros
-  pcl_conversions
+	#pcl_ros
+  #pcl_conversions
   std_msgs 
 	tf
 	tf_conversions
   visualization_msgs)
+
+find_package(PCL 1.7 REQUIRED)
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+set(PCL_LIBRARIES ${PCL_LIBRARIES} "pcl_common")
+set(PCL_BUILD_TYPE Release)
+
+message("PCL_LIBRARIES: ${PCL_LIBRARIES}")
 
 ## find Lapack
 find_package(LAPACK REQUIRED)
@@ -46,8 +56,8 @@ catkin_package(
     geometry_msgs 
     message_runtime 
     roscpp 
-    pcl_ros
-    pcl_conversions
+    #pcl_ros
+    #pcl_conversions
     std_msgs 
     tf
     tf_conversions
@@ -58,6 +68,8 @@ catkin_package(
     LAPACK)
 
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} include)
+
+set(catkin_LIBRARIES ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 ## create executables
 add_executable(${PROJECT_NAME} src/handle_detector.cpp)

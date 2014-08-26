@@ -13,6 +13,7 @@
 #include "handle_detector/visualizer.h"
 #include <iostream>
 //#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_conversions.h>
 //#include <pcl_ros/point_cloud.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -62,7 +63,7 @@ void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input)
 	
 	// convert ROS sensor message to PCL point cloud
 	PointCloud::Ptr cloud(new PointCloud);
-	pcl::fromROSMsg(*input, *cloud);
+	fromROSMsg(*input, *cloud);
 	g_has_read = true;
 	
 	// organize point cloud for Organized Nearest Neighbors Search
@@ -220,7 +221,7 @@ int main(int argc, char** argv)
 		}
 		
 		// publish point cloud
-		pcl::toROSMsg(*cloud_vis_rgb, pc2msg);
+		toROSMsg(*cloud_vis_rgb, pc2msg);
 		pc2msg.header.stamp = ros::Time::now();
 		pc2msg.header.frame_id = range_sensor_frame;
 		pcl_pub.publish(pc2msg);

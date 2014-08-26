@@ -36,7 +36,7 @@ class Planner:
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
         self.joint_indices = self.manip.GetArmIndices()
         
-    def get_joint_trajectory(self, start_joints, target_pose, n_steps=20):
+    def get_joint_trajectory(self, start_joints, target_pose, n_steps=20, ignore_orientation=False):
         """
         Calls trajopt to plan collision-free trajectory
         
@@ -66,7 +66,8 @@ class Planner:
         #    return False
         init_joint_target = None
         
-        request = self._get_trajopt_request(xyz_target, quat_target, init_joint_target, n_steps)
+        request = self._get_trajopt_request(xyz_target, quat_target, init_joint_target, n_steps,
+                                            ignore_orientation=ignore_orientation)
         
         # convert dictionary into json-formatted string
         s = json.dumps(request) 
@@ -77,7 +78,7 @@ class Planner:
         
         return result.GetTraj()
         
-    def _get_trajopt_request(self, xyz_target, quat_target, init_joint_target, n_steps):
+    def _get_trajopt_request(self, xyz_target, quat_target, init_joint_target, n_steps, ignore_orientation=False):
         """
         :param xyz_target: 3d list
         :param quat_target: [w,x,y,z]
@@ -85,6 +86,8 @@ class Planner:
         :param n_steps: trajopt discretization
         :return trajopt json request
         """
+        rot_coeffs = [1,1,1] if not ignore_orientation else [0,0,0]
+        
         request = {
             "basic_info" : {
                 "n_steps" : n_steps,
@@ -109,7 +112,7 @@ class Planner:
                         "params" : {"xyz" : xyz_target, 
                                     "wxyz" : quat_target,
                                     "link": self.tool_frame,
-                                    "rot_coeffs" : [1,1,1],
+                                    "rot_coeffs" : rot_coeffs,
                                     "pos_coeffs" : [0,0,0],
                                     }
                         },

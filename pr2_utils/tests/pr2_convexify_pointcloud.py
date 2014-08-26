@@ -12,10 +12,12 @@ class TestConvexifyPointcloud:
         self.pc_sub = rospy.Subscriber('/cloud_pcd', sm.PointCloud2, self._pc_callback)
         
         self.sim = simulator.Simulator(view=True)
-        self.arm = arm.Arm('right', sim=self.sim)
+        self.rarm = arm.Arm('right', sim=self.sim)
+        self.larm = arm.Arm('left', sim=self.sim)
         self.cam = camera.Camera(self.arm, self.sim)
         
-        self.arm.set_posture('mantis')
+        self.rarm.set_posture('mantis')
+        self.larm.set_posture('mantis')
 
     def _pc_callback(self, msg):
         self.pc = msg
@@ -25,7 +27,7 @@ class TestConvexifyPointcloud:
             print('Waiting for pointcloud')
             rospy.sleep(1)
             
-        names = convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, self.pc, self.cam.get_pose())
+        convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, self.pc, self.cam.get_pose())
         
 
 if __name__ == '__main__':

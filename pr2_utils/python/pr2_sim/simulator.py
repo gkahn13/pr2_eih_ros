@@ -88,6 +88,9 @@ class Simulator:
             print('Incorrect array size in transform_from_to')
             return p
         
+        ref_link_name = ref_link_name.replace('/','')
+        targ_link_name = targ_link_name.replace('/','')
+        
         # ref -> world
         if ref_link_name != 'world':
             ref_from_world = self.robot.GetLink(ref_link_name).GetTransform()
