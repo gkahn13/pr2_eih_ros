@@ -68,7 +68,7 @@ rosrun handle_poses_publisher
 ```
 /handle_detector/avg_handle_poses
 /kinfu/graspable_points
-/kinfu/table_pose
+/kinfu/plane_bounding_box
 ```
 #### outline:
 > 1. convex decomposition of pointcloud - add table from table pose
