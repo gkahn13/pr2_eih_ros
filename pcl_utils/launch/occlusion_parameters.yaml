@@ -8,7 +8,7 @@ max_x: 2
 min_y: 0.5
 max_y: 1.5
 min_z: 0.25
-max_z: 1.5
+max_z: 1.6
 
 # cluster_extraction.cpp
 cluster_extraction_leaf_size: 0.01
@@ -21,9 +21,9 @@ cluster_extraction_distance_threshold: 0.02
 table_tolerance: 0.05
 
 # plane_recognition.cpp
-plane_recognition_leaf_size: 0.05
-plane_recognition_distance_threshold: 0.01
+plane_recognition_leaf_size: 0.02
+plane_recognition_distance_threshold: 0.04
 
 # kinfu
 using_head_camera: false
-table_cutoff_above: 0.02
+table_cutoff_above: 0.0

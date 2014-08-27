@@ -50,8 +50,7 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
     ros::param::param<float>("/occlusion_parameters/min_y", min_y, 0);
     ros::param::param<float>("/occlusion_parameters/max_y", max_y, 2);
     ros::param::param<float>("/occlusion_parameters/min_z", min_z, 0);
-    ros::param::param<float>("/occlusion_parameters/max_z", max_z, 2);
-
+    ros::param::param<float>("occlusion_parameters/max_z", max_z, 2);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_full (new pcl::PointCloud<pcl::PointXYZ>);
 

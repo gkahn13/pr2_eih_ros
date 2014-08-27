@@ -23,7 +23,7 @@ void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, 
          iter != zero_crossing_cloud->end(); iter++)
     {
         if (plane_coeff->values[0] * iter->x + plane_coeff->values[1] * iter->y + plane_coeff->values[2] * iter->z + plane_coeff->values[3] - table_cutoff >= 0) {
-            pcl::PointXYZ new_point;
+    	    pcl::PointXYZ new_point;
             new_point = pcl::transformPoint(*iter, transform_affine.inverse());
             new_points.push_back(new_point);
         }
