@@ -60,12 +60,13 @@ int main(int argc, char** argv)
     ros::NodeHandle nh("~");
     ros::Publisher markers_pub;
     ros::Publisher points_pub;
-    ros::Publisher regions_pub, plane_pub, object_points_pub;
+    ros::Publisher regions_pub, plane_pub, object_points_pub, plane_points_pub;
     markers_pub = nh.advertise<visualization_msgs::MarkerArray> ("objects", 1);
     points_pub = nh.advertise<sensor_msgs::PointCloud2> ("occluded_points", 1);
     regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 1);
     plane_pub = nh.advertise<pcl_utils::BoundingBox>("plane_bounding_box", 1);
     object_points_pub = nh.advertise<sensor_msgs::PointCloud2>("graspable_points", 1);
+    plane_points_pub = nh.advertise<sensor_msgs::PointCloud2>("plane_points", 1);
 
     ros::spinOnce();
 
@@ -97,7 +98,7 @@ int main(int argc, char** argv)
 //    std::string unused;
 //    getline(cin, unused);
 
-    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub);
+    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub);
 
     return 0;
 

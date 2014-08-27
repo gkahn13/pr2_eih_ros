@@ -1,6 +1,12 @@
 #include <pcl_utils/plane_recognition.h>
 #include <pcl/io/pcd_io.h>
+
 #include "ros/ros.h"
+#include "sensor_msgs/PointCloud2.h"
+#include <pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 #include <pcl_utils/BoundingBox.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
@@ -12,7 +18,7 @@ using namespace std;
 
 namespace plane_recognition
 {
-void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients, ros::Publisher plane_pub, visualization_msgs::MarkerArrayPtr markers)
+void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients, ros::Publisher plane_pub, visualization_msgs::MarkerArrayPtr markers, ros::Publisher plane_points_pub)
 {
 
     float leaf_size, distance_threshold;
@@ -33,21 +39,29 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     seg.setOptimizeCoefficients (true);
     // Mandatory
     seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType(pcl::SAC_MLESAC);
-//    seg.setMethodType (pcl::SAC_RANSAC);
+//    seg.setMethodType(pcl::SAC_MLESAC);
+    seg.setMethodType (pcl::SAC_RANSAC);
     seg.setDistanceThreshold (distance_threshold);
 
     // input cloud
     seg.setInputCloud (cloud_filtered);
-
     seg.segment (*inliers, *coefficients);
 
     pcl::PointCloud<pcl::PointXYZ> plane_points;
 
-    for (std::vector<int>::iterator iter = inliers->indices.begin();
-        iter != inliers->indices.end(); iter++) {
-        plane_points.push_back(cloud_filtered->points[*iter]);
-    }
+    // Create the filtering object
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    // Extract the inliers
+    extract.setInputCloud(cloud_filtered);
+    extract.setIndices(inliers);
+    extract.setNegative (false);
+    extract.filter(plane_points);
+
+    sensor_msgs::PointCloud2 ros_plane_points;
+    toROSMsg(plane_points, ros_plane_points);
+    ros_plane_points.header.stamp = ros::Time::now();
+    ros_plane_points.header.frame_id = "/kinfu_frame";
+    plane_points_pub.publish(ros_plane_points);
 
 
     tf::TransformListener listener;

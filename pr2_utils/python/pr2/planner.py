@@ -143,21 +143,6 @@ class Planner:
                 }
             }
         
-        """
-        for t in xrange(n_steps):
-            request["costs"].append({
-                        "type" : "pose",
-                        "name" : "target_pose",
-                        "params" : {"xyz" : xyz_target, 
-                                    "wxyz" : quat_target,
-                                    "link": self.tool_frame,
-                                    "rot_coeffs" : [1,1,1],
-                                    "pos_coeffs" : [0,0,0],
-                                    "timestep" : t
-                                    }
-                        })
-        """
-        
         return request
         
  

@@ -15,7 +15,7 @@
 #include <visualization_msgs/MarkerArray.h>
 
 namespace plane_recognition {
-    void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients, ros::Publisher plane_pub, visualization_msgs::MarkerArrayPtr markers);
+    void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndices::Ptr inliers, pcl::ModelCoefficients::Ptr coefficients, ros::Publisher plane_pub, visualization_msgs::MarkerArrayPtr markers, ros::Publisher plane_points_pub);
 }
 
 

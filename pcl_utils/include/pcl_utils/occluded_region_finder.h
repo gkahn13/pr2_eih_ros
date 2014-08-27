@@ -25,7 +25,7 @@
 namespace occluded_region_finder {
 
 void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub,
-                           ros::Publisher points_pub, ros::Publisher regions_pub, ros::Publisher plane_pub, ros::Publisher object_points_pub); //,
+                           ros::Publisher points_pub, ros::Publisher regions_pub, ros::Publisher plane_pub, ros::Publisher object_points_pub, ros::Publisher plane_points_pub); //,
                            //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud);
 
 }

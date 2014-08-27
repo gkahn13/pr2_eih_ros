@@ -56,6 +56,7 @@ Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_ma
 		exit(0);
 	}
 
+	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/"+arm_letter+"_arm_trajectory", 1);
 }
 
 /**
@@ -117,6 +118,7 @@ void Arm::execute_joint_trajectory(const std::vector<VectorJ>& joint_traj, doubl
 	}
 
 	joint_command_client->sendGoal(goal);
+	display_trajectory(joint_traj);
 
 	if (block) {
 		ROS_INFO_STREAM("Executing joint trajectory for " << time_from_start << " seconds");
@@ -278,6 +280,34 @@ Matrix4d Arm::fk(const VectorJ& joints) {
 
 bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
 	return arm_sim->ik(pose, joints);
+}
+
+/**
+ *
+ * Display methods
+ *
+ */
+
+void Arm::display_trajectory(const std::vector<VectorJ>& joint_traj) {
+	geometry_msgs::PoseArray pose_array;
+	pose_array.poses.resize(joint_traj.size());
+	for(int t=0; t < joint_traj.size(); ++t) {
+		Matrix4d pose = fk(joint_traj[t]);
+		pose_array.poses[t].position.x = pose(0,3);
+		pose_array.poses[t].position.y = pose(1,3);
+		pose_array.poses[t].position.z = pose(2,3);
+
+		Quaterniond quat(pose.block<3,3>(0,0));
+		pose_array.poses[t].orientation.w = quat.w();
+		pose_array.poses[t].orientation.x = quat.x();
+		pose_array.poses[t].orientation.y = quat.y();
+		pose_array.poses[t].orientation.z = quat.z();
+	}
+
+	pose_array.header.frame_id = "/base_link";
+	pose_array.header.stamp = ros::Time::now();
+
+	display_trajectory_pub.publish(pose_array);
 }
 
 /**

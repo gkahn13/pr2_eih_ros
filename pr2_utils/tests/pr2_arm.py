@@ -21,5 +21,5 @@ def test_gripper():
 
 if __name__ == '__main__':
     rospy.init_node('pr2_arm', anonymous=True)
-    #test_mantis()
-    test_gripper()
+    test_mantis()
+#     test_gripper()

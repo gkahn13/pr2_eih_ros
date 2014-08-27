@@ -58,7 +58,7 @@ typedef short WeightT;
 #endif
 
 boost::shared_ptr<tf::TransformListener> listener;
-ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub;
+ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub;
 ros::Subscriber signal_sub, head_points_sub;
 bool downloading;
 int counter;
@@ -153,7 +153,7 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
 //		pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 //        pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
 //        PointCloudVoxelGrid::CloudType::Ptr inverse_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new  pcl::PointCloud<pcl::PointXYZ>);
-        occluded_region_finder::find_occluded_regions(tsdf_vector, tsdf_weights, transformation_matrix, false, "kinfu", markers_pub, points_pub, regions_pub, plane_pub, object_points_pub); //,
+        occluded_region_finder::find_occluded_regions(tsdf_vector, tsdf_weights, transformation_matrix, false, "kinfu", markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub); //,
         //zero_crossing_cloud, foreground_cloud, inverse_cloud);
         #endif // FIND_OCCLUSIONS
 
@@ -486,6 +486,7 @@ int main (int argc, char** argv)
     signal_sub = nh.subscribe<std_msgs::Empty> ("/get_occluded", 1, get_occluded);
     plane_pub = nh.advertise<pcl_utils::BoundingBox> ("plane_bounding_box", 1);
     object_points_pub = nh.advertise<sensor_msgs::PointCloud2> ("graspable_points", 1);
+    plane_points_pub = nh.advertise<sensor_msgs::PointCloud2>("plane_points", 1);
     #endif
 
     head_points_sub = nh.subscribe<sensor_msgs::PointCloud2>("/head_camera/depth_registered/points", 1, _head_cloud_callback);

@@ -8,6 +8,7 @@
 #include <ros/console.h>
 #include <sensor_msgs/JointState.h>
 #include <trajectory_msgs/JointTrajectory.h>
+#include <geometry_msgs/PoseArray.h>
 
 #include <control_msgs/JointTrajectoryAction.h>
 #include <control_msgs/GripperCommandAction.h>
@@ -80,6 +81,9 @@ private:
 	double min_grasp, max_grasp, default_max_effort;
 	GripperCommandClient *gripper_command_client;
 
+	ros::Publisher display_trajectory_pub;
+
+	void display_trajectory(const std::vector<VectorJ>& joint_traj);
 	void _joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_state);
 };
 
