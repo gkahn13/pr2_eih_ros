@@ -180,10 +180,19 @@ class Simulator:
     ######################
     
     def clear_kinbodies(self):
+        """
+        Removes all user added kinbodies
+        """
         for name in self.added_kinbody_names:
             self.env.Remove(self.env.GetKinBody(name))
     
     def add_kinbody(self, vertices, triangles, name=None, check_collision=False):
+        """
+        :param vertices: list of 3d np.ndarray corresponding to points in the mesh
+        :param triangles: list of 3d indices corresponding to vertices
+        :param name: name of the kinbody to be added
+        :param check_collision: if True, will not add kinbody if it collides with the robot
+        """
         name = name if name is not None else 'kinbody'+str(time.time())
         self.added_kinbody_names.append(name)
         
@@ -200,6 +209,47 @@ class Simulator:
             if self.env.CheckCollision(self.robot, body):
                 self.env.Remove(body)
                 self.added_kinbody_names = self.added_kinbody_names[:-1]
+                
+    def add_box(self, pose, extents, name=None, check_collision=False):
+        """
+        :param pose: 4x4 np.ndarray in frame world
+        :param extents: length 3 list/np.ndarray of axis lengths
+        :param name: name of kinbod to be added
+        :param check_collision: if True, will not add kinbody if it collides with the robot
+        """
+        name = name if name is not None else 'kinbody'+str(time.time())
+        pose = np.array(pose)
+        rot = pose[:3,:3]
+        trans = pose[:3,3]
+        
+        box = rave.RaveCreateKinBody(self.env, '')
+        rx, ry, rz = list(extents)
+        vertices = np.array([
+            [-rx, -ry, -rz],
+            [-rx, -ry, rz],
+            [-rx, ry, -rz],
+            [-rx, ry, rz],
+            [rx, -ry, -rz],
+            [rx, -ry, rz],
+            [rx, ry, -rz],
+            [rx, ry, rz]])
+        vertices = [rot.dot(v)+trans for v in vertices]
+        triangles = [
+            [0,1,2],
+            [3,1,2],
+            [0,1,4],
+            [5,1,4],
+            [0,2,4],
+            [6,2,4],
+            [7,6,5],
+            [4,6,5],
+            [7,6,3],
+            [2,6,3],
+            [7,5,3],
+            [1,5,3]]
+        self.add_kinbody(vertices, triangles, name=name, check_collision=check_collision)
+
+        
     
     ############
     # plotting #

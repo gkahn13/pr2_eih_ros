@@ -26,4 +26,4 @@ plane_recognition_distance_threshold: 0.04
 
 # kinfu
 using_head_camera: false
-table_cutoff_above: 0.0
+table_cutoff_above: 0.01

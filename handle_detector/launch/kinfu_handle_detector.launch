@@ -2,7 +2,7 @@
 	<node name="handle_detector" pkg="handle_detector" type="handle_detector" output="screen">
 		<!-- camera parameters -->
 		<param name="output_frame" value="/base_link" />
-		<param name="camera_topic" value="/kinfu/graspable_points" /> <!-- "/kinfu/kinfu_points" /> -->
+		<param name="camera_topic" value="/kinfu/graspable_points" />
 		
 		<!-- affordance search parameters -->
     	<param name="file" value="" />
