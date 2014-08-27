@@ -10,9 +10,11 @@
 #include <trajectory_msgs/JointTrajectory.h>
 
 #include <control_msgs/JointTrajectoryAction.h>
+#include <control_msgs/GripperCommandAction.h>
 #include <actionlib/client/simple_action_client.h>
 
-typedef actionlib::SimpleActionClient<control_msgs::JointTrajectoryAction > JointCommandClient;
+typedef actionlib::SimpleActionClient<control_msgs::JointTrajectoryAction> JointCommandClient;
+typedef actionlib::SimpleActionClient<control_msgs::GripperCommandAction> GripperCommandClient;
 
 #include <Eigen/Eigen>
 using namespace Eigen;
@@ -30,6 +32,8 @@ class Arm {
 	                                                 "_wrist_flex_joint",
 	                                                 "_wrist_roll_joint"};
 
+	std::string gripper_joint_name_suffix = "_gripper_joint";
+
 public:
 	enum ArmType { left, right };
 	enum Posture { untucked, tucked, up, side, mantis };
@@ -43,9 +47,9 @@ public:
 	void go_to_pose(const Matrix4d& pose, double speed=DEFAULT_SPEED, bool block=true);
 	void go_to_joints(const VectorJ& joints, double speed=DEFAULT_SPEED, bool block=true);
 
-	// close_griper(...)
-	// open_gripper(...)
-	// set_gripper(...)
+	void close_gripper(double max_effort=0, bool block=true, double timeout=10.0);
+	void open_gripper(double max_effort=0, bool block=true, double timeout=10.0);
+	void set_gripper(double pct, double max_effort=0, bool block=true, double timeout=10.0);
 
 	void teleop();
 
@@ -62,7 +66,10 @@ private:
 
 	std::string arm_name;
 	std::vector<std::string> joint_names;
+	std::string gripper_joint_name;
+
 	VectorJ current_joints;
+	double current_grasp;
 
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber joint_state_sub;
@@ -70,6 +77,8 @@ private:
 	bool received_joint_state;
 
 	JointCommandClient *joint_command_client;
+	double min_grasp, max_grasp, default_max_effort;
+	GripperCommandClient *gripper_command_client;
 
 	void _joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_state);
 };

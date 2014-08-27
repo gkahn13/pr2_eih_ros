@@ -8,7 +8,7 @@ namespace pr2 {
  *
  */
 
-Arm::Arm(ArmType a) : arm_type(a){
+Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_max_effort(50.0) {
 
 	sim = new pr2_sim::Simulator(false, true);
 	if (a == ArmType::right) {
@@ -23,6 +23,7 @@ Arm::Arm(ArmType a) : arm_type(a){
 	for(const std::string& joint_name_suffix : joint_name_suffixes) {
 		joint_names.push_back(arm_letter+joint_name_suffix);
 	}
+	gripper_joint_name = arm_letter+gripper_joint_name_suffix;
 
 	// setup ROS
 	nh_ptr = new ros::NodeHandle();
@@ -43,6 +44,15 @@ Arm::Arm(ArmType a) : arm_type(a){
 	ROS_INFO("Waiting for joint command server...");
 	if (!joint_command_client->waitForServer(ros::Duration(5.0))) {
 		ROS_ERROR("Failed to establish connection with joint command server, exiting!");
+		exit(0);
+	}
+
+	// create gripper command action client
+	gripper_command_client = new GripperCommandClient(arm_letter+"_gripper_controller/gripper_action", true);
+
+	//wait for the gripper action server to come up
+	if (!gripper_command_client->waitForServer(ros::Duration(5.0))){
+		ROS_ERROR("Failed to establish connection with gripper command server, exiting!");
 		exit(0);
 	}
 
@@ -160,6 +170,41 @@ void Arm::go_to_joints(const VectorJ& joints, double speed, bool block) {
 	execute_joint_trajectory(std::vector<VectorJ>(1, joints), speed, block);
 }
 
+void Arm::close_gripper(double max_effort, bool block, double timeout) {
+	set_gripper(0.0, max_effort, block, timeout);
+}
+
+void Arm::open_gripper(double max_effort, bool block, double timeout) {
+	set_gripper(1.0, max_effort, block, timeout);
+}
+
+void Arm::set_gripper(double pct, double max_effort, bool block, double timeout) {
+	max_effort = (max_effort > 0) ? max_effort : default_max_effort;
+
+	control_msgs::GripperCommandGoal goal;
+	double grasp = (max_grasp - min_grasp)*pct + min_grasp;
+	goal.command.position = grasp;
+	goal.command.max_effort = max_effort;
+
+	gripper_command_client->sendGoal(goal);
+
+	if (block) {
+//		gripper_command_client->waitForResult(ros::Duration(timeout));
+		ros::Time start = ros::Time::now();
+		double last_grasp = current_grasp;
+		do {
+			ros::Duration(0.1).sleep();
+			ros::spinOnce();
+//			double delta_final_grasp = current_grasp - std::max<double>(grasp,0);
+//			double delta_grasp = fabs(last_grasp - current_grasp);
+//			double time = (ros::Time::now() - start).toSec();
+		} while(fabs(current_grasp - std::max<double>(grasp,0)) > .005 &&
+				(fabs(last_grasp - current_grasp) > 1e-5) &&
+				((ros::Time::now() - start).toSec() < timeout));
+
+	}
+}
+
 void Arm::teleop() {
 	double pos_step = .01;
 	std::map<int,rave::Vector> delta_position =
@@ -258,6 +303,14 @@ void Arm::_joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_sta
 	}
 
 	current_joints = new_joints;
+
+	for(int i=0; i < joint_state->name.size(); ++i) {
+		if (joint_state->name[i] == gripper_joint_name) {
+			current_grasp = joint_state->position[i];
+			break;
+		}
+	}
+
 	received_joint_state = true;
 }
 

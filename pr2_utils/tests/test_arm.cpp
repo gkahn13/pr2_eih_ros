@@ -50,6 +50,17 @@ void print_joints() {
 	}
 }
 
+void test_gripper() {
+	pr2::Arm arm(pr2::Arm::ArmType::right);
+	ros::Duration(2).sleep();
+
+	std::cout << "Closing gripper\n";
+	arm.close_gripper();
+
+	std::cout << "Opening gripper\n";
+	arm.open_gripper();
+}
+
 int main(int argc, char** argv) {
 	// Init the ROS node
 	ros::init(argc, argv, "test_arm");
@@ -57,7 +68,8 @@ int main(int argc, char** argv) {
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 
 
-	test_movement();
+//	test_movement();
 //	test_match_transforms();
 //	print_joints();
+	test_gripper();
 }
