@@ -9,6 +9,23 @@
 namespace occluded_region_finder
 {
 
+Eigen::Matrix3f calculate_rotation(Eigen::Vector3f A, Eigen::Vector3f B)
+{
+    Eigen::Matrix3f G = Eigen::Matrix3f::Zero();
+    G(0, 0) = A.dot(B);
+    G(0, 1) = -A.cross(B).norm();
+    G(1, 0) = A.cross(B).norm();
+    G(1, 1) = A.dot(B);
+    G(2, 2) = 1;
+
+    Eigen::Matrix3f Finv = Eigen::Matrix3f::Zero();
+    Finv.col(0) = A;
+    Finv.col(1) = B - A.dot(B) * A;
+    Finv.col(1) = Finv.col(1) / Finv.col(1).norm();
+    Finv.col(2) = B.cross(A);
+    return Finv * G * Finv.inverse();
+}
+
 void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::ModelCoefficients::Ptr plane_coeff, ros::Publisher object_points_pub) {
     float table_cutoff;
     ros::param::param<float>("/occlusion_parameters/table_cutoff_above", table_cutoff, 0.005f);
@@ -39,26 +56,27 @@ void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, 
 
 Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max_point_OBB, Eigen::Matrix3f rotational_matrix_OBB, int a1, int a2, int min_direction)
 {
+    Eigen::Matrix3f id = Eigen::Matrix3f::Identity();
     Eigen::Vector3f corner;
     if (min_direction == 2)
     {
-        corner = new_position + a1 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,0) * (min_direction != 0) * (max_point_OBB.x) +
-                 a2 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,1) * (min_direction != 1) * (max_point_OBB.y) +
-                 rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,2) * (min_direction != 2) * (max_point_OBB.z);
+        corner = new_position + a1 * rotational_matrix_OBB * id.col(0) * (min_direction != 0) * (max_point_OBB.x) +
+                 a2 * rotational_matrix_OBB * id.col(1) * (min_direction != 1) * (max_point_OBB.y) +
+                 rotational_matrix_OBB * id.col(2) * (min_direction != 2) * (max_point_OBB.z);
     }
 
     if (min_direction == 1)
     {
-        corner = new_position + a1 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,0) * (min_direction != 0) * (max_point_OBB.x) +
-                 rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,1) * (min_direction != 1) * (max_point_OBB.y) +
-                 a2 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,2) * (min_direction != 2) * (max_point_OBB.z);
+        corner = new_position + a1 * rotational_matrix_OBB * id.col(0) * (min_direction != 0) * (max_point_OBB.x) +
+                 rotational_matrix_OBB * id.col(1) * (min_direction != 1) * (max_point_OBB.y) +
+                 a2 * rotational_matrix_OBB * id.col(2) * (min_direction != 2) * (max_point_OBB.z);
     }
 
     if (min_direction == 0)
     {
-        corner = new_position + rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,0) * (min_direction != 0) * (max_point_OBB.x) +
-                 a1 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,1) * (min_direction != 1) * (max_point_OBB.y) +
-                 a2 * rotational_matrix_OBB * Eigen::Matrix3f::Identity().block<3, 1>(0,2) * (min_direction != 2) * (max_point_OBB.z);
+        corner = new_position + rotational_matrix_OBB * id.col(0) * (min_direction != 0) * (max_point_OBB.x) +
+                 a1 * rotational_matrix_OBB * id.col(1) * (min_direction != 1) * (max_point_OBB.y) +
+                 a2 * rotational_matrix_OBB * id.col(2) * (min_direction != 2) * (max_point_OBB.z);
     }
 
     return corner;
@@ -68,106 +86,46 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
                                pcl_utils::OccludedRegion* occ_message, std::vector<Eigen::Vector3f> *corners)
 {
-    Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
-    Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
-    Eigen::Vector3f max_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
 
-    Eigen::Quaternionf quat (rotational_matrix_OBB);
+    Eigen::Vector3f weights (max_point_OBB.x, max_point_OBB.y, max_point_OBB.z);
+    Eigen::Vector3f position_vector = position / position.norm();
 
-//    double min_norm = INFINITY;
-    double max_norm = -INFINITY;
-    int min_direction = 0;
-    int forward_back = -1;
+    int direction = 0;
+    double max_dot_product = -INFINITY;
     for (int i = 0; i < 3; i++)
     {
-
-        pcl::PointXYZ current_point;
-
-        adder(i, i) = 1;
-
-        std::stringstream ss3;
-        ss3 << "sphere min corner" << j << i;
-
-        double current_norm;
-//        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector + position;
-        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector;
-        current_norm = current_vector.norm();
-        current_point.x = current_vector(0);
-        current_point.y = current_vector(1);
-        current_point.z = current_vector(2);
-//        if (current_norm < min_norm)
-        if (current_vector(2) / current_norm > max_norm)
-        {
-//            min_norm = current_norm;
-            max_norm = current_vector(2) / current_norm;
-            min_direction = i;
-            forward_back = -1;
-//            forward_back = 1;
+        double current_dot_product = position_vector.dot(rotational_matrix_OBB.col(i));
+        if (current_dot_product > max_dot_product) {
+                direction = i;
+                max_dot_product = current_dot_product;
         }
-
-
-//        current_vector = position - rotational_matrix_OBB * adder * max_vector; // not sure why this is minus, but it works
-        current_vector = -1 * rotational_matrix_OBB * adder * max_vector;
-        current_point.x = current_vector(0);
-        current_point.y = current_vector(1);
-        current_point.z = current_vector(2);
-
-        current_norm = current_vector.norm();
-        ss3 << "sphere max corner" << j << i;
-        //viewer->addSphere(current_point, 0.005, ss3.str());
-
-//        if (current_norm < min_norm)
-        if (current_vector(2) / current_norm > max_norm)
-        {
-//            min_norm = current_norm;
-            max_norm = current_vector(2) / current_norm;
-            min_direction = i;
-            forward_back = 1;
-//            forward_back = -1;
-        }
-
-        adder(i, i) = 0;
-
-
     }
 
-    adder(min_direction, min_direction) = 1;
+    Eigen::Matrix3f U = occluded_region_finder::calculate_rotation(rotational_matrix_OBB.col(direction), position_vector);
 
-    Eigen::Vector3f new_position = position + forward_back * rotational_matrix_OBB * adder * max_vector;
+    Eigen::Matrix3f new_vectors = U * rotational_matrix_OBB;
 
-    std::stringstream ss2;
-    int i = 0;
+    Eigen::Vector3f front_face_center = position - weights(direction) * new_vectors.col(direction);
+
+    Eigen::Quaternionf quat(new_vectors);
+
     for (int a1 = -1; a1 <= 1; a1 = a1 + 2)
     {
         for (int a2 = -1 * a1; a1 * a2 <= 1; a2 = a2 + a1 * 2)
         {
             Eigen::Vector3f corner;
-            corner = calculate_corner(new_position, max_point_OBB, rotational_matrix_OBB, a1, a2, min_direction);
+            corner = calculate_corner(front_face_center, max_point_OBB, new_vectors, a1, a2, direction);
 
 //            std::cout << "corner: " << std::endl << corner << std::endl;
 
-            ss2.str("");
             geometry_msgs::Point32 corner_point;
             corner_point.x = corner(0);
             corner_point.y = corner(1);
             corner_point.z = corner(2);
             occ_message->front_face.points.push_back(corner_point);
             corners->push_back(corner);
-
-//                ss2 << "corner " << j << " " << i;
-//                viewer->addSphere(corner_point, 0.01, ss2.str());
-//                std::cout << "corner: " << std::endl << corner << std::endl;
-//                ss2.str("");
-//                ss2 << "point " << j << " " << i;
-//                viewer->addText3D(ss2.str(), corner_point, 0.005, 1, 1, 1, ss2.str());
-
-            i++;
         }
     }
-
-
-    ss2 << "face" << j;
-//    viewer->addCube (new_position, quat, (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x), (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y), (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z), ss2.str());
 
 
     visualization_msgs::Marker marker;
@@ -176,20 +134,146 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
     marker.id = j + 1000;
     marker.type = visualization_msgs::Marker::CUBE;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = new_position(0);
-    marker.pose.position.y = new_position(1);
-    marker.pose.position.z = new_position(2);
+    marker.pose.position.x = front_face_center(0);
+    marker.pose.position.y = front_face_center(1);
+    marker.pose.position.z = front_face_center(2);
     marker.pose.orientation.x = quat.x();
     marker.pose.orientation.y = quat.y();
     marker.pose.orientation.z = quat.z();
     marker.pose.orientation.w = quat.w();
-    marker.scale.x = (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x);
-    marker.scale.y = (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
-    marker.scale.z = (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
+    marker.scale.x = (direction != 0) * (max_point_OBB.x - min_point_OBB.x);
+    marker.scale.y = (direction != 1) * (max_point_OBB.y - min_point_OBB.y);
+    marker.scale.z = (direction != 2) * (max_point_OBB.z - min_point_OBB.z);
     marker.color.a = 1;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
     marker.color.b = 0.0;
+
+
+    //    Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
+    //    Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
+    //    Eigen::Vector3f max_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
+    //
+    //    Eigen::Quaternionf quat (rotational_matrix_OBB);
+    //
+    ////    double min_norm = INFINITY;
+    //    double max_norm = -INFINITY;
+    //    int min_direction = 0;
+    //    int forward_back = -1;
+    //    for (int i = 0; i < 3; i++)
+    //    {
+    //
+    //        pcl::PointXYZ current_point;
+    //
+    //        adder(i, i) = 1;
+    //
+    //        std::stringstream ss3;
+    //        ss3 << "sphere min corner" << j << i;
+    //
+    //        double current_norm;
+    ////        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector + position;
+    //        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector;
+    //        current_norm = current_vector.norm();
+    //        current_point.x = current_vector(0);
+    //        current_point.y = current_vector(1);
+    //        current_point.z = current_vector(2);
+    ////        if (current_norm < min_norm)
+    //        if (current_vector(2) / current_norm > max_norm)
+    //        {
+    ////            min_norm = current_norm;
+    //            max_norm = current_vector(2) / current_norm;
+    //            min_direction = i;
+    //            forward_back = -1;
+    ////            forward_back = 1;
+    //        }
+    //
+    //
+    ////        current_vector = position - rotational_matrix_OBB * adder * max_vector; // not sure why this is minus, but it works
+    //        current_vector = -1 * rotational_matrix_OBB * adder * max_vector;
+    //        current_point.x = current_vector(0);
+    //        current_point.y = current_vector(1);
+    //        current_point.z = current_vector(2);
+    //
+    //        current_norm = current_vector.norm();
+    //        ss3 << "sphere max corner" << j << i;
+    //        //viewer->addSphere(current_point, 0.005, ss3.str());
+    //
+    ////        if (current_norm < min_norm)
+    //        if (current_vector(2) / current_norm > max_norm)
+    //        {
+    ////            min_norm = current_norm;
+    //            max_norm = current_vector(2) / current_norm;
+    //            min_direction = i;
+    //            forward_back = 1;
+    ////            forward_back = -1;
+    //        }
+    //
+    //        adder(i, i) = 0;
+    //
+    //
+    //    }
+    //
+    //    adder(min_direction, min_direction) = 1;
+    //
+    //    Eigen::Vector3f new_position = position + forward_back * rotational_matrix_OBB * adder * max_vector;
+    //
+    //    std::stringstream ss2;
+    //    int i = 0;
+    //    for (int a1 = -1; a1 <= 1; a1 = a1 + 2)
+    //    {
+    //        for (int a2 = -1 * a1; a1 * a2 <= 1; a2 = a2 + a1 * 2)
+    //        {
+    //            Eigen::Vector3f corner;
+    //            corner = calculate_corner(new_position, max_point_OBB, rotational_matrix_OBB, a1, a2, min_direction);
+    //
+    ////            std::cout << "corner: " << std::endl << corner << std::endl;
+    //
+    //            ss2.str("");
+    //            geometry_msgs::Point32 corner_point;
+    //            corner_point.x = corner(0);
+    //            corner_point.y = corner(1);
+    //            corner_point.z = corner(2);
+    //            occ_message->front_face.points.push_back(corner_point);
+    //            corners->push_back(corner);
+    //
+    ////                ss2 << "corner " << j << " " << i;
+    ////                viewer->addSphere(corner_point, 0.01, ss2.str());
+    ////                std::cout << "corner: " << std::endl << corner << std::endl;
+    ////                ss2.str("");
+    ////                ss2 << "point " << j << " " << i;
+    ////                viewer->addText3D(ss2.str(), corner_point, 0.005, 1, 1, 1, ss2.str());
+    //
+    //            i++;
+    //        }
+    //    }
+    //
+    //
+    //    ss2 << "face" << j;
+    //    viewer->addCube (new_position, quat, (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x), (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y), (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z), ss2.str());
+
+
+
+
+//    visualization_msgs::Marker marker;
+//    marker.header.frame_id = "/camera_rgb_optical_frame";
+//    marker.header.stamp = ros::Time::now();
+//    marker.id = j + 1000;
+//    marker.type = visualization_msgs::Marker::CUBE;
+//    marker.action = visualization_msgs::Marker::ADD;
+//    marker.pose.position.x = new_position(0);
+//    marker.pose.position.y = new_position(1);
+//    marker.pose.position.z = new_position(2);
+//    marker.pose.orientation.x = quat.x();
+//    marker.pose.orientation.y = quat.y();
+//    marker.pose.orientation.z = quat.z();
+//    marker.pose.orientation.w = quat.w();
+//    marker.scale.x = (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x);
+//    marker.scale.y = (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
+//    marker.scale.z = (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
+//    marker.color.a = 1;
+//    marker.color.r = 0.0;
+//    marker.color.g = 1.0;
+//    marker.color.b = 0.0;
 
     // later, write the below function to make things cleaner
 //    visualization_msgs::Marker marker = create_marker("/camera_rgb_optical_frame", ros::Time(0), j + 1000, visualization_msgs::Marker::CUBE, visualization_msgs::Marker::ADD, new_position(0), new_position(1), new_position(2),
@@ -198,7 +282,8 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 
     markers->markers.push_back(marker);
 
-    Eigen::Vector2i output(min_direction, forward_back);
+    //Eigen::Vector2i output(min_direction, forward_back);
+    Eigen::Vector2i output(direction, -1);
     return output;
 }
 
