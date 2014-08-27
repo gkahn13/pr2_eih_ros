@@ -68,7 +68,7 @@ rosrun handle_poses_publisher
 ```
 /handle_detector/avg_handle_poses
 /kinfu/graspable_points
-/kinfu/table_pose
+/kinfu/plane_bounding_box
 ```
 #### outline:
 > 1. convex decomposition of pointcloud - add table from table pose
@@ -76,4 +76,7 @@ rosrun handle_poses_publisher
 >     1. call trajopt (with collisions)
 >     2. if no collision && reaches handle:
 >     3. publish pose trajectory [/check_handle_grasps/trajectory]
+
+#### publishes:
+    /check_handle_grasps/trajectory
 
