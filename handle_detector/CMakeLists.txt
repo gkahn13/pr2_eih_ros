@@ -3,6 +3,7 @@ project(handle_detector)
 
 ## find catkin and required packages
 find_package(catkin REQUIRED COMPONENTS 
+  rospy
   eigen_conversions 
   geometry_msgs 
 	message_generation   

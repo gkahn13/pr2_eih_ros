@@ -4,13 +4,18 @@ import sensor_msgs.msg as sm
 import openravepy as rave
 import numpy as np
 
+import os.path
 import time
 
 import IPython
 
 class Simulator:
     """ OpenRave simulator """
-    def __init__(self, env_file='robots/pr2-beta-static.zae', view=False):
+    def __init__(self, env_file=None, view=False):
+        if env_file is None:
+            curr_dir = os.path.abspath('')
+            env_file = curr_dir[:curr_dir.find('pr2_utils')] + 'pr2_utils/robots/my-pr2-beta-sim.robot.xml'
+            print env_file
         self.joint_state_msg = None
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         
@@ -185,6 +190,7 @@ class Simulator:
         """
         for name in self.added_kinbody_names:
             self.env.Remove(self.env.GetKinBody(name))
+        self.added_kinbody_names = list()
     
     def add_kinbody(self, vertices, triangles, name=None, check_collision=False):
         """

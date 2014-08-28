@@ -11,6 +11,9 @@ def test_mantis():
     rarm.go_to_posture('mantis', block=False)
     larm.go_to_posture('mantis', block=False)
     
+    rarm.open_gripper()
+    larm.open_gripper()
+    
 def test_gripper():
     sim = simulator.Simulator(view=True)
     rarm = arm.Arm('right', sim=sim)

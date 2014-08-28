@@ -30,15 +30,22 @@ def test_ik():
         raw_input()
         sim.clear_plots()
         
-def test_gripper():
+def test_gripper_center_frame():
     sim = simulator.Simulator(view=True)
     larm = arm.Arm('left',sim=sim)
     larm.set_posture('mantis')
     rarm = arm.Arm('right',sim=sim)
     rarm.set_posture('mantis')
     
-    IPython.embed()
+    print('Showing r_gripper_tool_frame')
+    sim.plot_transform(sim.robot.GetLink('r_gripper_tool_frame').GetTransform())
+    raw_input()
+    
+    print('Showing r_gripper_center_frame')
+    sim.plot_transform(sim.robot.GetLink('r_gripper_center_frame').GetTransform())
+    raw_input()
+    
 
 if __name__ == '__main__':
     #test_ik()
-    test_gripper()
+    test_gripper_center_frame()
