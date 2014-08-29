@@ -49,9 +49,9 @@ typedef short WeightT;
 #define N_SUB (W_SUB*H_SUB)
 
 //#define USE_COLOR
-#define SAVE_TSDF
+//#define SAVE_TSDF
 #define FIND_OCCLUSIONS
-#define PUBLISH_WEIGHTS
+//#define PUBLISH_WEIGHTS
 
 #ifdef FIND_OCCLUSIONS
 #include <pcl_utils/occluded_region_finder.h>
@@ -59,7 +59,7 @@ typedef short WeightT;
 
 boost::shared_ptr<tf::TransformListener> listener;
 ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub;
-ros::Subscriber signal_sub, head_points_sub;
+ros::Subscriber signal_sub, head_points_sub, reset_sub;
 bool downloading;
 int counter;
 bool publish_kinfu_under_cam_depth_reg;
@@ -102,6 +102,18 @@ typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& poin
         merged_ptr->points[i].rgba = colors.points[i].rgba;
 
     return merged_ptr;
+}
+
+void reset_kinfu(const std_msgs::EmptyConstPtr& empty)
+{
+    if (!downloading)
+    {
+        downloading = true;
+        std::cout << "Resetting pointcloud..." << std::endl;
+        pcl_kinfu_tracker->reset();
+        std::cout << "Reset pointcloud" << std::endl;
+        downloading = false;
+    }
 }
 
 void get_occluded(const std_msgs::EmptyConstPtr& str)
@@ -487,6 +499,7 @@ int main (int argc, char** argv)
     plane_pub = nh.advertise<pcl_utils::BoundingBox> ("plane_bounding_box", 1);
     object_points_pub = nh.advertise<sensor_msgs::PointCloud2> ("graspable_points", 1);
     plane_points_pub = nh.advertise<sensor_msgs::PointCloud2>("plane_points", 1);
+    reset_sub = nh.subscribe<std_msgs::Empty> ("/reset_kinfu", 1, reset_kinfu);
     #endif
 
     head_points_sub = nh.subscribe<sensor_msgs::PointCloud2>("/head_camera/depth_registered/points", 1, _head_cloud_callback);
