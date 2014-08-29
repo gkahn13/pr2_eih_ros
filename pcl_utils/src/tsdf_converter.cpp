@@ -41,7 +41,7 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
 
     // get parameters
     int jump, prob;
-    float voxel_size, min_x, max_x, min_y, max_y, min_z, max_z;
+    float voxel_size, min_x, max_x, min_y, max_y, min_z, max_z, tsdf_min_distance, tsdf_max_distance;
     ros::param::param<int>("/occlusion_parameters/tsdf_converter_jump", jump, 1);
     ros::param::param<float>("/occlusion_parameters/voxel_size", voxel_size, 0.02f);
     ros::param::param<int>("/occlusion_parameters/downsampling_rate", prob, 100);
@@ -51,6 +51,8 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
     ros::param::param<float>("/occlusion_parameters/max_y", max_y, 2);
     ros::param::param<float>("/occlusion_parameters/min_z", min_z, 0);
     ros::param::param<float>("occlusion_parameters/max_z", max_z, 2);
+    ros::param::param<float>("occlusion_parameters/tsdf_min_distance", tsdf_min_distance, 0.2);
+    ros::param::param<float>("occlusion_parameters/tsdf_max_distance", tsdf_max_distance, 0.8);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr inverse_full (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -73,7 +75,7 @@ void convert_tsdf(std::vector<float> tsdf_distances, std::vector<short> tsdf_wei
                     current.y >= min_y && current.y <= max_y &&
                     current.z >= min_z && current.z <= max_z) {
 
-                    if (current_weight > 0 && current_distance > 0.2 && current_distance < 0.8) {
+                    if (current_weight > 0 && current_distance > tsdf_min_distance && current_distance < tsdf_max_distance) {
                         zero_crossing_cloud->push_back(current);
                     }
 
