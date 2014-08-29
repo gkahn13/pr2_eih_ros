@@ -263,9 +263,11 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
 
         // Publish the data
         sensor_msgs::PointCloud2 output;
-        toROSMsg(transformed_cloud, output);
+        //toROSMsg(transformed_cloud, output);
+        toROSMsg(current_cloud, output);
         output.header.stamp = ros::Time::now();
-        output.header.frame_id = "/camera_rgb_optical_frame";
+        //output.header.frame_id = "/camera_rgb_optical_frame";
+        output.header.frame_id = "/kinfu_frame";
         pub.publish (output);
         if (publish_kinfu_under_cam_depth_reg)
         {
