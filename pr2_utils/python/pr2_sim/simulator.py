@@ -1,4 +1,5 @@
-import rospy
+import rospy, rospkg
+rospack = rospkg.RosPack()
 import sensor_msgs.msg as sm
 
 import openravepy as rave
@@ -13,9 +14,7 @@ class Simulator:
     """ OpenRave simulator """
     def __init__(self, env_file=None, view=False):
         if env_file is None:
-            curr_dir = os.path.abspath('')
-            env_file = curr_dir[:curr_dir.find('pr2_utils')] + 'pr2_utils/robots/my-pr2-beta-sim.robot.xml'
-            print env_file
+            env_file = rospack.get_path('pr2_utils') + '/robots/my-pr2-beta-sim.robot.xml'
         self.joint_state_msg = None
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         
@@ -158,6 +157,7 @@ class Simulator:
         :param return_all_solns: if True, returns a list. if false, returns a single solution (OpenRAVE's default)
         :return if a solution exists, otherwise return None
         """
+        pose_mat = np.array(pose_mat)
         link = self.robot.GetLink(link_name)
     
         if not self.robot.DoesAffect(manip.GetArmJoints()[-1], link.GetIndex()):

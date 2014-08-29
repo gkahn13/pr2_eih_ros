@@ -7,7 +7,7 @@
 		<!-- affordance search parameters -->
     	<param name="file" value="" />
 		<param name="target_radius" value="0.025" /> <!-- 0.025 -->
-		<param name="target_radius_error" value="0.025" /> <!-- 0.025 -->
+		<param name="target_radius_error" value="0.02" /> <!-- 0.025 -->
 		<param name="affordance_gap" value="0.001" /> <!-- 0.001 -->
 		<param name="sample_size" value="5000" /> <!-- 20000 -->
 		<param name="use_clearance_filter" value="true" /> <!-- true -->
@@ -17,14 +17,14 @@
 		
 		<!-- RANSAC parameters -->
 		<param name="ransac_runs" value="5" /> <!-- 5 -->
-		<param name="ransac_min_inliers" value="2" /> <!-- 4 -->
+		<param name="ransac_min_inliers" value="4" /> <!-- 4 -->
 		<param name="ransac_dist_radius" value="0.005" /> <!-- 0.01 -->
 		<param name="ransac_orient_radius" value="0.3" /> <!-- 0.4 -->
 		<param name="ransac_radius_radius" value="0.003" /> <!-- .003 -->
 				
 		<!-- workspace limits -->
 		<param name="workspace_min_x" value="0" />
-		<param name="workspace_max_x" value="1" />
+		<param name="workspace_max_x" value="0.7" />
 		<param name="workspace_min_y" value="-0.75" />
 		<param name="workspace_max_y" value="0.25" />
 		<param name="workspace_min_z" value="0.3" />

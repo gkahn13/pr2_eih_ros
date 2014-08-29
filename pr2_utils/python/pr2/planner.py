@@ -37,7 +37,7 @@ class Planner:
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
         self.joint_indices = self.manip.GetArmIndices()
         
-    def get_joint_trajectory(self, start_joints, target_pose, n_steps=20, ignore_orientation=False):
+    def get_joint_trajectory(self, start_joints, target_pose, n_steps=20, ignore_orientation=False, link_name=None):
         """
         Calls trajopt to plan collision-free trajectory
         
@@ -46,6 +46,8 @@ class Planner:
         :param n_steps: trajopt discretization
         :return None if traj not collision free, else list of joint values
         """
+        link_name = link_name if link_name is not None else self.tool_frame
+        
         assert len(start_joints) == len(self.joint_indices)
         assert target_pose.frame.count('base_link') == 1
         self.sim.update()
@@ -65,10 +67,10 @@ class Planner:
         #if init_joint_target is None:
         #    rospy.loginfo('get_traj: IK failed')
         #    return False
-        init_joint_target = None
+        init_joint_target = self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
         
-        request = self._get_trajopt_request(xyz_target, quat_target, init_joint_target, n_steps,
-                                            ignore_orientation=ignore_orientation)
+        request = self._get_trajopt_request(xyz_target, quat_target, n_steps,
+                                            ignore_orientation=ignore_orientation, link_name=link_name, init_joint_target=init_joint_target)
         
         # convert dictionary into json-formatted string
         s = json.dumps(request) 
@@ -78,20 +80,24 @@ class Planner:
         result = trajoptpy.OptimizeProblem(prob)
         
         prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
-        if len(traj_collisions(result.GetTraj(), self.robot, n=100)) > 3:
+        num_upsampled_collisions = len(traj_collisions(result.GetTraj(), self.robot, n=100))
+        print('Number of collisions: {0}'.format(num_upsampled_collisions))
+        if num_upsampled_collisions > 5:
         #if not traj_is_safe(result.GetTraj()[:], self.robot): # Check that trajectory is collision free
             return None
         else:
             return result.GetTraj()
         
-    def _get_trajopt_request(self, xyz_target, quat_target, init_joint_target, n_steps, ignore_orientation=False):
+    def _get_trajopt_request(self, xyz_target, quat_target, n_steps, ignore_orientation=False, link_name=None, init_joint_target=None):
         """
         :param xyz_target: 3d list
         :param quat_target: [w,x,y,z]
-        :param init_joint_target: joint initialization of target_pose for trajopt
         :param n_steps: trajopt discretization
+        :param ignore_orientation
+        :param init_joint_target: if not None, joint initialization of target_pose for trajopt
         :return trajopt json request
         """
+        link_name = link_name if link_name is not None else self.tool_frame
         rot_coeffs = [1,1,1] if not ignore_orientation else [0,0,0]
         
         request = {
@@ -109,7 +115,7 @@ class Planner:
                     "type" : "collision",
                     "params" : {
                         "coeffs" : [20], # 20
-                        "dist_pen" : [0.01] # .025 
+                        "dist_pen" : [0.025] # .025 
                         }
                     },
                 {
@@ -117,7 +123,7 @@ class Planner:
                         "name" : "target_pose",
                         "params" : {"xyz" : xyz_target, 
                                     "wxyz" : quat_target,
-                                    "link": self.tool_frame,
+                                    "link": link_name,
                                     "rot_coeffs" : rot_coeffs,
                                     "pos_coeffs" : [0,0,0],
                                     }
@@ -130,18 +136,26 @@ class Planner:
                     "name" : "target_pose",
                     "params" : {"xyz" : xyz_target, 
                                 "wxyz" : quat_target,
-                                "link": self.tool_frame,
+                                "link": link_name,
                                 "rot_coeffs" : [0,0,0],
                                 "pos_coeffs" : [1,1,1]
                                 }
-                    
+                     
                     },
                 #END pose_target
                 ],
-            "init_info" : {
-                "type" : "stationary"
-                }
             }
+        
+        if init_joint_target is not None:
+                request["init_info"] = {
+                                         "type" : "straight_line",
+                                         "endpoint" : list(init_joint_target),
+                                         }
+        else:
+            request["init_info"] = {
+                                     "type" : "stationary",
+                                     }
+        
         
         return request
         
