@@ -179,6 +179,12 @@ int main(int argc, char** argv) {
 			ROS_INFO("update messages");
 
 			g_has_read = false;
+
+			// publish cylinders as ROS topic
+			cylinder_pub.publish(cylinder_list_msg);
+
+			// publish handles as ROS topic
+			handles_pub.publish(handle_list_msg);
 		}
 
 		// publish point cloud
@@ -199,21 +205,6 @@ int main(int argc, char** argv) {
 
 		// publish handle numbers for visualization
 		marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
-
-		// publish cylinders as ROS topic
-		cylinder_pub.publish(cylinder_list_msg);
-
-		// publish handles as ROS topic
-		handles_pub.publish(handle_list_msg);
-
-		//~ ROS_INFO("published %i grasp affordances for grasping", (int) cylinder_list_msg.cylinders.size());
-		//~ ROS_INFO("published %i handles for grasping", (int) handle_list_msg.handles.size());
-		//~ for(int i=0; i < handle_list_msg.handles.size(); i++)
-		//~ std::cout<<" - handle "<<i<<": "<<handle_list_msg.handles[i].cylinders.size()<<std::endl;
-		//~ ROS_INFO("published %i cylinders for visualization", (int) marker_array_msg.markers.size());
-		//~ ROS_INFO("published %i handles for visualization", (int) handle_pubs.size());
-		//~ for(int i=0; i < marker_arrays.size(); i++)
-		//~ std::cout<<" - visual handle "<<i<<": "<<marker_arrays[i].markers.size()<<std::endl;
 
 		ros::spinOnce();
 		rate.sleep();

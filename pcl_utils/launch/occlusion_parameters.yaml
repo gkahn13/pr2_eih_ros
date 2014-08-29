@@ -8,7 +8,7 @@ max_x: 2
 min_y: 0.5
 max_y: 1.5
 min_z: 0.25
-max_z: 1.6
+max_z: 1.5
 
 # cluster_extraction.cpp
 cluster_extraction_leaf_size: 0.01
@@ -27,3 +27,7 @@ plane_recognition_distance_threshold: 0.04 # 0.04
 # kinfu
 using_head_camera: false
 table_cutoff_above: 0.03
+
+# tsdf zero-crossing threshold
+tsdf_min_distance: 0
+tsdf_max_distance: .3

@@ -33,7 +33,7 @@ def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_comp
     transform_world = sim.transform_from_to(transform, 'base_link', 'world')
     
     full_cloud = pc2_to_cloudprocpy(pc2, transform_world)
-    cloud = cloudprocpy.downsampleCloud(full_cloud, .01)
+    cloud = cloudprocpy.downsampleCloud(full_cloud, .005)
 
     big_mesh = generate_mesh(cloud)
     convex_meshes = cloudprocpy.convexDecompHACD(big_mesh, num_cd_components)
@@ -46,7 +46,7 @@ def pc2_to_cloudprocpy(pc2, transform_world):
     :type  pc2: sensor_msgs.PointCloud2
     :param cam_pose_world: 4x4 np.ndarray of transform for cloud in frame world
     """
-    points_gen = read_points(pc2, skip_nans=False)
+    points_gen = read_points(pc2, skip_nans=True)
     
     rot = transform_world[:3,:3]
     trans = transform_world[:3,3]

@@ -67,7 +67,7 @@ class Planner:
         #if init_joint_target is None:
         #    rospy.loginfo('get_traj: IK failed')
         #    return False
-        init_joint_target = self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
+        init_joint_target = None # self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
         
         request = self._get_trajopt_request(xyz_target, quat_target, n_steps,
                                             ignore_orientation=ignore_orientation, link_name=link_name, init_joint_target=init_joint_target)
@@ -82,7 +82,7 @@ class Planner:
         prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
         num_upsampled_collisions = len(traj_collisions(result.GetTraj(), self.robot, n=100))
         print('Number of collisions: {0}'.format(num_upsampled_collisions))
-        if num_upsampled_collisions > 5:
+        if num_upsampled_collisions > 2:
         #if not traj_is_safe(result.GetTraj()[:], self.robot): # Check that trajectory is collision free
             return None
         else:

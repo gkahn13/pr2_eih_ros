@@ -76,6 +76,8 @@ class HandlePosesPublisher:
                 self.handles_pose_pub.publish(pose_array)
                 self.avg_handles_pose_pub.publish(avg_pose_array)
                 
+            self.handle_list_msg = None
+                
             
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
