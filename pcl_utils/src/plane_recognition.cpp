@@ -132,7 +132,7 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     marker.color.g = 0.0;
     marker.color.b = 1.0;
 
-    markers->markers.push_back(marker);
+    //markers->markers.push_back(marker);
 
 }
 }
