@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 	sub = node.subscribe(RANGE_SENSOR_TOPIC, 10, chatterCallback);
 
 	// visualization of point cloud, grasp affordances, and handles
-	Visualizer visualizer(g_update_interval);
+	Visualizer visualizer(1.0/g_update_interval);
 	sensor_msgs::PointCloud2 pc2msg;
 	PointCloud::Ptr cloud_vis(new PointCloud);
 	ros::Publisher marker_array_pub = node.advertise<visualization_msgs::MarkerArray>("visualization_all_affordances", 10);
@@ -185,6 +185,19 @@ int main(int argc, char** argv) {
 
 			// publish handles as ROS topic
 			handles_pub.publish(handle_list_msg);
+
+			// publish cylinders for visualization
+			marker_array_pub.publish(marker_array_msg);
+
+			// publish handles for visualization
+			for (int i=0; i < handle_pubs.size(); i++)
+				handle_pubs[i].publish(marker_arrays[i]);
+
+			// publish handles for visualization
+			marker_array_pub_handles.publish(marker_array_msg_handles);
+
+			// publish handle numbers for visualization
+			marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
 		}
 
 		// publish point cloud
@@ -192,19 +205,6 @@ int main(int argc, char** argv) {
 		pc2msg.header.stamp = ros::Time::now();
 		pc2msg.header.frame_id = output_frame;
 		pcl_pub.publish(pc2msg);
-
-		// publish cylinders for visualization
-		marker_array_pub.publish(marker_array_msg);
-
-		// publish handles for visualization
-		for (int i=0; i < handle_pubs.size(); i++)
-			handle_pubs[i].publish(marker_arrays[i]);
-
-		// publish handles for visualization
-		marker_array_pub_handles.publish(marker_array_msg_handles);
-
-		// publish handle numbers for visualization
-		marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
 
 		ros::spinOnce();
 		rate.sleep();

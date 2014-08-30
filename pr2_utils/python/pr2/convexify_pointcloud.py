@@ -144,6 +144,13 @@ def generate_mesh(cloud, decimation_rate=0.5):
     :return pcl polygon mesh
     """
     cloud_with_normals = cloudprocpy.mlsAddNormals(cloud, .02)
+    filtered_cloud = list()
+    for pt_and_normal in cloud_with_normals.to2dArray():
+        normal = pt_and_normal[3:]
+        if np.linalg.norm(normal) < 1e4:
+            filtered_cloud.append(pt_and_normal)
+    cloud_with_normals.from2dArray(np.array(filtered_cloud))
+
     big_mesh = cloudprocpy.meshGP3(cloud_with_normals, search_radius=0.02) # 0.04
 #     simple_mesh = cloudprocpy.quadricSimplifyVTK(big_mesh, decimation_rate) # decimate mesh with VTK function
 #     return simple_mesh

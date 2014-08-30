@@ -34,7 +34,7 @@ class HandlePosesPublisher:
         calculate average pose
         """
         while not rospy.is_shutdown():
-            rospy.sleep(.01)
+            rospy.sleep(.1)
             
             handle_list_msg = self.handle_list_msg
             if handle_list_msg is None:
