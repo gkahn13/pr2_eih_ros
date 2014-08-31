@@ -34,11 +34,11 @@ class HandlePosesPublisher:
         calculate average pose
         """
         while not rospy.is_shutdown():
-            rospy.sleep(.1)
             
+            self.handle_list_msg = None
+            while not rospy.is_shutdown() and self.handle_list_msg is None:
+                rospy.sleep(.01)
             handle_list_msg = self.handle_list_msg
-            if handle_list_msg is None:
-                continue
             
             pose_array = gm.PoseArray()
             pose_array.header.frame_id = handle_list_msg.header.frame_id
@@ -48,7 +48,10 @@ class HandlePosesPublisher:
             avg_pose_array.header.frame_id = handle_list_msg.header.frame_id
             avg_pose_array.header.stamp = rospy.Time.now()
     
-            cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix[:3,:3]
+            if handle_list_msg.header.frame_id.count('base_link') > 0:
+                cam_to_base = np.eye(3)
+            else:
+                cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix[:3,:3]
             switch = np.matrix([[0, 1, 0],
                                 [1, 0, 0],
                                 [0, 0, 1]])        
@@ -75,12 +78,6 @@ class HandlePosesPublisher:
             if len(pose_array.poses) > 0:
                 self.handles_pose_pub.publish(pose_array)
                 self.avg_handles_pose_pub.publish(avg_pose_array)
-                
-            self.handle_list_msg = None
-                
-            
-    def _handles_callback(self, msg):
-        self.handle_list_msg = msg
                         
     
 if __name__ == '__main__':

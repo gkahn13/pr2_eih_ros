@@ -190,6 +190,7 @@ Matrix4d Arm::fk(const VectorJ& joints) {
 //	return pose;
 }
 
+
 /**
  * \param pose desired pose of tool_frame in frame "base_link"
  */
@@ -199,6 +200,8 @@ bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
 	std::vector<double> joint_vec;
 	if (sim->ik_for_link(pose_world, manip, tool_frame, joint_vec)) {
 		joints = VectorJ(joint_vec.data()); // TODO: add closer_angle
+		sim->update();
+//		joints = closer_joint_angles(joints, get_joints());
 		return true;
 	} else {
 		return false;

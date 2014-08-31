@@ -30,6 +30,14 @@ inline char getch() {
 	return (buf);
 }
 
+inline double smaller_angle(double angle) {
+	return fmod(angle + M_PI, 2*M_PI) - M_PI;
+}
+
+inline double closer_angle(double x, double a) {
+	return a + smaller_angle(x-a);
+}
+
 }
 
 #endif

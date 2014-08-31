@@ -59,7 +59,6 @@ void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 	// convert ROS sensor message to PCL point cloud
 	PointCloud::Ptr cloud(new PointCloud);
 	fromROSMsg(*input, *cloud);
-	g_has_read = true;
 
 	// check whether input frame is equivalent to range sensor frame constant
 	std::string input_frame = input->header.frame_id;
@@ -98,6 +97,8 @@ void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 
 	// store current time
 	g_prev_time = omp_get_wtime();
+
+	g_has_read = true;
 }
 
 int main(int argc, char** argv) {
@@ -171,14 +172,13 @@ int main(int argc, char** argv) {
 			visualizer.createHandles(g_handles, output_frame, marker_arrays,
 					marker_array_msg_handles);
 			handle_pubs.resize(g_handles.size());
-			for (int i=0; i < handle_pubs.size(); i++)
+			for (int i=0; i < handle_pubs.size(); i++) {
 				handle_pubs[i] = node.advertise<visualization_msgs::MarkerArray>("visualization_handle_" + boost::lexical_cast<std::string>(i), 10);
+			}
 
 			marker_array_msg_handle_numbers = visualizer.createHandleNumbers(g_handles, output_frame);
 
 			ROS_INFO("update messages");
-
-			g_has_read = false;
 
 			// publish cylinders as ROS topic
 			cylinder_pub.publish(cylinder_list_msg);
@@ -190,14 +190,20 @@ int main(int argc, char** argv) {
 			marker_array_pub.publish(marker_array_msg);
 
 			// publish handles for visualization
-			for (int i=0; i < handle_pubs.size(); i++)
+			for (int i=0; i < handle_pubs.size(); i++) {
 				handle_pubs[i].publish(marker_arrays[i]);
+			}
 
 			// publish handles for visualization
 			marker_array_pub_handles.publish(marker_array_msg_handles);
 
 			// publish handle numbers for visualization
 			marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
+
+			g_cylindrical_shells.clear();
+			g_handles.clear();
+
+			g_has_read = false;
 		}
 
 		// publish point cloud

@@ -278,8 +278,21 @@ Matrix4d Arm::fk(const VectorJ& joints) {
 	return arm_sim->fk(joints);
 }
 
+VectorJ closer_joint_angles(const VectorJ& new_joints, const VectorJ& curr_joints) {
+	VectorJ closer_joints = new_joints;
+	for(const int& i : {2, 4, 6}) {
+		closer_joints(i) = pr2_utils::closer_angle(new_joints(i), curr_joints(i));
+	}
+	return closer_joints;
+}
+
 bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
-	return arm_sim->ik(pose, joints);
+	bool success = arm_sim->ik(pose, joints);
+	if (success) {
+		sim->update();
+		joints = closer_joint_angles(joints, get_joints());
+	}
+	return success;
 }
 
 /**

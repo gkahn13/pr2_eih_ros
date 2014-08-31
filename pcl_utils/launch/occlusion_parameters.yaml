@@ -8,7 +8,7 @@ max_x: 2
 min_y: 0.5
 max_y: 1.5
 min_z: 0.25
-max_z: 1.5
+max_z: 1.45
 
 # cluster_extraction.cpp
 cluster_extraction_leaf_size: 0.01
