@@ -8,11 +8,10 @@ messages = []
 
 def string_callback(data):
     rospy.loginfo(rospy.get_caller_id()+"I heard %s",data.data)
-    messages.append(data.data + '\n')
+    log_message(data.data)
 
 def write_out():
-    messages.append("End of experiment" + '\n')
-    messages.append(str(datetime.now()) + '\n')
+    log_message("End of experiment")
     print
     print "writing to log file: {0}".format(log_file)
     with open(log_file, "a+") as file:
@@ -21,8 +20,10 @@ def write_out():
     print "done"
 
 def log_message(string):
-    messages.append(string + '\n')
-    
+    messages.append("[" + str(datetime.now()) + "] " + string + '\n')
+
+def log_raw(string):
+    messages.append(string)    
     
 def logger():
 
@@ -33,7 +34,7 @@ def logger():
     # run simultaenously.
     rospy.init_node('log_messages', anonymous=True)
 
-    rospy.Subscriber("experiment_log", String, string_callback)
+    rospy.Subscriber("/experiment_log", String, string_callback)
 
     rospy.on_shutdown(write_out)
 
@@ -41,11 +42,14 @@ def logger():
     rospy.spin()
         
 if __name__ == '__main__':
-    global log_file
-    log_file = "default_log.txt"
-    if len(sys.argv) > 1:
-        log_file = sys.argv[1]
-    messages.append("-------------------" + '\n')
-    messages.append("Beginning new experiment" + '\n')
-    messages.append(str(datetime.now()) + '\n')
-    logger()
+    try:
+        global log_file
+        log_file = "default_log.txt"
+        if len(sys.argv) > 1:
+            log_file = sys.argv[1]
+        log_raw("-------------------\n")
+        log_message("Beginning new experiment")
+        logger()
+    except:
+        write_out()
+        raise
