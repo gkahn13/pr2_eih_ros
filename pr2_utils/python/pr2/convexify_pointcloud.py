@@ -32,10 +32,14 @@ def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_comp
     """
     transform_world = sim.transform_from_to(transform, 'base_link', 'world')
     
+    print('pc2_to_cloudprocpy')
     full_cloud = pc2_to_cloudprocpy(pc2, transform_world)
+    print('downsample')
     cloud = cloudprocpy.downsampleCloud(full_cloud, .005)
 
+    print('generate_mesh')
     big_mesh = generate_mesh(cloud)
+    print('convex decomp')
     convex_meshes = cloudprocpy.convexDecompHACD(big_mesh, num_cd_components)
     for i, mesh in enumerate(convex_meshes):
         sim.add_kinbody(mesh.getVertices(), mesh.getTriangles(), name='mesh_{0}'.format(i), check_collision=True)
@@ -46,7 +50,7 @@ def pc2_to_cloudprocpy(pc2, transform_world):
     :type  pc2: sensor_msgs.PointCloud2
     :param cam_pose_world: 4x4 np.ndarray of transform for cloud in frame world
     """
-    points_gen = read_points(pc2, skip_nans=True)
+    points_gen = read_points(pc2, skip_nans=False)
     
     rot = transform_world[:3,:3]
     trans = transform_world[:3,3]
@@ -143,12 +147,19 @@ def generate_mesh(cloud, decimation_rate=0.5):
     :param cloud: cloudprocpy cloud
     :return pcl polygon mesh
     """
+    import warnings
+    warnings.filterwarnings('error')
+    
     cloud_with_normals = cloudprocpy.mlsAddNormals(cloud, .02)
     filtered_cloud = list()
     for pt_and_normal in cloud_with_normals.to2dArray():
         normal = pt_and_normal[3:]
+#         try:
         if np.linalg.norm(normal) < 1e4:
             filtered_cloud.append(pt_and_normal)
+#         except Warning as e:
+#             import IPython
+#             IPython.embed()
     cloud_with_normals.from2dArray(np.array(filtered_cloud))
 
     big_mesh = cloudprocpy.meshGP3(cloud_with_normals, search_radius=0.02) # 0.04

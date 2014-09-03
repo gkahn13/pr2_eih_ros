@@ -288,8 +288,8 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile, ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub,
-                           ros::Publisher plane_pub, ros::Publisher object_points_pub, ros::Publisher plane_points_pub) //,
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile,
+		ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub, ros::Publisher plane_pub, ros::Publisher object_points_pub, ros::Publisher plane_points_pub) //,
 //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud)
 {
 
@@ -321,9 +321,9 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     // fit a plane to the zero-crossing points to find a table top
     pcl::ModelCoefficients::Ptr plane_coeff(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr unused(new pcl::PointIndices);
-    plane_recognition::calculate_plane(zero_crossing_cloud, unused, plane_coeff, plane_pub, markers, plane_points_pub);
+    plane_recognition::calculate_plane(zero_crossing_cloud, unused, plane_coeff, plane_pub, markers, plane_points_pub); // was zero_crossing_cloud
 
-    occluded_region_finder::publish_graspable(zero_crossing_cloud, plane_coeff, object_points_pub);
+    occluded_region_finder::publish_graspable(zero_crossing_cloud, plane_coeff, object_points_pub); // was zero_crossing_cloud
 
     Timer_tic(&timer);
 

@@ -3,7 +3,7 @@ tsdf_converter_jump: 1
 voxel_size: 0.02
 downsampling_rate: 100
 
-min_x: 0.25
+min_x: 0.5
 max_x: 2
 min_y: 0.5
 max_y: 1.5

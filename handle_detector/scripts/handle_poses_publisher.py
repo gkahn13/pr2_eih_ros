@@ -75,9 +75,8 @@ class HandlePosesPublisher:
                     avg_pose_array.poses.append(tfx.pose(avg_position, avg_quat).msg.Pose())
                 
                 
-            if len(pose_array.poses) > 0:
-                self.handles_pose_pub.publish(pose_array)
-                self.avg_handles_pose_pub.publish(avg_pose_array)
+            self.handles_pose_pub.publish(pose_array)
+            self.avg_handles_pose_pub.publish(avg_pose_array)
                         
     
 if __name__ == '__main__':

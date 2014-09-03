@@ -60,7 +60,7 @@ void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 	PointCloud::Ptr cloud(new PointCloud);
 	fromROSMsg(*input, *cloud);
 
-	// check whether input frame is equivalent to range sensor frame constant
+	// check whether input frame is equivalent to output frame constant
 	std::string input_frame = input->header.frame_id;
 	if (input_frame.compare(OUTPUT_FRAME) != 0) {
 		std::cout << "Input frame and output frame are different\n";
@@ -180,6 +180,12 @@ int main(int argc, char** argv) {
 
 			ROS_INFO("update messages");
 
+			// publish point cloud
+			toROSMsg(*cloud_vis, pc2msg);
+			pc2msg.header.stamp = ros::Time::now();
+			pc2msg.header.frame_id = output_frame;
+			pcl_pub.publish(pc2msg);
+
 			// publish cylinders as ROS topic
 			cylinder_pub.publish(cylinder_list_msg);
 
@@ -205,12 +211,6 @@ int main(int argc, char** argv) {
 
 			g_has_read = false;
 		}
-
-		// publish point cloud
-		toROSMsg(*cloud_vis, pc2msg);
-		pc2msg.header.stamp = ros::Time::now();
-		pc2msg.header.frame_id = output_frame;
-		pcl_pub.publish(pc2msg);
 
 		ros::spinOnce();
 		rate.sleep();

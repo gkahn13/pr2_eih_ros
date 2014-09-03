@@ -2,6 +2,7 @@ import openravepy as rave
 import trajoptpy
 import trajoptpy.kin_utils as ku
 from trajoptpy.check_traj import traj_is_safe, traj_collisions
+import trajoptpy.math_utils as mu
 import json
 
 import rospy
@@ -12,6 +13,7 @@ import tfx
 import numpy as np
 
 from pr2_sim import simulator
+from utils import utils
 
 import IPython
 
@@ -52,7 +54,7 @@ class Planner:
         assert target_pose.frame.count('base_link') == 1
         self.sim.update()
         
-        # set start joint positions
+        # set active manipulator and start joint positions
         self.robot.SetDOFValues(start_joints, self.joint_indices)
         
         # initialize trajopt inputs
@@ -63,11 +65,10 @@ class Planner:
         xyz_target = [xyz.x, xyz.y, xyz.z]
         rave_mat = rave.matrixFromPose(np.r_[quat_target, xyz_target])
         
-        #init_joint_target = ku.ik_for_link(rave_mat, self.manip, self.tool_frame, filter_options=rave.IkFilterOptions.CheckEnvCollisions)
-        #if init_joint_target is None:
-        #    rospy.loginfo('get_traj: IK failed')
-        #    return False
-        init_joint_target = None # self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
+        init_joint_target = None
+#         init_joint_target = self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
+#         if init_joint_target is not None:
+#             init_joint_target = self._closer_joint_angles(init_joint_target, start_joints)
         
         request = self._get_trajopt_request(xyz_target, quat_target, n_steps,
                                             ignore_orientation=ignore_orientation, link_name=link_name, init_joint_target=init_joint_target)
@@ -80,13 +81,36 @@ class Planner:
         result = trajoptpy.OptimizeProblem(prob)
         
         prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
-        num_upsampled_collisions = len(traj_collisions(result.GetTraj(), self.robot, n=100))
+        #num_upsampled_collisions = len(traj_collisions(result.GetTraj(), self.robot, n=100))
+        num_upsampled_collisions = self._num_collisions(result.GetTraj())
         print('Number of collisions: {0}'.format(num_upsampled_collisions))
-        if num_upsampled_collisions > 2:
+        self.robot.SetDOFValues(start_joints, self.joint_indices)
+        if num_upsampled_collisions > 0:
         #if not traj_is_safe(result.GetTraj()[:], self.robot): # Check that trajectory is collision free
             return None
         else:
             return result.GetTraj()
+        
+    @staticmethod
+    def _closer_joint_angles(new_joints, curr_joints):
+        for i in [2, 4, 6]:
+            new_joints[i] = utils.closer_angle(new_joints[i], curr_joints[i])
+        return new_joints
+        
+    def _num_collisions(self, joint_traj, up_samples=100):
+        traj_up = mu.interp2d(np.linspace(0,1,up_samples), np.linspace(0,1,len(joint_traj)), joint_traj)
+        
+        manip_links = [l for l in self.robot.GetLinks() if l not in self.manip.GetIndependentLinks()]
+        
+        num_collisions = 0
+        for (i,row) in enumerate(traj_up):
+            self.robot.SetDOFValues(row, self.joint_indices)
+            is_collision = max([self.sim.env.CheckCollision(l) for l in manip_links])
+            if is_collision:
+                num_collisions += 1
+                
+        return num_collisions
+
         
     def _get_trajopt_request(self, xyz_target, quat_target, n_steps, ignore_orientation=False, link_name=None, init_joint_target=None):
         """
@@ -115,6 +139,15 @@ class Planner:
                     "type" : "collision",
                     "params" : {
                         "coeffs" : [20], # 20
+                        "continuous": False,
+                        "dist_pen" : [0.025] # .025 
+                        }
+                    },
+                {
+                    "type" : "collision",
+                    "params" : {
+                        "coeffs" : [20], # 20
+                        "continuous" : True,
                         "dist_pen" : [0.025] # .025 
                         }
                     },

@@ -91,6 +91,13 @@ const double z = 2;
 const float shifting_distance = 5.0f;
 }
 
+struct null_deleter     //prevents the calling of destructor for Boost Shared Pointers
+{
+    void operator()(void const *) const
+    {
+    }
+};
+
 template<typename MergedT, typename PointT>
 typename pcl::PointCloud<MergedT>::Ptr merge(const pcl::PointCloud<PointT>& points, const pcl::PointCloud<pcl::RGB>& colors)
 {
@@ -212,7 +219,6 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
         #endif // SAVE_TSDF
 
         tsdf.fetchCloudHost(current_cloud);
-
 
         #else
         // new way of doing it, with color
