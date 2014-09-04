@@ -33,6 +33,11 @@ class Planner:
         self.robot = self.sim.robot
         self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm
         
+        wrist_flex_index = self.robot.GetJointIndex(arm_name[0]+'_wrist_flex_joint')
+        lower, upper = self.robot.GetDOFLimits()
+        lower[wrist_flex_index], upper[wrist_flex_index] = -np.pi/2., np.pi/2.
+        self.robot.SetDOFLimits(lower, upper)
+        
         if interact:
             trajoptpy.SetInteractive(True)
         

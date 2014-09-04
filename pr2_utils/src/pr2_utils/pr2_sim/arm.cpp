@@ -27,6 +27,7 @@ Arm::Arm(ArmType a, Simulator *s) : arm_type(a), sim(s) {
 	upper = VectorJ(upper_vec.data());
 
 	lower(5) = -M_PI/2; // enforce _wrist_flex_joint so carmine doesn't collide
+	upper(5) = M_PI/2;
 
 	sim->update(); // must do so the origin transform is correct
 	Matrix4d eye = Matrix4d::Identity();

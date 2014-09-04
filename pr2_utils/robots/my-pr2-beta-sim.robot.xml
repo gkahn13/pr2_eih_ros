@@ -11,6 +11,22 @@
        <body>r_gripper_center_frame</body>
        <limitsdeg>0 0</limitsdeg>
      </joint>
+   </kinbody>
+   <kinbody>
+     <Body name="r_kinect" type="dynamic">
+       <offsetfrom>r_gripper_tool_frame</offsetfrom>
+       <Translation>-0.1 0 -.06</Translation>
+       <Geom type="box">
+         <Translation>0 0 0</Translation>
+         <Extents>0.02 0.09 0.013</Extents>
+         <diffuseColor>0 1 1</diffuseColor>
+       </Geom>
+     </Body>
+     <joint name="dummy_r_kinect" type="hinge">
+       <body>r_gripper_tool_frame</body>
+       <body>r_kinect</body>
+       <limitsdeg>0 0</limitsdeg>
+     </joint>
   </kinbody>
   <kinbody>
     <body name="l_gripper_center_frame">

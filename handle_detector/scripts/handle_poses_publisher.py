@@ -41,17 +41,17 @@ class HandlePosesPublisher:
             handle_list_msg = self.handle_list_msg
             
             pose_array = gm.PoseArray()
-            pose_array.header.frame_id = handle_list_msg.header.frame_id
+            pose_array.header.frame_id = 'base_link'
             pose_array.header.stamp = rospy.Time.now()
             
             avg_pose_array = gm.PoseArray()
-            avg_pose_array.header.frame_id = handle_list_msg.header.frame_id
+            avg_pose_array.header.frame_id = 'base_link'
             avg_pose_array.header.stamp = rospy.Time.now()
     
             if handle_list_msg.header.frame_id.count('base_link') > 0:
-                cam_to_base = np.eye(3)
+                cam_to_base = np.eye(4)
             else:
-                cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix[:3,:3]
+                cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix
             switch = np.matrix([[0, 1, 0],
                                 [1, 0, 0],
                                 [0, 0, 1]])        
@@ -61,12 +61,13 @@ class HandlePosesPublisher:
                 rotated_poses = [tfx.pose(p.position, tfx.tb_angles(p.orientation.matrix*switch)) for p in all_poses]
                 filtered_poses = list()
                 for rot_pose in rotated_poses:
-                    r_base = cam_to_base*rot_pose.orientation.matrix
+                    r_base = cam_to_base[:3,:3]*rot_pose.orientation.matrix
                     if r_base[0,0] > 0:
                         if r_base[2,2] > 0:
                             rot_pose.orientation = tfx.tb_angles(rot_pose.orientation.matrix*tfx.tb_angles(0,0,180).matrix) 
                         filtered_poses.append(rot_pose)
                 
+                filtered_poses = [tfx.pose(cam_to_base*pose.matrix, frame='base_link') for pose in filtered_poses]
                 pose_array.poses += [pose.msg.Pose() for pose in filtered_poses]
                 
                 if len(filtered_poses) > 0:
@@ -74,7 +75,7 @@ class HandlePosesPublisher:
                     avg_quat = sum([p.orientation.quaternion for p in filtered_poses])/float(len(filtered_poses))
                     avg_pose_array.poses.append(tfx.pose(avg_position, avg_quat).msg.Pose())
                 
-                
+
             self.handles_pose_pub.publish(pose_array)
             self.avg_handles_pose_pub.publish(avg_pose_array)
                         

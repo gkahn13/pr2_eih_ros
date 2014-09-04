@@ -45,7 +45,31 @@ def test_gripper_center_frame():
     sim.plot_transform(sim.robot.GetLink('r_gripper_center_frame').GetTransform())
     raw_input()
     
+def test_kinect():
+    sim = simulator.Simulator(view=True)
+    
+    larm = arm.Arm('left',sim=sim)
+    rarm = arm.Arm('right',sim=sim)
+    sim.add_box(rarm.get_pose(), [.5,.5,.5])
+    
+    larm.set_posture('mantis')
+    rarm.set_posture('mantis')
+    
+    
+    manip_links = [l for l in sim.robot.GetLinks() if l not in rarm.manip.GetIndependentLinks()]
+    
+    while True:
+        print('Press "q" to exit')
+        if (utils.Getch.getch() == 'q'):
+            break
+        
+        rarm.teleop()
+        is_coll = max([sim.env.CheckCollision(l) for l in manip_links])
+        print('Is in collision: {0}\n'.format(is_coll))
+        
+            
 
 if __name__ == '__main__':
     #test_ik()
-    test_gripper_center_frame()
+    #test_gripper_center_frame()
+    test_kinect()
