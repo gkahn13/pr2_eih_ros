@@ -6,6 +6,7 @@
 #include <tf_conversions/tf_eigen.h>
 #include "sensor_msgs/PointCloud2.h"
 #include <std_msgs/Empty.h>
+#include <std_msgs/Float64.h>
 
 #include <pcl_conversions.h>
 // PCL specific includes
@@ -59,7 +60,7 @@ typedef short WeightT;
 
 boost::shared_ptr<tf::TransformListener> listener;
 ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub;
-ros::Subscriber signal_sub, head_points_sub, reset_sub;
+ros::Subscriber signal_sub, head_points_sub, reset_sub, head_camera_time_sub;
 bool downloading;
 int counter;
 bool publish_kinfu_under_cam_depth_reg;
@@ -68,6 +69,7 @@ pcl::PointCloud<pcl::PointXYZ> last_head_cloud;
 int current;
 pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker;
 bool using_head_camera;
+bool head_camera_active;
 
 namespace carmine
 {
@@ -120,6 +122,16 @@ void reset_kinfu(const std_msgs::EmptyConstPtr& empty)
         pcl_kinfu_tracker->reset();
         std::cout << "Reset pointcloud" << std::endl;
         downloading = false;
+    }
+}
+
+void activate_head_camera(const std_msgs::Float64ConstPtr duration)
+{
+  if (!head_camera_active)
+    {
+      head_camera_active = true;
+      ros::Duration(duration->data).sleep();
+      head_camera_active = false;
     }
 }
 
@@ -358,16 +370,17 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker)
 
 
 
-            if (using_head_camera) {
+            if (using_head_camera && head_camera_active) {
 
                 pcl::PointCloud<pcl::PointXYZ> head_cloud;
                 pcl::copyPointCloud(last_head_cloud, head_cloud);
 
                 // get the current location of the camera relative to the kinfu frame (see kinfu.launch)
                 tf::StampedTransform kinfu_to_head_camera;
-                listener->waitForTransform("/kinfu_frame", "/head_camera_rgb_optical_frame",
+		std::string head_camera_frame = "/head_camera_rgb_optical_frame";
+                listener->waitForTransform("/kinfu_frame", head_camera_frame,
                                            ros::Time(0), ros::Duration(5));
-                listener->lookupTransform("/kinfu_frame", "/head_camera_rgb_optical_frame",
+                listener->lookupTransform("/kinfu_frame", head_camera_frame,
                                           ros::Time(0), kinfu_to_head_camera);
 
                 // convert camera pose to format suitable for kinfu
@@ -510,6 +523,8 @@ int main (int argc, char** argv)
     reset_sub = nh.subscribe<std_msgs::Empty> ("/reset_kinfu", 1, reset_kinfu);
     #endif
 
+    head_camera_time_sub = nh.subscribe<std_msgs::Float64> ("/head_camera_duration", 1, activate_head_camera);
+
     head_points_sub = nh.subscribe<sensor_msgs::PointCloud2>("/head_camera/depth_registered/points", 1, _head_cloud_callback);
 
     std::string variable_topic;
@@ -539,6 +554,7 @@ int main (int argc, char** argv)
 
     std::cout << "Ready to publish clouds\n";
     downloading = false;
+    head_camera_active = false;
 
     current = 1;
 //	while(ros::ok()) {

@@ -25,7 +25,7 @@ plane_recognition_leaf_size: 0.01 # 0.02
 plane_recognition_distance_threshold: 0.04 # 0.04
 
 # kinfu
-using_head_camera: false
+using_head_camera: true
 table_cutoff_above: 0.03
 
 # tsdf zero-crossing threshold
