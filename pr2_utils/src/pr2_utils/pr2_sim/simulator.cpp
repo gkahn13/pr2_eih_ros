@@ -1,5 +1,7 @@
 #include "pr2_utils/pr2_sim/simulator.h"
 
+#include <ros/package.h>
+
 namespace pr2_sim {
 
 /**
@@ -21,7 +23,12 @@ void SetViewer(rave::EnvironmentBasePtr penv, const std::string& viewername)
     viewer->main(showgui);
 }
 
-Simulator::Simulator(const std::string env_file, bool view, bool use_ros) : use_ros(use_ros) {
+Simulator::Simulator(std::string env_file, bool view, bool use_ros) : use_ros(use_ros) {
+	if (env_file == "") {
+		std::string pkg_path("pr2_utils");
+		env_file = ros::package::getPath(pkg_path) + "/robots/my-pr2-beta-sim.robot.xml";
+	}
+
 	rave::RaveInitialize(true, rave::Level_Info);
 	env = rave::RaveCreateEnvironment();
 	env->Load(env_file);
@@ -155,8 +162,13 @@ bool Simulator::ik_for_link(const Matrix4d& pose, const rave::RobotBase::Manipul
 			joint_values, rave::IkFilterOptions::IKFO_CheckEnvCollisions);
 
 	return success;
-
 }
+
+/**
+ *
+ * Plotting methods
+ *
+ */
 
 void Simulator::clear_plots(int num) {
 	if ((num < 0) || (num > handles.size())) {

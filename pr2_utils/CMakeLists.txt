@@ -6,7 +6,7 @@ add_definitions("-Wno-sign-compare -std=c++11")
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp actionlib sensor_msgs trajectory_msgs control_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp roslib actionlib sensor_msgs trajectory_msgs control_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -110,18 +110,18 @@ add_library(pr2_utils
 ## Declare a cpp executable
 add_executable(pr2_sim_arm         tests/pr2_sim_arm.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
 														 src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
-add_executable(pr2_sim_simulator   tests/pr2_sim_simulator.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
-                                                               src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
-add_executable(pr2_sim_camera      tests/pr2_sim_camera.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
-														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
-														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
-add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/pr2_sim/arm.cpp
-														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
-														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
-add_executable(pr2_arm			   tests/test_arm.cpp       src/${PROJECT_NAME}/pr2/arm.cpp
-                                                            src/${PROJECT_NAME}/pr2_sim/arm.cpp
-                                                            src/${PROJECT_NAME}/pr2_sim/simulator.cpp
-                                                            src/${PROJECT_NAME}/pr2_sim/camera.cpp)                                                     
+#add_executable(pr2_sim_simulator   tests/pr2_sim_simulator.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
+#                                                               src/${PROJECT_NAME}/pr2_sim/simulator.cpp)
+#add_executable(pr2_sim_camera      tests/pr2_sim_camera.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
+#														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+#														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
+#add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/pr2_sim/arm.cpp
+#														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+#														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
+#add_executable(pr2_arm			   tests/test_arm.cpp       src/${PROJECT_NAME}/pr2/arm.cpp
+#                                                            src/${PROJECT_NAME}/pr2_sim/arm.cpp
+#                                                            src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+#                                                            src/${PROJECT_NAME}/pr2_sim/camera.cpp)                                                     
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -130,17 +130,17 @@ add_executable(pr2_arm			   tests/test_arm.cpp       src/${PROJECT_NAME}/pr2/arm
 set_target_properties(pr2_sim_arm PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(pr2_sim_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
-set_target_properties(pr2_sim_simulator PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2_sim_simulator PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+#set_target_properties(pr2_sim_simulator PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+#set_target_properties(pr2_sim_simulator PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
-set_target_properties(pr2_sim_camera PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2_sim_camera PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+#set_target_properties(pr2_sim_camera PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+#set_target_properties(pr2_sim_camera PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
-set_target_properties(gradient_sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(gradient_sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+#set_target_properties(gradient_sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+#set_target_properties(gradient_sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
-set_target_properties(pr2_arm PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+#set_target_properties(pr2_arm PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+#set_target_properties(pr2_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
 set(TIMER_LIBRARIES "dl;rt")
 
@@ -150,29 +150,29 @@ target_link_libraries(pr2_sim_arm
    ${OpenRAVE_CORE_LIBRARIES}
    ${Boost_LIBRARIES}
 )
-target_link_libraries(pr2_sim_simulator
-   ${catkin_LIBRARIES}
-   ${OpenRAVE_CORE_LIBRARIES}
-   ${Boost_LIBRARIES}
-)
-target_link_libraries(pr2_sim_camera
-   ${catkin_LIBRARIES}
-   ${OpenRAVE_CORE_LIBRARIES}
-   ${Boost_LIBRARIES}
-   ${TIMER_LIBRARIES}
-)
-target_link_libraries(gradient_sd
-   ${catkin_LIBRARIES}
-   ${OpenRAVE_CORE_LIBRARIES}
-   ${Boost_LIBRARIES}
-   ${TIMER_LIBRARIES}
-)
-target_link_libraries(pr2_arm
-   ${catkin_LIBRARIES}
-   ${OpenRAVE_CORE_LIBRARIES}
-   ${Boost_LIBRARIES}
-   ${TIMER_LIBRARIES}
-)
+#target_link_libraries(pr2_sim_simulator
+#   ${catkin_LIBRARIES}
+#   ${OpenRAVE_CORE_LIBRARIES}
+#   ${Boost_LIBRARIES}
+#)
+#target_link_libraries(pr2_sim_camera
+#   ${catkin_LIBRARIES}
+#   ${OpenRAVE_CORE_LIBRARIES}
+#   ${Boost_LIBRARIES}
+#   ${TIMER_LIBRARIES}
+#)
+#target_link_libraries(gradient_sd
+#   ${catkin_LIBRARIES}
+#   ${OpenRAVE_CORE_LIBRARIES}
+#   ${Boost_LIBRARIES}
+#   ${TIMER_LIBRARIES}
+#)
+#target_link_libraries(pr2_arm
+#   ${catkin_LIBRARIES}
+#   ${OpenRAVE_CORE_LIBRARIES}
+#   ${Boost_LIBRARIES}
+#   ${TIMER_LIBRARIES}
+#)
 
 #############
 ## Install ##

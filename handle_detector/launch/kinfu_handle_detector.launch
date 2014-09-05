@@ -8,7 +8,7 @@
     	<param name="file" value="" />
 		<param name="target_radius" value="0.035" /> <!-- 0.025 -->
 		<param name="target_radius_error" value="0.025" /> <!-- 0.025 -->
-		<param name="affordance_gap" value="0.004" /> <!-- 0.001 -->
+		<param name="affordance_gap" value="0.002" /> <!-- 0.001 -->
 		<param name="sample_size" value="5000" /> <!-- 20000 -->
 		<param name="use_clearance_filter" value="true" /> <!-- true -->
 		<param name="use_occlusion_filter" value="false" /> <!-- false -->

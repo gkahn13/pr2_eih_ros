@@ -22,8 +22,8 @@ namespace pr2_sim {
 class Simulator {
 	friend class Arm;
 public:
-	Simulator(const std::string env_file, bool view, bool use_ros);
-	Simulator(bool view, bool use_ros) : Simulator("robots/pr2-beta-static.zae", view, use_ros) { }
+	Simulator(std::string env_file, bool view, bool use_ros);
+	Simulator(bool view, bool use_ros) : Simulator("", view, use_ros) { }
 	Simulator() : Simulator(false, false) { }
 
 	void update();
