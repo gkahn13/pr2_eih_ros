@@ -18,7 +18,9 @@ import IPython
 class HandlePosesPublisher:
     def __init__(self, handle_topic='/handle_detector/handle_list'):
         self.handle_list_msg = None
+        self.camera_pose = None
         self.handle_list_sub = rospy.Subscriber(handle_topic, hd_msg.HandleListMsg, self._handles_callback)
+        self.camera_transform_sub = rospy.Subscriber('/handle_detector/camera_pose', gm.PoseStamped, self._camera_pose_callback)
         self.handles_pose_pub = rospy.Publisher('/handle_detector/handle_poses', gm.PoseArray)
         self.avg_handles_pose_pub = rospy.Publisher('/handle_detector/avg_handle_poses', gm.PoseArray)
         
@@ -28,6 +30,9 @@ class HandlePosesPublisher:
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
         
+    def _camera_pose_callback(self, msg):
+        self.camera_pose = tfx.pose(msg)
+        
     def _handles_loop(self):
         """
         For each handle in HandleListMsg,
@@ -36,9 +41,11 @@ class HandlePosesPublisher:
         while not rospy.is_shutdown():
             
             self.handle_list_msg = None
-            while not rospy.is_shutdown() and self.handle_list_msg is None:
+            self.camera_pose = None
+            while not rospy.is_shutdown() and (self.handle_list_msg is None or self.camera_pose is None):
                 rospy.sleep(.01)
             handle_list_msg = self.handle_list_msg
+            camera_pose = self.camera_pose
             
             pose_array = gm.PoseArray()
             pose_array.header.frame_id = 'base_link'
@@ -51,7 +58,7 @@ class HandlePosesPublisher:
             if handle_list_msg.header.frame_id.count('base_link') > 0:
                 cam_to_base = np.eye(4)
             else:
-                cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix
+                cam_to_base = camera_pose.matrix #tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix
             switch = np.matrix([[0, 1, 0],
                                 [1, 0, 0],
                                 [0, 0, 1]])        

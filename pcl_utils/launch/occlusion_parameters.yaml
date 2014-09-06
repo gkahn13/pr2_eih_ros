@@ -29,5 +29,5 @@ using_head_camera: true
 table_cutoff_above: 0.03
 
 # tsdf zero-crossing threshold
-tsdf_min_distance: 0
-tsdf_max_distance: .4
+tsdf_min_distance: 0 # 0
+tsdf_max_distance: .4 # .4

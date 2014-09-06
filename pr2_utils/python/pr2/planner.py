@@ -44,7 +44,7 @@ class Planner:
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
         self.joint_indices = self.manip.GetArmIndices()
         
-    def get_joint_trajectory(self, start_joints, target_pose, n_steps=20, ignore_orientation=False, link_name=None):
+    def get_joint_trajectory(self, start_joints, target_pose, n_steps=40, ignore_orientation=False, link_name=None):
         """
         Calls trajopt to plan collision-free trajectory
         
@@ -82,6 +82,25 @@ class Planner:
         s = json.dumps(request) 
         # create object that stores optimization problem
         prob = trajoptpy.ConstructProblem(s, self.sim.env)
+            
+        tool_link = self.robot.GetLink(link_name)
+        def point_at(x):
+            self.robot.SetDOFValues(x, self.joint_indices, False)
+            T = tool_link.GetTransform()
+            local_dir = xyz.array - T[:3,3]
+            return T[1:3,:3].dot(local_dir)
+#         arm_joints = [self.robot.GetJointFromDOFIndex(ind) for ind in self.joint_indices]
+#         def point_at_jac(x): # not working
+#             self.robot.SetDOFValues(x, self.joint_indices, False)
+#             T = tool_link.GetTransform()
+#             local_dir = xyz.array - T[:3,3]
+#             #world_dir = T[:3,:3].dot(local_dir)
+#             return np.array([np.cross(joint.GetAxis(), local_dir)[:] for joint in arm_joints]).T.copy()
+ 
+                 
+        for t in xrange(int(0.75*n_steps), n_steps-1):
+            prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+                        
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)
         
@@ -102,7 +121,7 @@ class Planner:
             new_joints[i] = utils.closer_angle(new_joints[i], curr_joints[i])
         return new_joints
         
-    def _num_collisions(self, joint_traj, up_samples=100):
+    def _num_collisions(self, joint_traj, up_samples=120):
         traj_up = mu.interp2d(np.linspace(0,1,up_samples), np.linspace(0,1,len(joint_traj)), joint_traj)
         
         manip_links = [l for l in self.robot.GetLinks() if l not in self.manip.GetIndependentLinks()]
@@ -168,7 +187,6 @@ class Planner:
                         },
                 ],
             "constraints" : [
-                # BEGIN pose_target
                 {
                     "type" : "pose",
                     "name" : "target_pose",
@@ -180,7 +198,16 @@ class Planner:
                                 }
                      
                     },
-                #END pose_target
+                {
+                    "type" : "cart_vel",
+                    "name" : "cart_vel",
+                    "params" : {
+                                "max_displacement" : .02,
+                                "first_step" : 0,
+                                "last_step" : n_steps-1, #inclusive
+                                "link" : link_name
+                                },
+                 }
                 ],
             }
         

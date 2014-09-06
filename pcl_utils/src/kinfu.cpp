@@ -24,7 +24,7 @@ using namespace Eigen;
 
 #include <pcl/console/parse.h>
 #include <pcl/gpu/kinfu_large_scale/kinfu.h>
-//#include <pcl/gpu/kinfu_large_scale/raycaster.h>
+#include <pcl/gpu/kinfu_large_scale/raycaster.h>
 //#include <pcl/gpu/kinfu_large_scale/marching_cubes.h>
 #include <pcl/gpu/kinfu_large_scale/tsdf_volume.h>
 #include <pcl/gpu/containers/initialization.h>
@@ -59,8 +59,13 @@ typedef short WeightT;
 #endif
 
 boost::shared_ptr<tf::TransformListener> listener;
+<<<<<<< HEAD
 ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub;
 ros::Subscriber signal_sub, head_points_sub, reset_sub, head_camera_time_sub;
+=======
+ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub, raycast_cloud_pub;
+ros::Subscriber signal_sub, head_points_sub, reset_sub;
+>>>>>>> gkahn
 bool downloading;
 int counter;
 bool publish_kinfu_under_cam_depth_reg;
@@ -135,6 +140,42 @@ void activate_head_camera(const std_msgs::Float64ConstPtr duration)
     }
 }
 
+typedef pcl::gpu::DeviceArray2D<unsigned short> Depth;
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr depth_to_cloud(const Depth& depth, Matrix4d T) {
+	Matrix3d rot = T.block<3,3>(0,0);
+	Vector3d trans = T.block<3,1>(0,3);
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new  pcl::PointCloud<pcl::PointXYZ>(carmine::HEIGHT, carmine::WIDTH));
+
+	int c;
+	std::vector<unsigned short> data;
+	depth.download(data, c);
+
+	int index = 0;
+	for(int i=0; i < carmine::HEIGHT; ++i) {
+		for(int j=0; j < carmine::WIDTH; ++j) {
+			float u = (i - carmine::cy/2.0) / carmine::fy;
+			float v = (j - carmine::cx/2.0) / carmine::fx;
+
+			float z = 1e-3*data[index++];
+			float y = u * z; // TODO: try switching x and y
+			float x = v * z;
+			Vector3d p = rot*Vector3d(x, y, z) + trans;
+
+			pcl::PointXYZ &point = cloud->at(i,j);
+			point.x = p(0);
+			point.y = p(1);
+			point.z = p(2);
+
+		}
+	}
+
+	cloud->is_dense = false;
+	return cloud;
+}
+
+
 void get_occluded(const std_msgs::EmptyConstPtr& str)
 {
     if (!downloading)
@@ -187,6 +228,20 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
         occluded_region_finder::find_occluded_regions(tsdf_vector, tsdf_weights, transformation_matrix, false, "kinfu", markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub); //,
         //zero_crossing_cloud, foreground_cloud, inverse_cloud);
         #endif // FIND_OCCLUSIONS
+
+        pcl::gpu::kinfuLS::RayCaster ray_caster(carmine::HEIGHT, carmine::WIDTH, carmine::fx, carmine::fy, carmine::cx/2., carmine::cy/2.);
+        ray_caster.run(tsdf, current_transform_write.inverse().cast<float>(), pcl_kinfu_tracker->getCyclicalBufferStructure());
+        Depth depth(carmine::HEIGHT, carmine::WIDTH);
+        ray_caster.generateDepthImage(depth);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr raycast_cloud = depth_to_cloud(depth, Matrix4d::Identity());
+        std::cout << "Published depth points\n";
+
+        // Publish the data
+        sensor_msgs::PointCloud2 raycast_cloud_ros;
+        toROSMsg(*raycast_cloud, raycast_cloud_ros);
+        raycast_cloud_ros.header.stamp = ros::Time::now();
+        raycast_cloud_ros.header.frame_id = "/camera_rgb_optical_frame";
+        raycast_cloud_pub.publish(raycast_cloud_ros);
 
 
         #ifdef SAVE_TSDF
@@ -255,8 +310,6 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
         pcl::PointCloud<pcl::PointXYZRGB> current_cloud = *(merge<pcl::PointXYZRGB>(*cloud_ptr_, *point_colors_ptr_));
 
         #endif // ndef USE_COLOR
-
-        //
 
         // get the transform from from rgb optical frame to kinfu frame
         tf::StampedTransform rgb_to_kinfu;
@@ -338,7 +391,6 @@ void update_kinfu_loop(pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker)
 
             const int cols = carmine::WIDTH;
 
-            // TODO: Greg - does this really iterate through the points in the correct order?
             int i;
             pcl::PointCloud<pcl::PointXYZRGB>::iterator cloud_iter;
             for(cloud_iter = cloud.begin(), i = 0;
@@ -520,6 +572,7 @@ int main (int argc, char** argv)
     plane_pub = nh.advertise<pcl_utils::BoundingBox> ("plane_bounding_box", 1);
     object_points_pub = nh.advertise<sensor_msgs::PointCloud2> ("graspable_points", 1);
     plane_points_pub = nh.advertise<sensor_msgs::PointCloud2>("plane_points", 1);
+    raycast_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("raycast_points", 1);
     reset_sub = nh.subscribe<std_msgs::Empty> ("/reset_kinfu", 1, reset_kinfu);
     #endif
 
