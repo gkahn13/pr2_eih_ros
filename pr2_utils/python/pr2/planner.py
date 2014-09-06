@@ -82,39 +82,24 @@ class Planner:
         s = json.dumps(request) 
         # create object that stores optimization problem
         prob = trajoptpy.ConstructProblem(s, self.sim.env)
-        
-#         def equal_rotation(x):
-#             j_curr, j_final = np.split(np.array(x), 2)
-#              
-#             self.robot.SetDOFValues(j_curr, self.joint_indices, False)
-#             T_curr = tfx.pose(self.sim.transform_from_to(np.eye(4), link_name, 'base_link'))
-#              
-#             self.robot.SetDOFValues(j_final, self.joint_indices, False)
-#             T_final = tfx.pose(self.sim.transform_from_to(np.eye(4), link_name, 'base_link'))
-#              
-#             return (T_curr.orientation.inverse()*T_final.orientation).angle
-#          
-#         for t in xrange(int(0.5*n_steps), n_steps-1):
-#             equal_rotation_vars = [(t,j) for j in xrange(len(self.joint_indices))] + [(n_steps-1,j) for j in xrange(len(self.joint_indices))]
-#             prob.AddErrorCost(equal_rotation, equal_rotation_vars, "ABS", "eq_rot_{0}".format(t))
             
         tool_link = self.robot.GetLink(link_name)
-        def f(x):
+        def point_at(x):
             self.robot.SetDOFValues(x, self.joint_indices, False)
-            T = tool_link.GetTransform() #self.sim.transform_from_to(np.eye(4), link_name, 'base_link')
+            T = tool_link.GetTransform()
             local_dir = xyz.array - T[:3,3]
             return T[1:3,:3].dot(local_dir)
-        arm_joints = [self.robot.GetJointFromDOFIndex(ind) for ind in self.joint_indices]
-        def dfdx(x):
-            self.robot.SetDOFValues(x, self.joint_indices, False)
-            T = tool_link.GetTransform() #self.sim.transform_from_to(np.eye(4), link_name, 'base_link')
-            local_dir = xyz.array - T[:3,3]
-            #world_dir = T[:3,:3].dot(local_dir)
-            return np.array([np.cross(joint.GetAxis(), local_dir)[1:2:4] for joint in arm_joints]).T.copy()
+#         arm_joints = [self.robot.GetJointFromDOFIndex(ind) for ind in self.joint_indices]
+#         def point_at_jac(x): # not working
+#             self.robot.SetDOFValues(x, self.joint_indices, False)
+#             T = tool_link.GetTransform()
+#             local_dir = xyz.array - T[:3,3]
+#             #world_dir = T[:3,:3].dot(local_dir)
+#             return np.array([np.cross(joint.GetAxis(), local_dir)[:] for joint in arm_joints]).T.copy()
  
                  
         for t in xrange(int(0.75*n_steps), n_steps-1):
-            prob.AddConstraint(f, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+            prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
                         
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)

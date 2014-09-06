@@ -25,7 +25,7 @@ def test_planner():
 
     start_joints = rarm.get_joints()
     n_steps = 20
-    joint_traj = p.get_joint_trajectory(start_joints, target_pose, n_steps=n_steps, ignore_orientation=False, link_name='r_gripper_center_frame')
+    joint_traj = p.get_joint_trajectory(start_joints, target_pose, n_steps=n_steps, ignore_orientation=True, link_name='r_gripper_center_frame')
     
     poses = [tfx.pose(rarm.fk(joints)) for joints in joint_traj]
     for pose in poses:

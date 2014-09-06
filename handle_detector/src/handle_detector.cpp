@@ -41,6 +41,7 @@ std::string OUTPUT_FRAME; // "/base_link"
 std::string RANGE_SENSOR_TOPIC; // "/camera/depth_registered/points";
 
 boost::shared_ptr<tf::TransformListener> listener;
+geometry_msgs::PoseStamped g_camera_pose;
 
 // input and output ROS topic data
 PointCloud::Ptr g_cloud(new PointCloud);
@@ -55,6 +56,17 @@ bool g_has_read = false;
 
 void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 	if (omp_get_wtime() - g_prev_time < g_update_interval) { return; }
+
+	tf::StampedTransform camera_transform;
+	listener->waitForTransform("base_link", "camera_rgb_optical_frame", input->header.stamp, ros::Duration(5));
+	listener->lookupTransform("base_link", "camera_rgb_optical_frame", input->header.stamp, camera_transform);
+	Eigen::Affine3d camera_affine;
+	tf::transformTFToEigen(camera_transform, camera_affine);
+	tf::Pose camera_pose;
+	tf::poseEigenToTF(camera_affine, camera_pose);
+	g_camera_pose.header.frame_id = "base_link";
+	g_camera_pose.header.stamp = input->header.stamp;
+	tf::poseTFToMsg(camera_pose, g_camera_pose.pose);
 
 	// convert ROS sensor message to PCL point cloud
 	PointCloud::Ptr cloud(new PointCloud);
@@ -149,6 +161,8 @@ int main(int argc, char** argv) {
 	handle_detector::CylinderArrayMsg cylinder_list_msg;
 	handle_detector::HandleListMsg handle_list_msg;
 
+	ros::Publisher camera_pose_pub = node.advertise<geometry_msgs::PoseStamped>("camera_pose", 1);
+
 	// how often things are published
 	ros::Rate rate(10);
 
@@ -191,6 +205,9 @@ int main(int argc, char** argv) {
 
 			// publish handles as ROS topic
 			handles_pub.publish(handle_list_msg);
+
+			// publish camera transform at time of cloud
+			camera_pose_pub.publish(g_camera_pose);
 
 			// publish cylinders for visualization
 			marker_array_pub.publish(marker_array_msg);

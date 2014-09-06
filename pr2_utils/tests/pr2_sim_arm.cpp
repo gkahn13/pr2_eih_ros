@@ -11,8 +11,6 @@ int main() {
 		rarm.teleop();
 		larm.teleop();
 
-		bool is_coll = sim.is_collision();
-		std::cout << "Is collision : " << is_coll << "\n";
 	}
 
 //	std::cout << "Press enter to exit\n";
