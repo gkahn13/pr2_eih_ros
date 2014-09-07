@@ -58,14 +58,14 @@ void chatterCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 	if (omp_get_wtime() - g_prev_time < g_update_interval) { return; }
 
 	tf::StampedTransform camera_transform;
-	listener->waitForTransform("base_link", "camera_rgb_optical_frame", input->header.stamp, ros::Duration(5));
-	listener->lookupTransform("base_link", "camera_rgb_optical_frame", input->header.stamp, camera_transform);
+	listener->waitForTransform("base_link", "camera_rgb_optical_frame", ros::Time(0), ros::Duration(5));
+	listener->lookupTransform("base_link", "camera_rgb_optical_frame", ros::Time(0), camera_transform);
 	Eigen::Affine3d camera_affine;
 	tf::transformTFToEigen(camera_transform, camera_affine);
 	tf::Pose camera_pose;
 	tf::poseEigenToTF(camera_affine, camera_pose);
 	g_camera_pose.header.frame_id = "base_link";
-	g_camera_pose.header.stamp = input->header.stamp;
+	g_camera_pose.header.stamp = ros::Time::now();
 	tf::poseTFToMsg(camera_pose, g_camera_pose.pose);
 
 	// convert ROS sensor message to PCL point cloud
@@ -209,25 +209,26 @@ int main(int argc, char** argv) {
 			// publish camera transform at time of cloud
 			camera_pose_pub.publish(g_camera_pose);
 
-			// publish cylinders for visualization
-			marker_array_pub.publish(marker_array_msg);
-
-			// publish handles for visualization
-			for (int i=0; i < handle_pubs.size(); i++) {
-				handle_pubs[i].publish(marker_arrays[i]);
-			}
-
-			// publish handles for visualization
-			marker_array_pub_handles.publish(marker_array_msg_handles);
-
-			// publish handle numbers for visualization
-			marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
-
 			g_cylindrical_shells.clear();
 			g_handles.clear();
 
 			g_has_read = false;
 		}
+
+		// publish cylinders for visualization
+		marker_array_pub.publish(marker_array_msg);
+
+		// publish handles for visualization
+		for (int i=0; i < handle_pubs.size(); i++) {
+			handle_pubs[i].publish(marker_arrays[i]);
+		}
+
+		// publish handles for visualization
+		marker_array_pub_handles.publish(marker_array_msg_handles);
+
+		// publish handle numbers for visualization
+		marker_array_pub_handle_numbers.publish(marker_array_msg_handle_numbers);
+
 
 		ros::spinOnce();
 		rate.sleep();

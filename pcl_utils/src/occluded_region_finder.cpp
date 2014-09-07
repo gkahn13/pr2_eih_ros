@@ -27,6 +27,14 @@ Eigen::Matrix3f calculate_rotation(Eigen::Vector3f A, Eigen::Vector3f B)
 }
 
 void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::ModelCoefficients::Ptr plane_coeff, ros::Publisher object_points_pub) {
+	float min_x, max_x, min_y, max_y, min_z, max_z;
+	ros::param::param<float>("/occlusion_parameters/min_x", min_x, 0);
+	ros::param::param<float>("/occlusion_parameters/max_x", max_x, 2);
+	ros::param::param<float>("/occlusion_parameters/min_y", min_y, 0);
+	ros::param::param<float>("/occlusion_parameters/max_y", max_y, 2);
+	ros::param::param<float>("/occlusion_parameters/min_z", min_z, 0);
+	ros::param::param<float>("/occlusion_parameters/max_z", max_z, 2);
+
     float table_cutoff;
     ros::param::param<float>("/occlusion_parameters/table_cutoff_above", table_cutoff, 0.005f);
     pcl::PointCloud<pcl::PointXYZ> new_points;
@@ -39,11 +47,15 @@ void publish_graspable(pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, 
     for (pcl::PointCloud<pcl::PointXYZ>::iterator iter = zero_crossing_cloud->begin();
          iter != zero_crossing_cloud->end(); iter++)
     {
-        if (plane_coeff->values[0] * iter->x + plane_coeff->values[1] * iter->y + plane_coeff->values[2] * iter->z + plane_coeff->values[3] - table_cutoff >= 0) {
-    	    pcl::PointXYZ new_point;
-            new_point = pcl::transformPoint(*iter, transform_affine.inverse());
-            new_points.push_back(new_point);
-        }
+    	if (iter->x >= min_x && iter->x <= max_x &&
+    	                    iter->y >= min_y && iter->y <= max_y &&
+    	                    iter->z >= min_z && iter->z <= max_z) {
+    		if (plane_coeff->values[0] * iter->x + plane_coeff->values[1] * iter->y + plane_coeff->values[2] * iter->z + plane_coeff->values[3] - table_cutoff >= 0) {
+    			pcl::PointXYZ new_point;
+    			new_point = pcl::transformPoint(*iter, transform_affine.inverse());
+    			new_points.push_back(new_point);
+    		}
+    	}
     }
 
     sensor_msgs::PointCloud2 cloud_msg;
@@ -288,7 +300,7 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 }
 
 
-void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile,
+void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short> tsdf_weights, pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud_ptr, Eigen::Matrix4d transformation_matrix, bool saving, std::string outfile,
 		ros::Publisher markers_pub, ros::Publisher points_pub, ros::Publisher regions_pub, ros::Publisher plane_pub, ros::Publisher object_points_pub, ros::Publisher plane_points_pub) //,
 //pcl::PointCloud<pcl::PointXYZ>::Ptr zero_crossing_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr foreground_cloud, PointCloudVoxelGrid::CloudType::Ptr inverse_cloud)
 {
@@ -323,7 +335,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
     pcl::PointIndices::Ptr unused(new pcl::PointIndices);
     plane_recognition::calculate_plane(zero_crossing_cloud, unused, plane_coeff, plane_pub, markers, plane_points_pub); // was zero_crossing_cloud
 
-    occluded_region_finder::publish_graspable(zero_crossing_cloud, plane_coeff, object_points_pub); // was zero_crossing_cloud
+    occluded_region_finder::publish_graspable(current_cloud_ptr, plane_coeff, object_points_pub); // was zero_crossing_cloud
 
     Timer_tic(&timer);
 

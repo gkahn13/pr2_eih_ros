@@ -98,7 +98,8 @@ int main(int argc, char** argv)
 //    std::string unused;
 //    getline(cin, unused);
 
-    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub);
+    // TODO: must download current_cloud
+//    occluded_region_finder::find_occluded_regions(*tsdf_distances, *tsdf_weights, transformation_matrix, saving, outfile, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub);
 
     return 0;
 

@@ -3,12 +3,12 @@ tsdf_converter_jump: 1
 voxel_size: 0.02
 downsampling_rate: 100
 
-min_x: 0.5
-max_x: 2
-min_y: 0.5
-max_y: 1.5
-min_z: 0.75
-max_z: 1.45
+min_x: 0.5 # 0.5
+max_x: 2 # 2
+min_y: 0.5 # 0.5
+max_y: 1.5 # 1.5
+min_z: 0.75 # 0.75
+max_z: 1.45 # 1.45
 
 # cluster_extraction.cpp
 cluster_extraction_leaf_size: 0.01

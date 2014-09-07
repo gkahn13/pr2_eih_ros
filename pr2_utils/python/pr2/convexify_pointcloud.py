@@ -21,7 +21,7 @@ _DATATYPES[sm.PointField.UINT32] = ('I', 4)
 _DATATYPES[sm.PointField.FLOAT32] = ('f', 4)
 _DATATYPES[sm.PointField.FLOAT64] = ('d', 8)
 
-def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_components=20):
+def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_components=20, point_cloud_filter=lambda point: True):
     """
     Convexifies point cloud and adds to openrave environment
     
@@ -29,18 +29,19 @@ def add_convexified_pointcloud_to_env(sim, pc2, transform=np.eye(4), num_cd_comp
     :param pc2: the point cloud to read from
     :type  pc2: sensor_msgs.PointCloud2
     :param transform: 4x4 np.ndarray of transform for cloud in frame base_link
+    :param point_cloud_filter: True if keep point
     """
     transform_world = sim.transform_from_to(transform, 'base_link', 'world')
     
-    full_cloud = pc2_to_cloudprocpy(pc2, transform_world)
-    cloud = cloudprocpy.downsampleCloud(full_cloud, .008) # .005
+    full_cloud = pc2_to_cloudprocpy(pc2, transform_world, point_cloud_filter)
+    cloud = cloudprocpy.downsampleCloud(full_cloud, .005) # .005
 
     big_mesh = generate_mesh(cloud)
     convex_meshes = cloudprocpy.convexDecompHACD(big_mesh, num_cd_components)
     for i, mesh in enumerate(convex_meshes):
         sim.add_kinbody(mesh.getVertices(), mesh.getTriangles(), name='mesh_{0}'.format(i), check_collision=True)
 
-def pc2_to_cloudprocpy(pc2, transform_world):
+def pc2_to_cloudprocpy(pc2, transform_world, point_cloud_filter):
     """
     :param pc2: the point cloud to read from
     :type  pc2: sensor_msgs.PointCloud2
@@ -52,9 +53,10 @@ def pc2_to_cloudprocpy(pc2, transform_world):
     trans = transform_world[:3,3]
     points = list()
     for pt in points_gen:
-        pt = list(np.dot(rot, pt) + trans)
-        pt.append(1)
-        points.append(pt)
+        if point_cloud_filter(pt):
+            pt = list(np.dot(rot, pt) + trans)
+            pt.append(1)
+            points.append(pt)
         
     # reorganize cloud data to construct a cloud object
     n_dim = 4 # 3 spatial dimension + 1 for homogenity

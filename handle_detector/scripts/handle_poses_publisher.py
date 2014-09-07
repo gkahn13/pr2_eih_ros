@@ -26,6 +26,9 @@ class HandlePosesPublisher:
         
         self.handles_thread = threading.Thread(target=self._handles_loop)
         self.handles_thread.start()
+        
+        self.min_positions = np.array([0,-1,0.3])
+        self.max_positions = np.array([1,1,1.5])
                     
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
@@ -75,6 +78,7 @@ class HandlePosesPublisher:
                         filtered_poses.append(rot_pose)
                 
                 filtered_poses = [tfx.pose(cam_to_base*pose.matrix, frame='base_link') for pose in filtered_poses]
+                filtered_poses = filter(lambda pose: min(self.min_positions < pose.position.array) and min(pose.position.array < self.max_positions), filtered_poses)
                 pose_array.poses += [pose.msg.Pose() for pose in filtered_poses]
                 
                 if len(filtered_poses) > 0:
