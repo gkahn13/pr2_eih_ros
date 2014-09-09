@@ -96,7 +96,7 @@ Eigen::Vector3f calculate_corner(Eigen::Vector3f new_position, pcl::PointXYZ max
 }
 
 Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_point_OBB, Eigen::Vector3f position, Eigen::Matrix3f rotational_matrix_OBB, int j, visualization_msgs::MarkerArrayPtr markers,
-                               pcl_utils::OccludedRegion* occ_message, std::vector<Eigen::Vector3f> *corners)
+                               pcl_utils::OccludedRegion* occ_message, std::vector<Eigen::Vector3f> *corners, bool rotate_box)
 {
 
     Eigen::Vector3f weights (max_point_OBB.x, max_point_OBB.y, max_point_OBB.z);
@@ -113,7 +113,12 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
         }
     }
 
-    Eigen::Matrix3f U = occluded_region_finder::calculate_rotation(rotational_matrix_OBB.col(direction), position_vector);
+    Eigen::Matrix3f U;
+    if (rotate_box) {
+        U = occluded_region_finder::calculate_rotation(rotational_matrix_OBB.col(direction), position_vector);
+    } else {
+        U = Eigen::Matrix3f::Identity();
+    }
 
     Eigen::Matrix3f new_vectors = U * rotational_matrix_OBB;
 
@@ -162,136 +167,6 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
     marker.color.b = 0.0;
 
 
-    //    Eigen::Matrix3f adder = Eigen::Matrix3f::Zero();
-    //    Eigen::Vector3f min_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
-    //    Eigen::Vector3f max_vector(min_point_OBB.x, min_point_OBB.y, min_point_OBB.z);
-    //
-    //    Eigen::Quaternionf quat (rotational_matrix_OBB);
-    //
-    ////    double min_norm = INFINITY;
-    //    double max_norm = -INFINITY;
-    //    int min_direction = 0;
-    //    int forward_back = -1;
-    //    for (int i = 0; i < 3; i++)
-    //    {
-    //
-    //        pcl::PointXYZ current_point;
-    //
-    //        adder(i, i) = 1;
-    //
-    //        std::stringstream ss3;
-    //        ss3 << "sphere min corner" << j << i;
-    //
-    //        double current_norm;
-    ////        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector + position;
-    //        Eigen::Vector3f current_vector = rotational_matrix_OBB * adder * max_vector;
-    //        current_norm = current_vector.norm();
-    //        current_point.x = current_vector(0);
-    //        current_point.y = current_vector(1);
-    //        current_point.z = current_vector(2);
-    ////        if (current_norm < min_norm)
-    //        if (current_vector(2) / current_norm > max_norm)
-    //        {
-    ////            min_norm = current_norm;
-    //            max_norm = current_vector(2) / current_norm;
-    //            min_direction = i;
-    //            forward_back = -1;
-    ////            forward_back = 1;
-    //        }
-    //
-    //
-    ////        current_vector = position - rotational_matrix_OBB * adder * max_vector; // not sure why this is minus, but it works
-    //        current_vector = -1 * rotational_matrix_OBB * adder * max_vector;
-    //        current_point.x = current_vector(0);
-    //        current_point.y = current_vector(1);
-    //        current_point.z = current_vector(2);
-    //
-    //        current_norm = current_vector.norm();
-    //        ss3 << "sphere max corner" << j << i;
-    //        //viewer->addSphere(current_point, 0.005, ss3.str());
-    //
-    ////        if (current_norm < min_norm)
-    //        if (current_vector(2) / current_norm > max_norm)
-    //        {
-    ////            min_norm = current_norm;
-    //            max_norm = current_vector(2) / current_norm;
-    //            min_direction = i;
-    //            forward_back = 1;
-    ////            forward_back = -1;
-    //        }
-    //
-    //        adder(i, i) = 0;
-    //
-    //
-    //    }
-    //
-    //    adder(min_direction, min_direction) = 1;
-    //
-    //    Eigen::Vector3f new_position = position + forward_back * rotational_matrix_OBB * adder * max_vector;
-    //
-    //    std::stringstream ss2;
-    //    int i = 0;
-    //    for (int a1 = -1; a1 <= 1; a1 = a1 + 2)
-    //    {
-    //        for (int a2 = -1 * a1; a1 * a2 <= 1; a2 = a2 + a1 * 2)
-    //        {
-    //            Eigen::Vector3f corner;
-    //            corner = calculate_corner(new_position, max_point_OBB, rotational_matrix_OBB, a1, a2, min_direction);
-    //
-    ////            std::cout << "corner: " << std::endl << corner << std::endl;
-    //
-    //            ss2.str("");
-    //            geometry_msgs::Point32 corner_point;
-    //            corner_point.x = corner(0);
-    //            corner_point.y = corner(1);
-    //            corner_point.z = corner(2);
-    //            occ_message->front_face.points.push_back(corner_point);
-    //            corners->push_back(corner);
-    //
-    ////                ss2 << "corner " << j << " " << i;
-    ////                viewer->addSphere(corner_point, 0.01, ss2.str());
-    ////                std::cout << "corner: " << std::endl << corner << std::endl;
-    ////                ss2.str("");
-    ////                ss2 << "point " << j << " " << i;
-    ////                viewer->addText3D(ss2.str(), corner_point, 0.005, 1, 1, 1, ss2.str());
-    //
-    //            i++;
-    //        }
-    //    }
-    //
-    //
-    //    ss2 << "face" << j;
-    //    viewer->addCube (new_position, quat, (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x), (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y), (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z), ss2.str());
-
-
-
-
-//    visualization_msgs::Marker marker;
-//    marker.header.frame_id = "/camera_rgb_optical_frame";
-//    marker.header.stamp = ros::Time::now();
-//    marker.id = j + 1000;
-//    marker.type = visualization_msgs::Marker::CUBE;
-//    marker.action = visualization_msgs::Marker::ADD;
-//    marker.pose.position.x = new_position(0);
-//    marker.pose.position.y = new_position(1);
-//    marker.pose.position.z = new_position(2);
-//    marker.pose.orientation.x = quat.x();
-//    marker.pose.orientation.y = quat.y();
-//    marker.pose.orientation.z = quat.z();
-//    marker.pose.orientation.w = quat.w();
-//    marker.scale.x = (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x);
-//    marker.scale.y = (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y);
-//    marker.scale.z = (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z);
-//    marker.color.a = 1;
-//    marker.color.r = 0.0;
-//    marker.color.g = 1.0;
-//    marker.color.b = 0.0;
-
-    // later, write the below function to make things cleaner
-//    visualization_msgs::Marker marker = create_marker("/camera_rgb_optical_frame", ros::Time(0), j + 1000, visualization_msgs::Marker::CUBE, visualization_msgs::Marker::ADD, new_position(0), new_position(1), new_position(2),
-//                                                      quat.x(), quat.y(), quat.z(), quat.w(), (min_direction != 0) * (max_point_OBB.x - min_point_OBB.x), marker.scale.y = (min_direction != 1) * (max_point_OBB.y - min_point_OBB.y),
-//                                                      marker.scale.z = (min_direction != 2) * (max_point_OBB.z - min_point_OBB.z), 1, 0, 1, 0);
-
     markers->markers.push_back(marker);
 
     //Eigen::Vector2i output(min_direction, forward_back);
@@ -339,7 +214,10 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     Timer_tic(&timer);
 
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters = cluster_extraction::extract_clusters(zero_crossing_cloud);
+    std::vector<pcl::PointCloud<pcl::PointXYZ> >* clusters = new std::vector<pcl::PointCloud<pcl::PointXYZ> >;
+    int num_plane_clusters = cluster_extraction::extract_clusters(zero_crossing_cloud, clusters);
+    std::cout << "number of planar clusters: " << num_plane_clusters << std::endl;
+    std::cout << "number of regular clusters: " << clusters->size() - num_plane_clusters << std::endl;
 
     std::cout << "cluster extraction: " << Timer_toc(&timer) << std::endl;
 
@@ -361,8 +239,8 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
 
     int j = 1;
     std::vector<pcl::PointCloud<pcl::PointXYZ> >::iterator cluster_iter;
-    std::cout << "number of clusters: " << clusters.size() << std::endl;
-    for (cluster_iter = clusters.begin(); cluster_iter != clusters.end(); cluster_iter++)
+    std::cout << "number of clusters: " << clusters->size() << std::endl;
+    for (cluster_iter = clusters->begin(); cluster_iter != clusters->end(); cluster_iter++)
     {
         Timer_tic(&timer3);
         if (j == 1 || true)
@@ -418,7 +296,7 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             std::vector<Eigen::Vector3f> corners;
 
             Timer_tic(&timer2);
-            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region, &corners);
+            Eigen::Vector2i directions = calculate_face(min_point_OBB, max_point_OBB, position, rotational_matrix_OBB, j, markers, &region, &corners, j > num_plane_clusters);
             std::cout << "corners size: " << corners.size() << std::endl;
             std::cout << "calculate front face: " << Timer_toc(&timer2) << std::endl;
 

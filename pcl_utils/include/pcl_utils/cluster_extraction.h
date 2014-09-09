@@ -17,7 +17,7 @@
 
 namespace cluster_extraction {
 
-    std::vector<pcl::PointCloud<pcl::PointXYZ> > extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+    int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* clusters);
 
 }
 

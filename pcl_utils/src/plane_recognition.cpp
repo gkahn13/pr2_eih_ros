@@ -22,8 +22,10 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
 {
 
     float leaf_size, distance_threshold;
+    bool publish_plane_marker;
     ros::param::param<float>("/occlusion_parameters/plane_recognition_leaf_size", leaf_size, 0.05f); // TODO: find the right value for this - could be pretty high I think?
     ros::param::param<float>("/occlusion_parameters/plane_recognition_distance_threshold", distance_threshold, 0.04f);
+    ros::param::param<bool>("/occlusion_parameters/publish_plane_marker", publish_plane_marker, false);
 
     std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
@@ -132,7 +134,9 @@ void calculate_plane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointIndice
     marker.color.g = 0.0;
     marker.color.b = 1.0;
 
-    //markers->markers.push_back(marker);
+    if (publish_plane_marker) {
+        markers->markers.push_back(marker);
+    }
 
 }
 }
