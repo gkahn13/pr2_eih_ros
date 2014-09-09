@@ -37,7 +37,7 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
     seg.setDistanceThreshold (plane_distance_threshold);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
-    while (cloud_filtered->points.size () > 0.3 * nr_points)
+    while (cloud_filtered->points.size () > 0.3 * nr_points) // 0.3
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (cloud_filtered);
@@ -57,11 +57,11 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
         // Get the points associated with the planar surface
         extract.filter (*cloud_plane);
 
-        if (i > 0) {
-        cloud_plane->width = cloud_plane->points.size ();
-        cloud_plane->height = 1;
-        cloud_plane->is_dense = true;
-        cloud_vector->push_back(*cloud_plane);
+        if ((i >= 1) && (i <= 2)) { // TODO: Peter, this limits the number of cloud_planes. Change it as you will
+        	cloud_plane->width = cloud_plane->points.size ();
+        	cloud_plane->height = 1;
+        	cloud_plane->is_dense = true;
+        	cloud_vector->push_back(*cloud_plane);
         }
 
 //        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;

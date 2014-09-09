@@ -27,8 +27,8 @@ class HandlePosesPublisher:
         self.handles_thread = threading.Thread(target=self._handles_loop)
         self.handles_thread.start()
         
-        self.min_positions = np.array([0.1,-1,0.3])
-        self.max_positions = np.array([1,1,0.9]) # 1, 1, 1.5
+        self.min_positions = np.array([0.15,-1,0.3])
+        self.max_positions = np.array([1,1,0.92]) # 1, 1, 1.5
                     
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
