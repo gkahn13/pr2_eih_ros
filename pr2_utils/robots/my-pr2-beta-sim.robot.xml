@@ -3,7 +3,7 @@
   <kinbody>
      <body name="r_gripper_center_frame">
        <rotationaxis>0 0 0 0</rotationaxis>
-       <translation>-0.015 0 0</translation>
+       <translation>-0.02 0 0</translation>
        <offsetfrom>r_gripper_tool_frame</offsetfrom>
      </body>
      <joint name="dummy_r_gripper_center" type="hinge">
@@ -31,7 +31,7 @@
   <kinbody>
     <body name="l_gripper_center_frame">
       <rotationaxis>0 0 0 0</rotationaxis>
-      <translation>-0.015 0 0</translation>
+      <translation>-0.02 0 0</translation>
       <offsetfrom>l_gripper_tool_frame</offsetfrom>
     </body>
     <joint name="dummy_l_gripper_center" type="hinge">
