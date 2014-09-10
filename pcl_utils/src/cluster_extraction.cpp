@@ -1,8 +1,13 @@
 #include <pcl_utils/cluster_extraction.h>
 
+#include "ros/ros.h"
+#include "sensor_msgs/PointCloud2.h"
+
+#include <pcl_conversions.h>
+
 namespace cluster_extraction {
 
-int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* cloud_vector) {
+int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* cloud_vector, ros::Publisher plane_points_pub) {
 
 
     float leaf_size, cluster_tolerance, plane_distance_threshold;
@@ -39,7 +44,7 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
     seg.setDistanceThreshold (plane_distance_threshold);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
-    while (cloud_filtered->points.size () > 0.3 * nr_points) // 0.3
+    while (cloud_filtered->points.size () > 500) // 0.3 * nr_points
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (cloud_filtered);
@@ -59,50 +64,61 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
         // Get the points associated with the planar surface
         extract.filter (*cloud_plane);
 
-	if ((i >= 1) && (i <= 1000)) { // TODO: Peter, this limits the number of cloud_planes. Change it as you will
-	  cloud_plane->width = cloud_plane->points.size ();
-	  cloud_plane->height = 1;
-	  cloud_plane->is_dense = true;
-	  // try subclustering within each plane cluster
-	  if (subcluster_planes) {
-	    // Creating the KdTree object for the search method of the extraction
-	    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-	    tree->setInputCloud (cloud_filtered);
+#define PUBLISH_POINTS
+#ifdef PUBLISH_POINTS
+      sensor_msgs::PointCloud2 cloud_plane_ros;
+      pcl::toROSMsg(*cloud_plane, cloud_plane_ros);
+      cloud_plane_ros.header.frame_id = "/kinfu_frame";
+      cloud_plane_ros.header.stamp = ros::Time::now();
+      plane_points_pub.publish(cloud_plane_ros);
+      ros::spinOnce();
+      std::cout << "Number of points: " << cloud_plane->points.size() << "\n";
+      std::cout << "Plane points published. Press enter\n";
+      std::cin.ignore();
+#endif
 
-	    std::vector<pcl::PointIndices> cluster_indices;
-	    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-	    ec.setClusterTolerance (cluster_tolerance);
-	    ec.setMinClusterSize (min_cluster_size);
-	    ec.setMaxClusterSize (max_cluster_size);
-	    ec.setSearchMethod (tree);
-	    ec.setInputCloud (cloud_plane);
-	    ec.extract (cluster_indices);
+      if ((i >= 1) && (i <= 1000)) { // TODO: Peter, this limits the number of cloud_planes. Change it as you will
+    	  cloud_plane->width = cloud_plane->points.size ();
+    	  cloud_plane->height = 1;
+    	  cloud_plane->is_dense = true;
+    	  // try subclustering within each plane cluster
+    	  if (subcluster_planes) {
+    		  // Creating the KdTree object for the search method of the extraction
+    		  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    		  tree->setInputCloud (cloud_filtered);
 
-	    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-	      {
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-		  cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
-		cloud_cluster->width = cloud_cluster->points.size ();
-		cloud_cluster->height = 1;
-		cloud_cluster->is_dense = true;
+    		  std::vector<pcl::PointIndices> cluster_indices;
+    		  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    		  ec.setClusterTolerance (cluster_tolerance);
+    		  ec.setMinClusterSize (min_cluster_size);
+    		  ec.setMaxClusterSize (max_cluster_size);
+    		  ec.setSearchMethod (tree);
+    		  ec.setInputCloud (cloud_plane);
+    		  ec.extract (cluster_indices);
 
-		cloud_vector->push_back(*cloud_cluster);
+    		  for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+    		  {
+    			  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+    			  for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
+    				  cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
+    			  cloud_cluster->width = cloud_cluster->points.size ();
+    			  cloud_cluster->height = 1;
+    			  cloud_cluster->is_dense = true;
 
-	      }
-	    
-	  } else {
-	    cloud_vector->push_back(*cloud_plane);
-	  }
-        }
+    			  cloud_vector->push_back(*cloud_cluster);
 
-//        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+    		  }
+    	  } else {
+    		  cloud_vector->push_back(*cloud_plane);
+    	  }
+      }
+	  i++;
+      //        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
 
-        // Remove the planar inliers, extract the rest
-        extract.setNegative (true);
-        extract.filter (*cloud_f);
-        *cloud_filtered = *cloud_f;
-        i++;
+      // Remove the planar inliers, extract the rest
+      extract.setNegative (true);
+      extract.filter (*cloud_f);
+      *cloud_filtered = *cloud_f;
     }
 
 
@@ -123,26 +139,27 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
     //int j = 0;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
     {
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-            cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
+    	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+    	for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
+    		cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
+    	cloud_cluster->width = cloud_cluster->points.size ();
+    	cloud_cluster->height = 1;
+    	cloud_cluster->is_dense = true;
 
-        cloud_vector->push_back(*cloud_cluster);
-//        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+    	cloud_vector->push_back(*cloud_cluster);
+    	//        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
 
-        //functionality moved to occluded_region_finder.cpp
-//        std::stringstream ss;
-//        ss << "cloud_cluster_" << j << ".pcd";
-//        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
-//        j++;
+    	//functionality moved to occluded_region_finder.cpp
+    	//        std::stringstream ss;
+    	//        ss << "cloud_cluster_" << j << ".pcd";
+    	//        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+    	//        j++;
 
     }
 
     return i - 1;
 }
+
 }
 
 // now handled in occluded_region_finder.cpp

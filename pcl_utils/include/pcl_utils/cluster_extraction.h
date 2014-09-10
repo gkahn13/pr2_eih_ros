@@ -17,7 +17,7 @@
 
 namespace cluster_extraction {
 
-    int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* clusters);
+    int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* clusters, ros::Publisher plane_points_pub);
 
 }
 

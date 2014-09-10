@@ -85,15 +85,15 @@ class Planner:
         # create object that stores optimization problem
         prob = trajoptpy.ConstructProblem(s, self.sim.env)
             
-        tool_link = self.robot.GetLink(link_name)
-        def point_at(x):
-            self.robot.SetDOFValues(x, self.joint_indices, False)
-            T = tool_link.GetTransform()
-            local_dir = xyz.array - T[:3,3]
-            return T[1:3,:3].dot(local_dir)
-        
-        for t in xrange(int(0.75*n_steps), n_steps-1):
-            prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+#         tool_link = self.robot.GetLink(link_name)
+#         def point_at(x):
+#             self.robot.SetDOFValues(x, self.joint_indices, False)
+#             T = tool_link.GetTransform()
+#             local_dir = xyz.array - T[:3,3]
+#             return T[1:3,:3].dot(local_dir)
+#         
+#         for t in xrange(int(0.75*n_steps), n_steps-1):
+#             prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
 
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)
@@ -375,6 +375,16 @@ class Planner:
         s = json.dumps(request) 
         # create object that stores optimization problem
         prob = trajoptpy.ConstructProblem(s, self.sim.env)
+        
+        tool_link = self.robot.GetLink(self.tool_frame)
+        def penalize_low_height(x):
+            self.robot.SetDOFValues(x, self.joint_indices, False)
+            z = tool_link.GetTransform()[2,3]
+            return max(0, 10.0 - z)
+
+        for t in xrange(n_steps-2):
+            prob.AddErrorCost(penalize_low_height, [(t,j) for j in xrange(len(self.joint_indices))], "ABS", "PENALIZE_LOW_HEIGHT_%i"%t)
+        
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)
         
