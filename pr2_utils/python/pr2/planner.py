@@ -70,13 +70,15 @@ class Planner:
         xyz_target = [xyz.x, xyz.y, xyz.z]
         rave_mat = rave.matrixFromPose(np.r_[quat_target, xyz_target])
         
-        init_joint_target = None
-#         init_joint_target = self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
-#         if init_joint_target is not None:
-#             init_joint_target = self._closer_joint_angles(init_joint_target, start_joints)
+#         init_joint_target = None
+        init_joint_target = self.sim.ik_for_link(rave_pose.matrix, self.manip, link_name, 0)
+        if init_joint_target is not None:
+            init_joint_target = self._closer_joint_angles(init_joint_target, start_joints)
+        
+        init_traj = self.ik_point(start_joints, xyz, n_steps=n_steps, link_name=link_name)
         
         request = self._get_grasp_trajopt_request(xyz_target, quat_target, n_steps,
-                                                  ignore_orientation=ignore_orientation, link_name=link_name, init_joint_target=init_joint_target)
+                                                  ignore_orientation=ignore_orientation, link_name=link_name, init_traj=init_traj)
         
         # convert dictionary into json-formatted string
         s = json.dumps(request) 
@@ -89,18 +91,10 @@ class Planner:
             T = tool_link.GetTransform()
             local_dir = xyz.array - T[:3,3]
             return T[1:3,:3].dot(local_dir)
-#         arm_joints = [self.robot.GetJointFromDOFIndex(ind) for ind in self.joint_indices]
-#         def point_at_jac(x): # not working
-#             self.robot.SetDOFValues(x, self.joint_indices, False)
-#             T = tool_link.GetTransform()
-#             local_dir = xyz.array - T[:3,3]
-#             #world_dir = T[:3,:3].dot(local_dir)
-#             return np.array([np.cross(joint.GetAxis(), local_dir)[:] for joint in arm_joints]).T.copy()
- 
-                 
+        
         for t in xrange(int(0.75*n_steps), n_steps-1):
             prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
-                        
+
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)
         
@@ -115,13 +109,13 @@ class Planner:
         else:
             return result.GetTraj()
         
-    def _get_grasp_trajopt_request(self, xyz_target, quat_target, n_steps, ignore_orientation=False, link_name=None, init_joint_target=None):
+    def _get_grasp_trajopt_request(self, xyz_target, quat_target, n_steps, ignore_orientation=False, link_name=None, init_traj=None):
         """
         :param xyz_target: 3d list
         :param quat_target: [w,x,y,z]
         :param n_steps: trajopt discretization
         :param ignore_orientation
-        :param init_joint_target: if not None, joint initialization of target_pose for trajopt
+        :param init_traj: if not None, traj initialization of target_pose for trajopt
         :return trajopt json request
         """
         link_name = link_name if link_name is not None else self.tool_frame
@@ -143,15 +137,15 @@ class Planner:
                     "params" : {
                         "coeffs" : [20], # 20
                         "continuous": False,
-                        "dist_pen" : [0.025] # .025 
+                        "dist_pen" : [0.05] # .025 
                         }
                     },
                 {
                     "type" : "collision",
                     "params" : {
-                        "coeffs" : [20], # 20
+                        "coeffs" : [40], # 20
                         "continuous" : True,
-                        "dist_pen" : [0.025] # .025 
+                        "dist_pen" : [0.05] # .025 
                         }
                     },
                 {
@@ -190,14 +184,14 @@ class Planner:
                 ],
             }
         
-        if init_joint_target is not None:
-                request["init_info"] = {
-                                         "type" : "straight_line",
-                                         "endpoint" : list(init_joint_target),
-                                         }
-        else:
+        if init_traj is None:
             request["init_info"] = {
                                      "type" : "stationary",
+                                     }
+        else:
+            request["init_info"] = {
+                                     "type" : "given_traj",
+                                     "data" : init_traj.tolist(),
                                      }
         
         
@@ -246,7 +240,14 @@ class Planner:
         result = trajoptpy.OptimizeProblem(prob)
         
         self.robot.SetDOFValues(start_joints, self.joint_indices)
-        return result.GetTraj()
+        prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
+        num_upsampled_collisions = self._num_collisions(result.GetTraj())
+        print('Number of collisions: {0}'.format(num_upsampled_collisions))
+        self.robot.SetDOFValues(start_joints, self.joint_indices)
+        if num_upsampled_collisions > 2:
+            return None
+        else:
+            return result.GetTraj()
         
     def _get_return_from_grasp_trajopt_request(self, xyz_target, quat_target, n_steps):
         """
@@ -323,6 +324,62 @@ class Planner:
         
         return request
     
+    def ik_point(self, start_joints, target_position, n_steps=40, link_name=None):
+        """
+        Calls trajopt to get traj to point, no collision checking
+        
+        :param start_joints: list of initial joints
+        :param target_position: 3d np.ndarray desired position of tool_frame in world frame
+        :param n_steps: trajopt discretization
+        :return None if traj not collision free, else list of joint values
+        """
+        link_name = link_name if link_name is not None else self.tool_frame
+        
+        assert len(start_joints) == len(self.joint_indices)
+        self.sim.update()
+        
+        # set active manipulator and start joint positions
+        self.robot.SetDOFValues(start_joints, self.joint_indices)
+        
+        request = {
+            "basic_info" : {
+                "n_steps" : n_steps,
+                "manip" : str(self.manip.GetName()), 
+                "start_fixed" : True 
+                },
+            "costs" : [
+                {
+                    "type" : "joint_vel",
+                    "params": {"coeffs" : [1]} 
+                    },
+                ],
+            "constraints" : [
+                {
+                    "type" : "pose",
+                    "name" : "target_pose",
+                    "params" : {"xyz" : list(target_position), 
+                                "wxyz" : [0,0,0,1],
+                                "link": link_name,
+                                "rot_coeffs" : [0,0,0],
+                                "pos_coeffs" : [1,1,1]
+                                }
+                     
+                    },
+                ],
+            "init_info" : {
+                            "type" : "stationary",
+                    },
+            }
+        
+        # convert dictionary into json-formatted string
+        s = json.dumps(request) 
+        # create object that stores optimization problem
+        prob = trajoptpy.ConstructProblem(s, self.sim.env)
+        # do optimization
+        result = trajoptpy.OptimizeProblem(prob)
+        
+        return result.GetTraj()
+    
     @staticmethod
     def _closer_joint_angles(new_joints, curr_joints):
         for i in [2, 4, 6]:
@@ -337,7 +394,8 @@ class Planner:
         num_collisions = 0
         for (i,row) in enumerate(traj_up):
             self.robot.SetDOFValues(row, self.joint_indices)
-            is_collision = max([self.sim.env.CheckCollision(l) for l in manip_links])
+            #is_collision = max([self.sim.env.CheckCollision(l) for l in manip_links])
+            is_collision = self.sim.env.CheckCollision(self.robot)
             if is_collision:
                 num_collisions += 1
                 

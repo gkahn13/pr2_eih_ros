@@ -2,7 +2,7 @@
 
 namespace cluster_extraction {
 
-  int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* cloud_vector) {
+int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl::PointCloud<pcl::PointXYZ> >* cloud_vector) {
 
 
     float leaf_size, cluster_tolerance, plane_distance_threshold;
@@ -17,7 +17,7 @@ namespace cluster_extraction {
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
 
-    //    std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
+//    std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
 
     // Create the filtering object: downsample the dataset using a leaf size of 1cm
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
@@ -25,7 +25,7 @@ namespace cluster_extraction {
     vg.setInputCloud (cloud);
     vg.setLeafSize (leaf_size, leaf_size, leaf_size);
     vg.filter (*cloud_filtered);
-    //    std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
+//    std::cout << "PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
 
     // Create the segmentation object for the planar model and set all the parameters
     pcl::SACSegmentation<pcl::PointXYZ> seg;
@@ -39,16 +39,16 @@ namespace cluster_extraction {
     seg.setDistanceThreshold (plane_distance_threshold);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
-    while (cloud_filtered->points.size () > 0.3 * nr_points)
-      {
+    while (cloud_filtered->points.size () > 0.3 * nr_points) // 0.3
+    {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (cloud_filtered);
         seg.segment (*inliers, *coefficients);
         if (inliers->indices.size () == 0)
-	  {
-	    //            std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+        {
+//            std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
             break;
-	  }
+        }
 
         // Extract the planar inliers from the input cloud
         pcl::ExtractIndices<pcl::PointXYZ> extract;
@@ -59,7 +59,7 @@ namespace cluster_extraction {
         // Get the points associated with the planar surface
         extract.filter (*cloud_plane);
 
-        if (i > 0) {
+	if ((i >= 1) && (i <= 1000)) { // TODO: Peter, this limits the number of cloud_planes. Change it as you will
 	  cloud_plane->width = cloud_plane->points.size ();
 	  cloud_plane->height = 1;
 	  cloud_plane->is_dense = true;
@@ -96,14 +96,14 @@ namespace cluster_extraction {
 	  }
         }
 
-	//        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+//        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
 
         // Remove the planar inliers, extract the rest
         extract.setNegative (true);
         extract.filter (*cloud_f);
         *cloud_filtered = *cloud_f;
         i++;
-      }
+    }
 
 
     // Creating the KdTree object for the search method of the extraction
@@ -122,27 +122,27 @@ namespace cluster_extraction {
     //pcl::PCDWriter writer;
     //int j = 0;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-      {
+    {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
         for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-	  cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
+            cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
         cloud_cluster->width = cloud_cluster->points.size ();
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
 
         cloud_vector->push_back(*cloud_cluster);
-	//        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+//        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
 
         //functionality moved to occluded_region_finder.cpp
-	//        std::stringstream ss;
-	//        ss << "cloud_cluster_" << j << ".pcd";
-	//        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
-	//        j++;
+//        std::stringstream ss;
+//        ss << "cloud_cluster_" << j << ".pcd";
+//        writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+//        j++;
 
-      }
+    }
 
     return i - 1;
-  }
+}
 }
 
 // now handled in occluded_region_finder.cpp
