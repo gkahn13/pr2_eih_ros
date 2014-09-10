@@ -13,6 +13,7 @@ namespace rave = OpenRAVE;
 
 #define ARM_DIM 7
 typedef Matrix<double, ARM_DIM, 1> VectorJ;
+typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 
 namespace pr2_sim {
 

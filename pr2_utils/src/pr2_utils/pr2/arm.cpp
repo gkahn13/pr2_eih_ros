@@ -71,7 +71,7 @@ Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_ma
  * \param block if true, waits until trajectory is completed
  */
 void Arm::execute_pose_trajectory(const std::vector<Matrix4d>& pose_traj, double speed, bool block) {
-	std::vector<VectorJ> joint_traj;
+	StdVectorJ joint_traj;
 	for(const Matrix4d& pose : pose_traj) {
 		VectorJ joints;
 		if (!ik(pose, joints)) {
@@ -86,7 +86,7 @@ void Arm::execute_pose_trajectory(const std::vector<Matrix4d>& pose_traj, double
 	execute_joint_trajectory(joint_traj, speed, block);
 }
 
-void Arm::execute_joint_trajectory(const std::vector<VectorJ>& joint_traj, double speed, bool block) {
+void Arm::execute_joint_trajectory(const StdVectorJ& joint_traj, double speed, bool block) {
 	control_msgs::JointTrajectoryGoal goal;
 
 	goal.trajectory.joint_names = joint_names;
@@ -169,7 +169,7 @@ void Arm::go_to_pose(const Matrix4d& pose, double speed, bool block) {
 }
 
 void Arm::go_to_joints(const VectorJ& joints, double speed, bool block) {
-	execute_joint_trajectory(std::vector<VectorJ>(1, joints), speed, block);
+	execute_joint_trajectory(StdVectorJ(1, joints), speed, block);
 }
 
 void Arm::close_gripper(double max_effort, bool block, double timeout) {
@@ -301,7 +301,7 @@ bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
  *
  */
 
-void Arm::display_trajectory(const std::vector<VectorJ>& joint_traj) {
+void Arm::display_trajectory(const StdVectorJ& joint_traj) {
 	geometry_msgs::PoseArray pose_array;
 	pose_array.poses.resize(joint_traj.size());
 	for(int t=0; t < joint_traj.size(); ++t) {

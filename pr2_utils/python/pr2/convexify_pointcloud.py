@@ -57,7 +57,8 @@ def pc2_to_cloudprocpy(pc2, transform_world, point_cloud_filter):
             pt = list(np.dot(rot, pt) + trans)
             pt.append(1)
             points.append(pt)
-        
+    
+    
     # reorganize cloud data to construct a cloud object
     n_dim = 4 # 3 spatial dimension + 1 for homogenity
     cloud = cloudprocpy.CloudXYZ()
@@ -145,8 +146,8 @@ def generate_mesh(cloud, decimation_rate=0.5):
     :param cloud: cloudprocpy cloud
     :return pcl polygon mesh
     """
-    import warnings
-    warnings.filterwarnings('error')
+#     import warnings
+#     warnings.filterwarnings('error')
     
     cloud_with_normals = cloudprocpy.mlsAddNormals(cloud, .02)
     filtered_cloud = list()

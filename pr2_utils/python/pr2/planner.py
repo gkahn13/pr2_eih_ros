@@ -283,16 +283,16 @@ class Planner:
                         "dist_pen" : [0.025] 
                         }
                     },
-                {
-                        "type" : "pose",
-                        "name" : "target_pose",
-                        "params" : {"xyz" : xyz_target, 
-                                    "wxyz" : quat_target,
-                                    "link": self.tool_frame,
-                                    "rot_coeffs" : [1,1,1],
-                                    "pos_coeffs" : [0,0,0],
-                                    }
-                        },
+#                 {
+#                         "type" : "pose",
+#                         "name" : "target_pose",
+#                         "params" : {"xyz" : xyz_target, 
+#                                     "wxyz" : quat_target,
+#                                     "link": self.tool_frame,
+#                                     "rot_coeffs" : [1,1,1],
+#                                     "pos_coeffs" : [0,0,0],
+#                                     }
+#                         },
                 ],
             "constraints" : [
                 {
@@ -301,7 +301,7 @@ class Planner:
                     "params" : {"xyz" : xyz_target, 
                                 "wxyz" : quat_target,
                                 "link": self.tool_frame,
-                                "rot_coeffs" : [0,0,0],
+                                "rot_coeffs" : [1,1,1],
                                 "pos_coeffs" : [1,1,1]
                                 }
                      

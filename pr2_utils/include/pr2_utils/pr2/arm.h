@@ -42,7 +42,7 @@ public:
 	Arm(ArmType a);
 
 	void execute_pose_trajectory(const std::vector<Matrix4d>& pose_traj, double speed=DEFAULT_SPEED, bool block=true);
-	void execute_joint_trajectory(const std::vector<VectorJ>& joint_traj, double speed=DEFAULT_SPEED, bool block=true);
+	void execute_joint_trajectory(const StdVectorJ& joint_traj, double speed=DEFAULT_SPEED, bool block=true);
 
 	void go_to_posture(Arm::Posture posture, double speed=DEFAULT_SPEED, bool block=true);
 	void go_to_pose(const Matrix4d& pose, double speed=DEFAULT_SPEED, bool block=true);
@@ -83,7 +83,7 @@ private:
 
 	ros::Publisher display_trajectory_pub;
 
-	void display_trajectory(const std::vector<VectorJ>& joint_traj);
+	void display_trajectory(const StdVectorJ& joint_traj);
 	void _joint_state_callback(const sensor_msgs::JointStateConstPtr& joint_state);
 };
 
