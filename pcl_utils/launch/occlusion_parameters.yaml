@@ -3,12 +3,12 @@ tsdf_converter_jump: 1
 voxel_size: 0.02
 downsampling_rate: 100
 
-min_x: 0.5 # 0.5
+min_x: 0 # 0.5
 max_x: 2 # 2
-min_y: 0.5 # 0.5
-max_y: 1.5 # 1.5
-min_z: 0.75 # 0.75
-max_z: 1.45 # 1.45
+min_y: 0 # 0.5
+max_y: 2 # 1.5
+min_z: 0 # 0.75
+max_z: 2 # 1.45
 
 # cluster_extraction.cpp
 cluster_extraction_leaf_size: 0.01
@@ -25,6 +25,7 @@ table_tolerance: 0.05
 plane_recognition_leaf_size: 0.01 # 0.02
 plane_recognition_distance_threshold: 0.04 # 0.04
 publish_plane_marker: true
+subcluster_planes: false
 
 # kinfu
 using_head_camera: true
@@ -33,3 +34,6 @@ table_cutoff_above: 0.03
 # tsdf zero-crossing threshold
 tsdf_min_distance: 0 # 0
 tsdf_max_distance: .4 # .4
+
+# occluded_region_finder.cpp
+face_use_eigenvalues: true

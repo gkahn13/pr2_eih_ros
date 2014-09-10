@@ -290,8 +290,19 @@ void find_occluded_regions(std::vector<float> tsdf_distances, std::vector<short>
             feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
             feature_extractor.getMassCenter (mass_center);
 
-            std::cout << "cluster feature extraction: " << Timer_toc(&timer2) << std::endl;
+	    bool face_use_eigenvalues;
+	    ros::param::param<bool>("/occlusion_parameters/face_use_eigenvalues", face_use_eigenvalues, false);
 
+	    if (face_use_eigenvalues) {
+	      min_point_OBB.x = -major_value;
+	      min_point_OBB.y = -middle_value;
+	      min_point_OBB.z = -minor_value;
+	      min_point_OBB.x = major_value;
+	      min_point_OBB.y = middle_value;
+	      min_point_OBB.z = minor_value;
+	    }
+
+            std::cout << "cluster feature extraction: " << Timer_toc(&timer2) << std::endl;
             Eigen::Vector3f position (position_OBB.x, position_OBB.y, position_OBB.z);
             std::vector<Eigen::Vector3f> corners;
 
