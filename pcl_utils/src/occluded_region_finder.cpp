@@ -103,21 +103,31 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 	Eigen::Vector3f position_vector = position / position.norm();
 
 	int direction = 0;
-	double max_dot_product = -INFINITY;
-	for (int i = 0; i < 3; i++)
-	{
-		double current_dot_product = position_vector.dot(rotational_matrix_OBB.col(i));
-		if (current_dot_product > max_dot_product) {
-			direction = i;
-			max_dot_product = current_dot_product;
-		}
-	}
-
+	
 	Eigen::Matrix3f U;
 	if (rotate_box) {
-		U = occluded_region_finder::calculate_rotation(rotational_matrix_OBB.col(direction), position_vector);
+	  double max_dot_product = -INFINITY;
+	  for (int i = 0; i < 3; i++)
+	    {
+	      double current_dot_product = position_vector.dot(rotational_matrix_OBB.col(i));
+	      if (current_dot_product > max_dot_product) {
+		direction = i;
+		max_dot_product = current_dot_product;
+	      }
+	}
+
+	        U = occluded_region_finder::calculate_rotation(rotational_matrix_OBB.col(direction), position_vector);
+		
 	} else {
 		U = Eigen::Matrix3f::Identity();
+		double min_eigen_value = INFINITY;
+		for (int i = 0; i < 3; i++) {
+		  if (weights(i) < min_eigen_value) {
+		    min_eigen_value = weights(i);
+		    direction = i;
+		  }
+		}
+		
 	}
 
 	Eigen::Matrix3f new_vectors = U * rotational_matrix_OBB;
@@ -151,9 +161,9 @@ Eigen::Vector2i calculate_face(pcl::PointXYZ min_point_OBB, pcl::PointXYZ max_po
 	marker.id = j + 1000;
 	marker.type = visualization_msgs::Marker::CUBE;
 	marker.action = visualization_msgs::Marker::ADD;
-	marker.pose.position.x = front_face_center(0);
-	marker.pose.position.y = front_face_center(1);
-	marker.pose.position.z = front_face_center(2);
+	marker.pose.position.x = rotate_box ? front_face_center(0) : position(0);
+	marker.pose.position.y = rotate_box ? front_face_center(1) : position(1);
+	marker.pose.position.z = rotate_box ? front_face_center(2) : position(2);
 	marker.pose.orientation.x = quat.x();
 	marker.pose.orientation.y = quat.y();
 	marker.pose.orientation.z = quat.z();

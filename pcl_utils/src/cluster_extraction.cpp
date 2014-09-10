@@ -11,14 +11,13 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
 
 
     float leaf_size, cluster_tolerance, plane_distance_threshold;
-    int min_cluster_size, max_cluster_size;
-    bool subcluster_planes;
+    int min_cluster_size, max_cluster_size, min_planar_cluster_size;
     ros::param::param<float>("/occlusion_parameters/cluster_extraction_leaf_size", leaf_size, 0.01f);
     ros::param::param<float>("/occlusion_parameters/cluster_tolerance", cluster_tolerance, 0.01f);
     ros::param::param<int>("/occlusion_parameters/min_cluster_size", min_cluster_size, 100);
     ros::param::param<int>("/occlusion_parameters/max_cluster_size", max_cluster_size, 25000);
     ros::param::param<float>("/occlusion_parameters/plane_cluster_distance_threshold", plane_distance_threshold, 0.02f);
-    ros::param::param<bool>("/occlusion_parameters/subcluster_planes", subcluster_planes, false);
+    ros::param::param<int>("/occlusion_parameters/min_planar_cluster_size", min_planar_cluster_size, 500);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -44,7 +43,7 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
     seg.setDistanceThreshold (plane_distance_threshold);
 
     int i=0, nr_points = (int) cloud_filtered->points.size ();
-    while (cloud_filtered->points.size () > 500) // 0.3 * nr_points
+    while (cloud_filtered->points.size () > 0.1 * nr_points)
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (cloud_filtered);
@@ -63,8 +62,11 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
 
         // Get the points associated with the planar surface
         extract.filter (*cloud_plane);
+	if (cloud_plane->points.size() < min_planar_cluster_size) {
+	  break;
+	}
 
-#define PUBLISH_POINTS
+// #define PUBLISH_POINTS
 #ifdef PUBLISH_POINTS
       sensor_msgs::PointCloud2 cloud_plane_ros;
       pcl::toROSMsg(*cloud_plane, cloud_plane_ros);
@@ -81,36 +83,8 @@ int extract_clusters(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<pcl:
     	  cloud_plane->width = cloud_plane->points.size ();
     	  cloud_plane->height = 1;
     	  cloud_plane->is_dense = true;
-    	  // try subclustering within each plane cluster
-    	  if (subcluster_planes) {
-    		  // Creating the KdTree object for the search method of the extraction
-    		  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-    		  tree->setInputCloud (cloud_filtered);
 
-    		  std::vector<pcl::PointIndices> cluster_indices;
-    		  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    		  ec.setClusterTolerance (cluster_tolerance);
-    		  ec.setMinClusterSize (min_cluster_size);
-    		  ec.setMaxClusterSize (max_cluster_size);
-    		  ec.setSearchMethod (tree);
-    		  ec.setInputCloud (cloud_plane);
-    		  ec.extract (cluster_indices);
-
-    		  for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-    		  {
-    			  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    			  for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-    				  cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
-    			  cloud_cluster->width = cloud_cluster->points.size ();
-    			  cloud_cluster->height = 1;
-    			  cloud_cluster->is_dense = true;
-
-    			  cloud_vector->push_back(*cloud_cluster);
-
-    		  }
-    	  } else {
-    		  cloud_vector->push_back(*cloud_plane);
-    	  }
+	  cloud_vector->push_back(*cloud_plane);
       }
 	  i++;
       //        std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
