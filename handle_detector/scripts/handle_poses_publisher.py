@@ -28,7 +28,7 @@ class HandlePosesPublisher:
         self.handles_thread.start()
         
         self.min_positions = np.array([0.2,-1,0.3])
-        self.max_positions = np.array([1,0.2,0.87])
+        self.max_positions = np.array([1,0.2,0.85])
 #         self.min_positions = np.array([0.15,-1,0])
 #         self.max_positions = np.array([1,1,0.92])
                     

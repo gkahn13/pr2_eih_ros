@@ -85,15 +85,17 @@ class Planner:
         # create object that stores optimization problem
         prob = trajoptpy.ConstructProblem(s, self.sim.env)
             
-#         tool_link = self.robot.GetLink(link_name)
-#         def point_at(x):
-#             self.robot.SetDOFValues(x, self.joint_indices, False)
-#             T = tool_link.GetTransform()
-#             local_dir = xyz.array - T[:3,3]
-#             return T[1:3,:3].dot(local_dir)
-#         
-#         for t in xrange(int(0.75*n_steps), n_steps-1):
-#             prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+        # TODO: worth doing?
+        tool_link = self.robot.GetLink(link_name)
+        def point_at(x):
+            self.robot.SetDOFValues(x, self.joint_indices, False)
+            T = tool_link.GetTransform()
+            local_dir = xyz.array - T[:3,3]
+            return T[1:3,:3].dot(local_dir)
+          
+        for t in xrange(int(0.8*n_steps), n_steps-1):
+            # TODO: change to cost
+            prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
 
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)

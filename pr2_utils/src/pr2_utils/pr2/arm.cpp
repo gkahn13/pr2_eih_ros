@@ -1,5 +1,20 @@
 #include "pr2_utils/pr2/arm.h"
 
+/**
+ *
+ * Helper functions
+ *
+ */
+
+VectorJ closer_joint_angles(const VectorJ& new_joints, const VectorJ& curr_joints) {
+	VectorJ closer_joints = new_joints;
+	for(const int& i : {2, 4, 6}) {
+		closer_joints(i) = pr2_utils::closer_angle(new_joints(i), curr_joints(i));
+	}
+	return closer_joints;
+}
+
+
 namespace pr2 {
 
 /**
@@ -94,12 +109,16 @@ void Arm::execute_joint_trajectory(const StdVectorJ& joint_traj, double speed, b
 	goal.trajectory.points.resize(joint_traj.size());
 
 	sim->update();
-	VectorJ curr_joints = get_joints();
+	VectorJ start_joints = get_joints();
+	VectorJ curr_joints = start_joints;
 	Vector3d start_position = fk(curr_joints).block<3,1>(0,3);
 	ROS_INFO_STREAM("\nStart position: " << start_position.transpose());
 	double time_from_start = 0;
 	for(int i=0; i < joint_traj.size(); ++i) {
-		const VectorJ& next_joints = joint_traj[i];
+		VectorJ next_joints = joint_traj[i];
+		ROS_INFO_STREAM("Before Joints[" << i << "]: " << next_joints.transpose());
+		next_joints = closer_joint_angles(next_joints, start_joints);
+		ROS_INFO_STREAM("Joints[" << i << "]: " << next_joints.transpose());
 
 		Vector3d next_position = fk(next_joints).block<3,1>(0,3);
 		Vector3d curr_position = fk(curr_joints).block<3,1>(0,3);
@@ -276,14 +295,6 @@ VectorJ Arm::get_joints() {
 
 Matrix4d Arm::fk(const VectorJ& joints) {
 	return arm_sim->fk(joints);
-}
-
-VectorJ closer_joint_angles(const VectorJ& new_joints, const VectorJ& curr_joints) {
-	VectorJ closer_joints = new_joints;
-	for(const int& i : {2, 4, 6}) {
-		closer_joints(i) = pr2_utils::closer_angle(new_joints(i), curr_joints(i));
-	}
-	return closer_joints;
 }
 
 bool Arm::ik(const Matrix4d& pose, VectorJ& joints) {
