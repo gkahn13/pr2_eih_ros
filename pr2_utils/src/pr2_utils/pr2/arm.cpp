@@ -23,7 +23,7 @@ namespace pr2 {
  *
  */
 
-Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_max_effort(50.0), max_joint_velocity(M_PI/2.0) {
+Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_max_effort(50.0), max_joint_velocity(M_PI/4.0) {
 
 	sim = new pr2_sim::Simulator(false, true);
 	if (a == ArmType::right) {

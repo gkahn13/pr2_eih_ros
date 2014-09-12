@@ -189,6 +189,7 @@ class Halfspace {
 public:
 	Vector3d origin, normal;
 
+	Halfspace() : origin(Vector3d(0,0,-1e10)), normal(Vector3d(0,0,1)) { }
 	Halfspace(const Vector3d& o, const Vector3d n) : origin(o), normal(n) { }
 
 	/**
