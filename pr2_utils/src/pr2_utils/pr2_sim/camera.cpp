@@ -6,6 +6,38 @@ namespace pr2_sim {
 
 /**
  *
+ * RelativePyramid methods
+ *
+ */
+
+geometry3d::TruncatedPyramid RelativePyramid::construct_pyramid(const Matrix4d& cam_pose) {
+	std::vector<Vector3d> abs_points3d;
+	for(int i=0; i < 3; ++i) {
+		Vector3d pt = points[i];
+		const std::string& frame = point_frames[i];
+
+		assert(frame.find("base_link") != std::string::npos || frame.find("camera") != std::string::npos);
+
+		if (frame.find("camera") != std::string::npos) {
+			pt = cam_pose.block<3,3>(0,0)*pt + cam_pose.block<3,1>(0,3);
+		}
+
+		Vector2d pixel = cam->pixel_from_point(cam_pose, pt);
+		geometry3d::Segment abs_seg3d = cam->segment_through_pixel(cam_pose, pixel);
+
+		abs_points3d.push_back(abs_seg3d.p0);
+		abs_points3d.push_back(abs_seg3d.p1);
+	}
+
+	return geometry3d::TruncatedPyramid(abs_points3d);
+}
+
+double RelativePyramid::signed_distance(const Matrix4d& cam_pose, const Vector3d& point) {
+	return construct_pyramid(cam_pose).signed_distance(point);
+}
+
+/**
+ *
  * Camera constructors
  *
  */

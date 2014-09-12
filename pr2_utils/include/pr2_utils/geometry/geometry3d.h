@@ -76,6 +76,7 @@ public:
 	}
 
 	/**
+	 * TODO: doesn't work
 	 * \brief Finds intersection point with another segment
 	 * \param intersection stores intersection (if found)
 	 * \return True if intersection found
@@ -108,6 +109,33 @@ public:
 		}
 		return false;
 
+	}
+
+	/**
+	 * \brief Finds the closest points on the two segments
+	 *        but treats the segments as infinite lines
+	 */
+	inline void lines_closest_points(const Segment& other, Vector3d& closest, Vector3d& other_closest) const {
+		Vector3d w = p1 - p0;
+		Vector3d v = other.p1 - other.p0;
+
+		Matrix<double,3,2> A;
+		A << w(0), v(0),
+				w(1), v(1),
+				w(2), v(2);
+		Vector3d b = other.p0 - p0;
+
+		Vector2d soln = A.colPivHouseholderQr().solve(b);
+
+//		Eigen::JacobiSVD<MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+//		Matrix<double,3,2> A_pinv = svd.matrixV()*svd.matrixU().transpose();
+//		Vector2d soln = svd.solve(b);
+
+//		Vector2d soln = A.lu().solve(b); // TODO: will this work?
+		double s = soln(0), t = -soln(1);
+
+		closest = s*w + p0;
+		other_closest = t*v + other.p0;
 	}
 
 	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color) const {
@@ -370,9 +398,12 @@ class TruncatedPyramid {
      *    b0----c0    b1----c1
 	 */
 public:
+	TruncatedPyramid() { };
 	TruncatedPyramid(const Vector3d& a0, const Vector3d& a1,
 			const Vector3d& b0, const Vector3d& b1,
 			const Vector3d& c0, const Vector3d& c1) : a0(a0), a1(a1), b0(b0), b1(b1), c0(c0), c1(c1) { }
+	TruncatedPyramid(const std::vector<Vector3d>& ps) :
+		TruncatedPyramid(ps[0], ps[1], ps[2], ps[3], ps[4], ps[5]) { }
 
 	/**
 	 * \brief Checks if point p is inside by comparing against intersection of halfspaces
@@ -426,6 +457,10 @@ public:
             Triangle(b0, b1, c1),
             Triangle(b0, c0, c1),
             Triangle(a1, b1, c1)};
+	}
+
+	inline std::vector<Segment> get_side_segments() const {
+		return {Segment(a0, a1), Segment(b0, b1), Segment(c0, c1)};
 	}
 
 	void plot(pr2_sim::Simulator& sim, std::string frame, Vector3d color, bool with_sides=false, bool fill=false, double alpha=0.25) const {

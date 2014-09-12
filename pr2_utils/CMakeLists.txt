@@ -115,9 +115,9 @@ add_executable(pr2_sim_arm         tests/pr2_sim_arm.cpp src/${PROJECT_NAME}/pr2
 #add_executable(pr2_sim_camera      tests/pr2_sim_camera.cpp src/${PROJECT_NAME}/pr2_sim/arm.cpp
 #														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
 #														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
-#add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/pr2_sim/arm.cpp
-#														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
-#														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
+add_executable(gradient_sd         tests/gradient_sd.cpp    src/${PROJECT_NAME}/pr2_sim/arm.cpp
+														    src/${PROJECT_NAME}/pr2_sim/simulator.cpp
+														    src/${PROJECT_NAME}/pr2_sim/camera.cpp)
 #add_executable(pr2_arm			   tests/test_arm.cpp       src/${PROJECT_NAME}/pr2/arm.cpp
 #                                                            src/${PROJECT_NAME}/pr2_sim/arm.cpp
 #                                                            src/${PROJECT_NAME}/pr2_sim/simulator.cpp
@@ -136,8 +136,8 @@ set_target_properties(pr2_sim_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}"
 #set_target_properties(pr2_sim_camera PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 #set_target_properties(pr2_sim_camera PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
-#set_target_properties(gradient_sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-#set_target_properties(gradient_sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+set_target_properties(gradient_sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(gradient_sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 
 #set_target_properties(pr2_arm PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 #set_target_properties(pr2_arm PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
@@ -161,12 +161,12 @@ target_link_libraries(pr2_sim_arm
 #   ${Boost_LIBRARIES}
 #   ${TIMER_LIBRARIES}
 #)
-#target_link_libraries(gradient_sd
-#   ${catkin_LIBRARIES}
-#   ${OpenRAVE_CORE_LIBRARIES}
-#   ${Boost_LIBRARIES}
-#   ${TIMER_LIBRARIES}
-#)
+target_link_libraries(gradient_sd
+   ${catkin_LIBRARIES}
+   ${OpenRAVE_CORE_LIBRARIES}
+   ${Boost_LIBRARIES}
+   ${TIMER_LIBRARIES}
+)
 #target_link_libraries(pr2_arm
 #   ${catkin_LIBRARIES}
 #   ${OpenRAVE_CORE_LIBRARIES}

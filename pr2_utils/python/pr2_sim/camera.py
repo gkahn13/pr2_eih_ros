@@ -26,7 +26,6 @@ class RelativePyramid:
         cam_pose = np.array(cam.get_pose().matrix)
         cam_rot, cam_trans = cam_pose[:3,:3], cam_pose[:3,3]
         
-        abs_seg3d_list = list()
         abs_points3d = list()
         for pt, frame in zip(self.points, self.point_frames):
             assert(frame.count('base_link') > 0 or frame.count('camera') > 0)

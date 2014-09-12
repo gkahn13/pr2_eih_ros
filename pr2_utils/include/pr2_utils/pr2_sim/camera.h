@@ -12,6 +12,22 @@ using namespace Eigen;
 
 namespace pr2_sim {
 
+class Camera;
+
+class RelativePyramid {
+public:
+	RelativePyramid(Camera *cam, const std::vector<Vector3d>& points, const std::vector<std::string>& point_frames) :
+		cam(cam), points(points), point_frames(point_frames) { }
+
+	geometry3d::TruncatedPyramid construct_pyramid(const Matrix4d& cam_pose);
+	double signed_distance(const Matrix4d& cam_pose, const Vector3d& point);
+
+private:
+	Camera *cam;
+	std::vector<Vector3d> points;
+	std::vector<std::string> point_frames;
+};
+
 class Camera {
 public:
 	Camera(Arm *arm, Simulator *sim, double height, double width, double focal_length,
