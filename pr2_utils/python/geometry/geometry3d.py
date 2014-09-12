@@ -116,6 +116,15 @@ class TruncatedPyramid:
                 Triangle(self.b0, self.b1, self.c1),
                 Triangle(self.b0, self.c0, self.c1),
                 Triangle(self.a1, self.b1, self.c1)]
+        
+    @property
+    def side_segments(self):
+        """
+        :return list of Segment of sides of pyramid
+        """
+        return [Segment(self.a0, self.a1),
+                Segment(self.b0, self.b1),
+                Segment(self.c0, self.c1)]
     
     def plot(self, sim, frame='world', fill=False, with_sides=True, color=(1,0,0), alpha=0.25):
         """
@@ -397,7 +406,7 @@ class Triangle:
         
         return None
     
-    def closest_point_on_segment(self, segment):
+    def closest_point_on_segment(self, segment): # TODO: incorrect
         hyperplane = self.hyperplane
         intersection = hyperplane.intersection(segment)
         
@@ -505,7 +514,7 @@ class Segment:
         
         # w = p1 - p0
         # v = p1_other - p0_other
-        # s*w + p0 = t*v + p_other
+        # s*w + p0 = t*v + p0_other
         
         w = self.p1 - self.p0
         v = p1_other - p0_other
@@ -524,7 +533,7 @@ class Segment:
         if ((-epsilon <= s) and (s <= 1+epsilon) and (-epsilon <= t) and (t <= 1+epsilon)):
             return intersection
         else:
-            return None
+            return None    
         
     @property
     def length(self):
@@ -540,6 +549,52 @@ class Segment:
         p1 = sim.transform_from_to(self.p1, frame, 'world')
         sim.plot_segment(p0, p1, color=color)
         
+class Line:
+    def __init__(self, p0, p1):
+        self.p0, self.p1 = np.array(p0), np.array(p1)
+        
+    def closest_points(self, other):
+        """
+        Finds the closest points on this line and other line to each other
+        :param other: Line
+        :return point on self, point on other
+        """
+        p0_other, p1_other = other.p0, other.p1
+        
+        # w = p1 - p0
+        # v = p1_other - p0_other
+        # s*w + p0 = t*v + p0_other
+        
+        w = self.p1 - self.p0
+        v = p1_other - p0_other
+        
+        A = np.vstack((w,v)).T
+        b = p0_other - self.p0
+        
+        #soln = np.linalg.solve(A, b)
+        soln = np.linalg.pinv(A).dot(b)
+        s, t = soln[0], -soln[1]
+        
+        return s*w + self.p0, t*v + p0_other
+        
+    def distance_to(self, other):
+        """
+        Finds minimum distance between this line and other
+        :param other: Line
+        :return distance
+        """
+        p_self, p_other = self.closest_points(other)
+        return np.linalg.norm(p_self - p_other)
+    
+    def plot(self, sim, frame='world', color=(1,0,0)):
+        """
+        :param axes: pyplot axes
+        :param frame: frame in which points are defined in
+        :param color: character or (r,g,b) [0,1]
+        """
+        p0 = sim.transform_from_to(self.p0, frame, 'world')
+        p1 = sim.transform_from_to(self.p1, frame, 'world')
+        sim.plot_segment(p0, p1, color=color)
     
 class Halfspace:
     def __init__(self, origin, normal):

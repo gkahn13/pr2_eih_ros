@@ -71,6 +71,7 @@ private:
 
 	VectorJ current_joints;
 	double current_grasp;
+	double max_joint_velocity;
 
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber joint_state_sub;

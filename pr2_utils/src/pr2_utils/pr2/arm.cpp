@@ -23,7 +23,7 @@ namespace pr2 {
  *
  */
 
-Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_max_effort(50.0) {
+Arm::Arm(ArmType a) : arm_type(a), min_grasp(-0.01), max_grasp(0.08), default_max_effort(50.0), max_joint_velocity(M_PI/2.0) {
 
 	sim = new pr2_sim::Simulator(false, true);
 	if (a == ArmType::right) {
@@ -116,13 +116,15 @@ void Arm::execute_joint_trajectory(const StdVectorJ& joint_traj, double speed, b
 	double time_from_start = 0;
 	for(int i=0; i < joint_traj.size(); ++i) {
 		VectorJ next_joints = joint_traj[i];
-		ROS_INFO_STREAM("Before Joints[" << i << "]: " << next_joints.transpose());
+//		ROS_INFO_STREAM("Before Joints[" << i << "]: " << next_joints.transpose());
 		next_joints = closer_joint_angles(next_joints, start_joints);
-		ROS_INFO_STREAM("Joints[" << i << "]: " << next_joints.transpose());
+//		ROS_INFO_STREAM("Joints[" << i << "]: " << next_joints.transpose());
 
 		Vector3d next_position = fk(next_joints).block<3,1>(0,3);
 		Vector3d curr_position = fk(curr_joints).block<3,1>(0,3);
 		double duration = (next_position - curr_position).norm() / speed;
+		duration = std::max(duration, (next_joints-curr_joints).cwiseAbs().maxCoeff() / max_joint_velocity);
+
 		time_from_start += duration;
 		goal.trajectory.points[i].time_from_start = ros::Duration(time_from_start);
 		ROS_INFO_STREAM("Position " << i << ": " << next_position.transpose());

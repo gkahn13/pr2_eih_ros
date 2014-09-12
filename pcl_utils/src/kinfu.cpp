@@ -494,14 +494,14 @@ int main (int argc, char** argv)
     markers_pub = nh.advertise<visualization_msgs::MarkerArray> ("objects", 1);
     points_pub = nh.advertise<sensor_msgs::PointCloud2> ("occluded_points", 1);
     regions_pub = nh.advertise<pcl_utils::OccludedRegionArray> ("occluded_regions", 1);
-    signal_sub = nh.subscribe<std_msgs::Empty> ("/get_occluded", 1, get_occluded);
+    signal_sub = nh.subscribe<std_msgs::Empty> ("get_occluded", 1, get_occluded);
     plane_pub = nh.advertise<pcl_utils::BoundingBox> ("plane_bounding_box", 1);
     object_points_pub = nh.advertise<sensor_msgs::PointCloud2> ("graspable_points", 1);
     plane_points_pub = nh.advertise<sensor_msgs::PointCloud2>("plane_points", 1);
-    reset_sub = nh.subscribe<std_msgs::Empty> ("/reset_kinfu", 1, reset_kinfu);
+    reset_sub = nh.subscribe<std_msgs::Empty> ("reset", 1, reset_kinfu);
     #endif
 
-    head_camera_time_sub = nh.subscribe<std_msgs::Float64> ("/head_camera_duration", 1, activate_head_camera);
+    head_camera_time_sub = nh.subscribe<std_msgs::Float64> ("head_camera_duration", 1, activate_head_camera);
 
     head_points_sub = nh.subscribe<sensor_msgs::PointCloud2>("/head_camera/depth_registered/points", 1, _head_cloud_callback);
 

@@ -94,8 +94,8 @@ class Planner:
             return T[1:3,:3].dot(local_dir)
           
         for t in xrange(int(0.8*n_steps), n_steps-1):
-            # TODO: change to cost
-            prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+            #prob.AddConstraint(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "EQ", "POINT_AT_%i"%t)
+            prob.AddErrorCost(point_at, [(t,j) for j in xrange(len(self.joint_indices))], "ABS", "POINT_AT_%i"%t)
 
         # do optimization
         result = trajoptpy.OptimizeProblem(prob)

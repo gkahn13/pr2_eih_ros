@@ -16,6 +16,33 @@ from utils import utils
 wrist_to_hand = tfx.transform((-0.10580602687, -0.00436027573857, -0.102020052103),
                               (0.533272970101, 0.445531688303, 0.53017921348, 0.485830686218))
 
+class RelativePyramid:
+    def __init__(self, points, point_frames):
+        assert(len(points) == 3 and len(point_frames) == 3)
+        self.points = points
+        self.point_frames = point_frames
+        
+    def construct_pyramid(self, cam):
+        cam_pose = np.array(cam.get_pose().matrix)
+        cam_rot, cam_trans = cam_pose[:3,:3], cam_pose[:3,3]
+        
+        abs_seg3d_list = list()
+        abs_points3d = list()
+        for pt, frame in zip(self.points, self.point_frames):
+            assert(frame.count('base_link') > 0 or frame.count('camera') > 0)
+            
+            if frame.count('camera') > 0:
+                pt = cam_rot.dot(pt.T) + cam_trans
+                
+            abs_seg3d = cam.segment_through_pixel(cam.pixel_from_point(tfx.point(pt,frame='base_link')))
+            abs_points3d += [abs_seg3d.p0, abs_seg3d.p1]
+
+        pyramid3d = geometry3d.TruncatedPyramid(*abs_points3d)
+        return pyramid3d
+    
+    def signed_distance(self, cam, point):
+        return self.construct_pyramid(cam).signed_distance(point)
+
 class Camera:
     def __init__(self, arm, sim, tool_to_camera=None,
                  height=480., width=640., focal_length=.01,
