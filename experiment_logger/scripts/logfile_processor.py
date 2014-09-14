@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 import sys
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class LogfileProcessor:
     def __init__(self, file_name):
@@ -49,9 +49,13 @@ class LogfileProcessor:
             
     def __str__(self):
         result = "Summary:\n"
+        timesum = timedelta(0)
         for name, time in self.total_times.items():
             result += "{0}: {1}\n".format(name, time)
-        result += "total time: {0}\n".format(self.end_of_experiment - self.start_of_experiment)
+            timesum += time
+    
+        result += "total: {0}\n".format(timesum)
+        result += "experiment total time: {0}\n".format(self.end_of_experiment - self.start_of_experiment)
         return result
             
 if __name__ == '__main__':
