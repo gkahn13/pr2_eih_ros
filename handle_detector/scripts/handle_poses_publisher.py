@@ -36,7 +36,7 @@ class HandlePosesPublisher:
         
         # for kitchen
         self.min_positions = np.array([0.45,-0.9,0.68])
-        self.max_positions = np.array([0.8,0.2,1.5])
+        self.max_positions = np.array([0.8,0.2,1.45])
         
         # for shelf
 #         self.min_positions = np.array([0.26,-0.9,0.68])
