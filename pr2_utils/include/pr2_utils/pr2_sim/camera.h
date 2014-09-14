@@ -16,8 +16,9 @@ class Camera;
 
 class RelativePyramid {
 public:
-	RelativePyramid(Camera *cam, const std::vector<Vector3d>& points, const std::vector<std::string>& point_frames) :
-		cam(cam), points(points), point_frames(point_frames) { }
+	RelativePyramid() { };
+	RelativePyramid(const Matrix4d& cam_pose, Camera *cam, const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum,
+			const std::vector<geometry3d::Triangle>& obstacles, const Vector3d& sd_point);
 
 	geometry3d::TruncatedPyramid construct_pyramid(const Matrix4d& cam_pose);
 	double signed_distance(const Matrix4d& cam_pose, const Vector3d& point);

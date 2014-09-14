@@ -7,7 +7,7 @@ from datetime import datetime
 messages = []
 
 def string_callback(data):
-    rospy.loginfo(rospy.get_caller_id()+"I heard %s",data.data)
+    rospy.loginfo(rospy.get_caller_id()+"\n%s",data.data)
     log_message(data.data)
 
 def write_out():

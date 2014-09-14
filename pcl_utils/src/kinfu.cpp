@@ -7,6 +7,7 @@
 #include "sensor_msgs/PointCloud2.h"
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/String.h>
 
 #include <pcl_conversions.h>
 // PCL specific includes
@@ -35,6 +36,7 @@ using namespace Eigen;
 #include <iterator>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <cuda_runtime.h>
 #include <assert.h>
@@ -59,7 +61,8 @@ typedef short WeightT;
 #endif
 
 boost::shared_ptr<tf::TransformListener> listener;
-ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub, object_points_pub, plane_points_pub;
+ros::Publisher pub, current_pointcloud_pub, variable_pub, markers_pub, points_pub, regions_pub, plane_pub,
+			  object_points_pub, plane_points_pub, logger_pub;
 ros::Subscriber signal_sub, head_points_sub, reset_sub, head_camera_time_sub;
 bool downloading;
 int counter;
@@ -135,7 +138,28 @@ void activate_head_camera(const std_msgs::Float64ConstPtr duration)
     }
 }
 
+void publish_to_logger(const std::vector<short>& tsdf_weights) {
+	int num_zero = 0, num_nonzero = 0;
+	for(int i=0; i < tsdf_weights.size(); ++i) {
+		if (tsdf_weights[i] > 0) {
+			num_nonzero++;
+		} else {
+			num_zero++;
+		}
+	}
 
+	std::stringstream ss_zero;
+	std_msgs::String msg_zero;
+	ss_zero << "kinfu zero weights " << num_zero;
+	msg_zero.data = ss_zero.str().c_str();
+	logger_pub.publish(msg_zero);
+
+	std::stringstream ss_nonzero;
+	std_msgs::String msg_nonzero;
+	ss_nonzero << "kinfu nonzero weights " << num_nonzero;
+	msg_nonzero.data = ss_nonzero.str().c_str();
+	logger_pub.publish(msg_nonzero);
+}
 
 void get_occluded(const std_msgs::EmptyConstPtr& str)
 {
@@ -186,6 +210,7 @@ void get_occluded(const std_msgs::EmptyConstPtr& str)
         tsdf.downloadTsdfAndWeights(tsdf_vector, tsdf_weights);
         std::cout << "distances: " << tsdf_vector.size() << std::endl;
         std::cout << "weights: " << tsdf_weights.size() << std::endl;
+        publish_to_logger(tsdf_weights);
 
         // transform kinfu points back to rgb optical frame
         Affine3d current_transform_write;
@@ -504,6 +529,8 @@ int main (int argc, char** argv)
     head_camera_time_sub = nh.subscribe<std_msgs::Float64> ("head_camera_duration", 1, activate_head_camera);
 
     head_points_sub = nh.subscribe<sensor_msgs::PointCloud2>("/head_camera/depth_registered/points", 1, _head_cloud_callback);
+
+    logger_pub = nh.advertise<std_msgs::String>("/experiment_log", 1);
 
     std::string variable_topic;
     if (!nh.getParam("handle_points_source", variable_topic))

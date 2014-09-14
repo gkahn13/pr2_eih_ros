@@ -21,8 +21,16 @@ def test_gripper():
     
     rarm.open_gripper()
     larm.open_gripper()
+    
+def test_joints():
+    sim = simulator.Simulator(view=True)
+    rarm = arm.Arm('right', sim=sim)
+    larm = arm.Arm('left', sim=sim)
+    
+    print('rarm joints: {0}'.format(rarm.get_joints()))
 
 if __name__ == '__main__':
     rospy.init_node('pr2_arm', anonymous=True)
-    test_mantis()
+#     test_mantis()
 #     test_gripper()
+    test_joints()

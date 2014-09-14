@@ -58,7 +58,7 @@ class Arm:
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
         self.joint_names = ['{0}{1}'.format(arm_name[0], joint_name) for joint_name in self.joint_name_suffixes]
         self.gripper_joint_name = '{0}_gripper_joint'.format(arm_name[0])
-        self.min_grasp, self.max_grasp = -.01, .08
+        self.min_grasp, self.max_grasp = -.01, .1
         self.default_max_effort = 40 # Newtons
         
         self.current_joints, self.current_grasp = None, None

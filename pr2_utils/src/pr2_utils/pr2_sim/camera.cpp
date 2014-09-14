@@ -6,9 +6,50 @@ namespace pr2_sim {
 
 /**
  *
- * RelativePyramid methods
+ * RelativePyramid constructors/methods
  *
  */
+
+RelativePyramid::RelativePyramid(const Matrix4d& cam_pose, Camera *cam,
+		const std::vector<geometry3d::TruncatedPyramid>& truncated_frustum,
+		const std::vector<geometry3d::Triangle>& obstacles, const Vector3d& sd_point) : cam(cam) {
+	Matrix4d cam_pose_inv = cam_pose.inverse();
+
+	geometry3d::TruncatedPyramid sd_pyramid3d;
+	double sd = INFINITY;
+	for(const geometry3d::TruncatedPyramid& pyramid3d : truncated_frustum) {
+		double sd_tmp = pyramid3d.signed_distance(sd_point);
+		if (sd_tmp < sd) {
+			sd = sd_tmp;
+			sd_pyramid3d = pyramid3d;
+		}
+	}
+
+	for(const geometry3d::Segment& sd_seg3d : sd_pyramid3d.get_side_segments()) {
+		bool found_clipping_tri3d = false;
+		for(const geometry3d::Triangle& tri3d : obstacles) {
+			for(const geometry3d::Segment& tri_seg3d : tri3d.get_segments()) {
+				Vector3d tri_closest, sd_closest;
+				tri_seg3d.lines_closest_points(sd_seg3d, tri_closest, sd_closest);
+				double dist = (tri_closest - sd_closest).norm();
+
+				if (dist < 1e-3) {
+					points.push_back(tri_closest);
+					point_frames.push_back("base_link");
+					found_clipping_tri3d = true;
+				}
+				if (found_clipping_tri3d) { break; }
+			}
+			if (found_clipping_tri3d) { break; }
+		}
+
+		if (!found_clipping_tri3d) {
+			points.push_back(cam_pose_inv.block<3,3>(0,0)*sd_seg3d.p1 + cam_pose_inv.block<3,1>(0,3));
+			point_frames.push_back("camera_rgb_optical_frame");
+		}
+	}
+
+}
 
 geometry3d::TruncatedPyramid RelativePyramid::construct_pyramid(const Matrix4d& cam_pose) {
 	std::vector<Vector3d> abs_points3d;

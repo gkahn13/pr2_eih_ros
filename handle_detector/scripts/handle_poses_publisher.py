@@ -8,6 +8,7 @@ roslib.load_manifest('handle_detector')
 roslib.load_manifest('tfx')
 import geometry_msgs.msg as gm
 import handle_detector.msg as hd_msg
+import std_msgs.msg as sm
 import tfx
 
 import threading
@@ -24,13 +25,22 @@ class HandlePosesPublisher:
         self.handles_pose_pub = rospy.Publisher('/handle_detector/handle_poses', gm.PoseArray)
         self.avg_handles_pose_pub = rospy.Publisher('/handle_detector/avg_handle_poses', gm.PoseArray)
         
+        self.logger_pub = rospy.Publisher("/experiment_log", sm.String)
+        
         self.handles_thread = threading.Thread(target=self._handles_loop)
         self.handles_thread.start()
         
-        self.min_positions = np.array([0.22,-1,0.3])
-        self.max_positions = np.array([1,0.2,0.86])
-#         self.min_positions = np.array([0.15,-1,0])
-#         self.max_positions = np.array([1,1,0.92])
+        # for box
+#         self.min_positions = np.array([0.22,-0.9,0.68])
+#         self.max_positions = np.array([0.8,0.2,0.86])
+        
+        # for kitchen
+        self.min_positions = np.array([0.45,-0.9,0.68])
+        self.max_positions = np.array([0.8,0.2,1.5])
+        
+        # for shelf
+#         self.min_positions = np.array([0.26,-0.9,0.68])
+#         self.max_positions = np.array([0.8,0.2,1.5])
                     
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
@@ -91,6 +101,8 @@ class HandlePosesPublisher:
 
             self.handles_pose_pub.publish(pose_array)
             self.avg_handles_pose_pub.publish(avg_pose_array)
+            
+            self.logger_pub.publish('handles {0}'.format(len(avg_pose_array.poses)))
                         
     
 if __name__ == '__main__':

@@ -38,67 +38,8 @@ VectorJ signed_distance_grad(const VectorJ& j, const Vector3d& point, const std:
 VectorJ fast_signed_distance_grad(const VectorJ& j, const Vector3d& point, const std::vector<geometry3d::Triangle>& triangles3d,
 		pr2_sim::Arm& arm, pr2_sim::Camera& cam, pr2_sim::Simulator& sim) {
 
-	Matrix4d cam_pose_inv = cam.get_pose(j).inverse();
-
 	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(cam.get_pose(j), triangles3d, false);
-
-	geometry3d::TruncatedPyramid sd_pyramid3d;
-	double sd = INFINITY;
-	for(const geometry3d::TruncatedPyramid& pyramid3d : truncated_frustum) {
-		double sd_tmp = pyramid3d.signed_distance(point);
-		if (sd_tmp < sd) {
-			sd = sd_tmp;
-			sd_pyramid3d = pyramid3d;
-		}
-	}
-
-	std::vector<Vector3d> rel_points;
-	std::vector<std::string> rel_point_frames;
-	for(const geometry3d::Segment& sd_seg3d : sd_pyramid3d.get_side_segments()) {
-//		std::cout << "\nsd_seg3d\n";
-//		sd_seg3d.plot(sim, "base_link", Vector3d(0,1,0));
-
-		bool found_clipping_tri3d = false;
-		for(const geometry3d::Triangle& tri3d : triangles3d) {
-			for(const geometry3d::Segment& tri_seg3d : tri3d.get_segments()) {
-//				std::cout << "tri_line3d\n";
-//				tri_seg3d.plot(sim, "base_link", Vector3d(0,0,1));
-
-				Vector3d tri_closest, sd_closest;
-				tri_seg3d.lines_closest_points(sd_seg3d, tri_closest, sd_closest);
-				double dist = (tri_closest - sd_closest).norm();
-//				std::cout << "dist: " << dist << "\n";
-				if (dist < 1e-3) {
-//					std::cout << "lines touch!\n";
-					rel_points.push_back(tri_closest);
-					rel_point_frames.push_back("base_link");
-					found_clipping_tri3d = true;
-				}
-//				std::cin.ignore();
-//				sim.clear_plots(1);
-				if (found_clipping_tri3d) { break; }
-			}
-			if (found_clipping_tri3d) { break; }
-		}
-
-//		std::cin.ignore();
-//		sim.clear_plots(1);
-
-		if (!found_clipping_tri3d) {
-			rel_points.push_back(cam_pose_inv.block<3,3>(0,0)*sd_seg3d.p1 + cam_pose_inv.block<3,1>(0,3));
-			rel_point_frames.push_back("camera_rgb_optical_frame");
-		}
-
-//		std::cout << "rel_point: " << rel_points.back().transpose() << "\n";
-//		std::cout << "rel_point_frame: " << rel_point_frames.back() << "\n";
-	}
-
-	pr2_sim::RelativePyramid rel_pyramid(&cam, rel_points, rel_point_frames);
-//	geometry3d::TruncatedPyramid abs_pyramid = rel_pyramid.construct_pyramid(cam.get_pose(j), sim);
-//	abs_pyramid.plot(sim, "base_link", Vector3d(0,0,1), true, true, 0.25);
-//
-//	std::cout << "Relative pyramid\n";
-//	std::cin.ignore();
+	pr2_sim::RelativePyramid rel_pyramid(cam.get_pose(j), &cam, truncated_frustum, triangles3d, point);
 
 	const double step = 1e-5;
 	VectorJ grad;
@@ -110,8 +51,6 @@ VectorJ fast_signed_distance_grad(const VectorJ& j, const Vector3d& point, const
 
 		double sd_p = rel_pyramid.signed_distance(cam.get_pose(j_p), point);
 		double sd_m = rel_pyramid.signed_distance(cam.get_pose(j_m), point);
-//		double sd_p = signed_distance(j_p, point, triangles3d, arm, cam, sim, false);
-//		double sd_m = signed_distance(j_m, point, triangles3d, arm, cam, sim, false);
 		grad(i) = (sd_p - sd_m) / (2*step);
 
 		j_p(i) = j(i);
