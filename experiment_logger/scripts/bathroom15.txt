@@ -1,0 +1,18 @@
+-------------------
+[2014-09-15 08:13:34.433402] Beginning new experiment
+[2014-09-15 08:13:44.598182] start kinfu_reset
+[2014-09-15 08:13:45.098098] end kinfu_reset
+[2014-09-15 08:13:45.101420] start get_occluded_regions
+[2014-09-15 08:13:49.011516] kinfu zero weights 134217728
+[2014-09-15 08:13:49.011768] kinfu nonzero weights 0
+[2014-09-15 08:13:50.714831] end get_occluded_regions
+[2014-09-15 08:13:50.797819] start bsp
+[2014-09-15 08:14:03.223677] start kinfu_reset
+[2014-09-15 08:14:03.723911] end kinfu_reset
+[2014-09-15 08:14:03.724146] start get_occluded_regions
+[2014-09-15 08:14:07.742758] kinfu zero weights 134217728
+[2014-09-15 08:14:07.743085] kinfu nonzero weights 0
+[2014-09-15 08:14:09.514869] end get_occluded_regions
+[2014-09-15 08:14:09.601490] start bsp
+[2014-09-15 08:14:23.321367] bad start. dont include this one
+[2014-09-15 08:14:25.169012] End of experiment
