@@ -13,8 +13,8 @@ from geometry import geometry2d, geometry3d
 from pr2_sim import simulator, arm
 from utils import utils
 
-wrist_to_hand = tfx.transform((-0.109834267279, 0.00286188715846, -0.0798558596129),
-                              (0.540315103721, 0.447475971042, 0.524414225167, 0.482508615957))
+wrist_to_hand = tfx.transform((-0.111397384909, -0.0239359472875, -0.0896634796303),
+                              (0.523176976003, 0.452471638887, 0.537357265137, 0.48249604909))
 
 class RelativePyramid:
     def __init__(self, points, point_frames):
