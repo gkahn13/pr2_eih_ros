@@ -141,7 +141,7 @@ class LogfileProcessor:
         result = "Summary of {0}:\n".format(self.name)
         timesum = sum(self.total_times.values(), timedelta(0))
         for name, time in self.total_times.items():
-            result += "{0}: {1} ({2:.3g}%)\n".format(name, time, time.total_seconds() / timesum.total_seconds())
+            result += "{0}: {1} ({2:.3g}%)\n".format(name, time, 100 * time.total_seconds() / timesum.total_seconds())
     
         result += "total: {0}\n".format(timesum)
         if self.start_of_experiment:
@@ -149,8 +149,8 @@ class LogfileProcessor:
 
         result += "\nTime before first handle found: {0}".format(self.first_handle_time - self.start_of_experiment)
         total_voxels = float(self.last_nonzero_weights + self.last_zero_weights)
-        result += "\nCount of nonzero weight voxels: {0} ({1:.3g}%)\n".format(self.last_nonzero_weights, self.last_nonzero_weights / total_voxels)
-        result += "Count of zero weight voxels: {0} ({1:.3g}%)\n".format(self.last_zero_weights, self.last_zero_weights / total_voxels)
+        result += "\nCount of nonzero weight voxels: {0} ({1:.3g}%)\n".format(self.last_nonzero_weights, 100 * self.last_nonzero_weights / total_voxels)
+        result += "Count of zero weight voxels: {0} ({1:.3g}%)\n".format(self.last_zero_weights, 100 * self.last_zero_weights / total_voxels)
         return result
 
 
