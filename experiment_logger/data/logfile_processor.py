@@ -116,6 +116,7 @@ class FileGroup:
             result += "Successfully grasped {0} out of {1} objects ({2:.3g}%)\n".format(self.successful_grasps, self.num_objects(), self.grasp_percentage())
             result += "Missed grasps: {0}\n".format(self.missed_grasps)
             result += "Misses per attempted grasp: {0}\n".format(float(self.missed_grasps) / self.grasps_attempted)
+            result += "Misses per object: {0}\n".format(float(self.missed_grasps) / self.num_objects())
             result += "Drops: {0}\n".format(self.drops)
             result += "Drops per attempted grasp: {0}\n".format(float(self.drops) / self.grasps_attempted)
             result += "\n"
