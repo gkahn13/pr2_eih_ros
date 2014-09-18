@@ -36,6 +36,7 @@ class FileGroup:
         self.grasps_attempted = 0
         self.successful_grasps = 0
         self.missed_grasps = 0
+        self.drops = 0
         self.experiment_times = NumericData()
         self.run_times = NumericData()
         self.first_handle_times = NumericData()
@@ -70,6 +71,7 @@ class FileGroup:
             self.total_time_runs += proc.total_time()
             self.run_times.add(proc.total_time().total_seconds())
             self.missed_grasps += proc.missed_grasps
+            self.drops += proc.drops
             try:
                 self.first_handle_times.add(proc.time_to_first_handle().total_seconds())
             except:
@@ -114,6 +116,9 @@ class FileGroup:
             result += "Successfully grasped {0} out of {1} objects ({2:.3g}%)\n".format(self.successful_grasps, self.num_objects(), self.grasp_percentage())
             result += "Missed grasps: {0}\n".format(self.missed_grasps)
             result += "Misses per attempted grasp: {0}\n".format(float(self.missed_grasps) / self.grasps_attempted)
+            result += "Drops: {0}\n".format(self.drops)
+            result += "Drops per attempted grasp: {0}\n".format(float(self.drops) / self.grasps_attempted)
+            result += "\n"
         else:
             result += "No grasps attempted.\n"
 
@@ -178,6 +183,7 @@ class LogfileProcessor:
             self.successful_grasps = 0
             self.grasps_attempted = 0
             self.missed_grasps = 0
+            self.drops = 0
         
             if CONFIG['verbose']:
                 print "processing {}".format(self.name)
@@ -253,6 +259,8 @@ class LogfileProcessor:
                     self.nonzero_weights.append(count['count'])
             elif line.count("successful grasp") > 0:
                 self.successful_grasps += 1
+            elif line.count("dropped object") > 0:
+                self.drops += 1
 
             
         
