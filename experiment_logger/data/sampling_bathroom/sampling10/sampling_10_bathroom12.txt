@@ -408,6 +408,8 @@
 [2014-09-16 08:10:02.628630] gripper position  0.221378 -0.544996  0.645843
 [2014-09-16 08:10:04.254694] handles 1
 [2014-09-16 08:10:10.793880] end execute_bsp
+[2014-09-16 08:10:10.793890] start execute_grasp_trajectory
+-- peter added the previous line manually
 [2014-09-16 08:10:10.794080] gripper position     0.63358 -0.00590068    0.823863
 [2014-09-16 08:10:35.195665] gripper position     0.63358 -0.00590068     1.06052
 [2014-09-16 08:10:35.195868] gripper position    0.648054 -0.00387905     1.08052

@@ -35,18 +35,28 @@ class FileGroup:
         self.name = name
         self.grasps_attempted = 0
         self.successful_grasps = 0
+        self.missed_grasps = 0
+        self.drops = 0
         self.experiment_times = NumericData()
         self.run_times = NumericData()
+        self.first_handle_times = NumericData()
         self.total_time_runs = timedelta(0)
         self.total_time_experiments = timedelta(0)
+
+        if "bathroom" in self.name:
+            self.objects_per_experiment = 2
+        elif "kitchen" in self.name:
+            self.objects_per_experiment = 3
 
         i = 0
         for filename in filenames:
             current_file = File("{0}, experiment {1}".format(name, i), filename)
             i += 1
-            self.files.append(current_file)
-            for run in current_file.split_runs():
-                self.runs.append(run)
+            if len(current_file.lines) > 1:
+                self.files.append(current_file)
+                for run in current_file.split_runs():
+                    if len(run.lines) > 1:
+                        self.runs.append(run)
 
        
         self.calculate_group_statistics()
@@ -60,6 +70,12 @@ class FileGroup:
             self.successful_grasps += proc.successful_grasps
             self.total_time_runs += proc.total_time()
             self.run_times.add(proc.total_time().total_seconds())
+            self.missed_grasps += proc.missed_grasps
+            self.drops += proc.drops
+            try:
+                self.first_handle_times.add(proc.time_to_first_handle().total_seconds())
+            except:
+                pass
 
     def calculate_experiment_level_statistics(self):
         for f in self.files:
@@ -81,13 +97,28 @@ class FileGroup:
     def sd_run_time(self):
         return timedelta(seconds=self.run_times.sd())
 
+    def num_objects(self):
+        return len(self.files) * self.objects_per_experiment
+
     def grasp_percentage(self):
-        return 100.0 * self.successful_grasps / self.grasps_attempted
+        return 100.0 * self.successful_grasps / self.num_objects()
+
+    def average_time_to_first_handle(self):
+        return timedelta(seconds=self.first_handle_times.mean())
+
+    def sd_time_to_first_handle(self):
+        return timedelta(seconds=self.first_handle_times.sd())
             
     def summary(self):
         result = "Summary for group: {0}\n".format(self.name)
         if self.grasps_attempted:
-           result += "Successful grasps: {0}/{1} ({2:.3g}%)\n".format(self.successful_grasps, self.grasps_attempted, self.grasp_percentage())
+            result += "Attempted grasps: {0}\n".format(self.grasps_attempted)
+            result += "Successfully grasped {0} out of {1} objects ({2:.3g}%)\n".format(self.successful_grasps, self.num_objects(), self.grasp_percentage())
+            result += "Missed grasps: {0}\n".format(self.missed_grasps)
+            result += "Misses per attempted grasp: {0}\n".format(float(self.missed_grasps) / self.grasps_attempted)
+            result += "Drops: {0}\n".format(self.drops)
+            result += "Drops per attempted grasp: {0}\n".format(float(self.drops) / self.grasps_attempted)
+            result += "\n"
         else:
             result += "No grasps attempted.\n"
 
@@ -96,6 +127,9 @@ class FileGroup:
         result += "Standard deviation: {0}\n".format(self.sd_experiment_time())
         result += "Average run time: {0}\n".format(self.average_run_time())
         result += "Standard deviation: {0}\n".format(self.sd_run_time())
+
+        result += "Average time to first handle (within each run): {0}\n".format(self.average_time_to_first_handle())
+        result += "Standard deviation: {0}\n".format(self.sd_time_to_first_handle())
             
         return result
         
@@ -105,11 +139,10 @@ class File:
         self.lines = []
         self.runs = []
         self.name = name
-
         if file_name:
             with open(file_name, 'r') as file:
                 for line in file:
-                    if line.count("------") == 0:
+                    if line.count("--") == 0:
                         self.lines.append(line)
 
     def __getitem__(self, i):
@@ -149,13 +182,15 @@ class LogfileProcessor:
             self.nonzero_weights = []
             self.successful_grasps = 0
             self.grasps_attempted = 0
+            self.missed_grasps = 0
+            self.drops = 0
         
             if CONFIG['verbose']:
                 print "processing {}".format(self.name)
 
             for line in infile.getlines():
                 self.process_line(line)
-            
+
             self.start_of_experiment = self.split_line(infile[0])['time']
             self.end_of_experiment = self.split_line(infile[-1])['time']
 
@@ -200,11 +235,14 @@ class LogfileProcessor:
             return {'time': time, 'zero': zero, 'count': count}
         else:
             return None
+
             
 
     def process_line(self, line):
         result = self.split_line(line)
         if result:
+            if line.count("missed grasp") > 0:
+                self.missed_grasps += 1
             if line.count('start') > 0:
                 self.start[result['name']].append(result['time'])
                 if line.count("execute_grasp_trajectory") > 0:
@@ -221,6 +259,8 @@ class LogfileProcessor:
                     self.nonzero_weights.append(count['count'])
             elif line.count("successful grasp") > 0:
                 self.successful_grasps += 1
+            elif line.count("dropped object") > 0:
+                self.drops += 1
 
             
         
