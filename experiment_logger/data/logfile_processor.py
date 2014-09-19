@@ -7,6 +7,8 @@ import re
 from datetime import datetime, timedelta
 import os
 
+import IPython
+
 CONFIG = {'verbose': False}
 
 class NumericData:
@@ -27,6 +29,68 @@ class NumericData:
         if m is None:
             return None
         return np.std(np.array(self.data))
+    
+class FileGroupProcessor():
+    def __init__(self):
+        group_names = ['bsp_bathroom', 'bsp_kitchen']
+#         group_names = ['bsp_bathroom'] + ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + \
+#                       ['bsp_kitchen'] + ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]]
+                      
+        self.fgs = list()
+        for group_name in group_names:
+            self.fgs.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
+            
+    def latex_table(self):
+        latex_str = ('\\begin{table*}[t] \n'
+                     '\\centering \n'
+                     '\\begin{tabular}{l || c c c c c | c c c c c} \n'
+                     '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} \\\\ \n'
+                     '& Trajectory & \multicolumn{4}{c|}{Sampling}& Trajectory & \multicolumn{4}{c}{Sampling}\\\\ \n'
+                     '& Optimization & 10   & 50   & 100  & 200  & Optimization & 10   & 50   & 100  & 200  \\\\ \n')
+
+        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += 'Total number of objects & ' + ' & '.join([str(fg.num_objects) for fg in self.fgs]) + ' \\\\ \n'
+        
+        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += 'Objects successfully grasped (\%) & ' + ' & '.join([str(fg.objects_successfully_grasped_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Objects missed (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_missed_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Objects dropped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_dropped_pct) for fg in self.fgs]) + ' \\\\ \n'
+
+        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += 'Avg. time to plan (s) & ' + \
+                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Avg. time to see handle (s) & ' + \
+                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_time_to_first_handle_s, fg.sd_time_to_first_handle_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Avg. time to grasp attempt (s) & ' + \
+                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_time_to_grasp_attempt_s, fg.sd_time_to_grasp_attempt_s) for fg in self.fgs]) + ' \\\\ \n'
+
+        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += 'Avg. run time (s) & ' + \
+                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_run_time_s, fg.sd_run_time_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Occluded Region time (\%) & ' + \
+                     ' & '.join(['{0:.4}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Planning time (\%) & ' + \
+                     ' & '.join(['{0:.4}'.format(fg.planning_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Exploring time (\%) & ' + \
+                     ' & '.join(['{0:.4}'.format(fg.exploring_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+                     
+        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += 'Experiments failed (\%) & ' + \
+                     ' & '.join(['{0:.4}'.format(fg.experiments_failed_pct) for fg in self.fgs]) + ' \\\\ \n'
+
+        latex_str += ('\end{tabular} \n'
+                     '\\caption{\\TODO{}} \n'
+                     '\\label{table:results} \n'
+                     '\\end{table*} \n')
+
+        return latex_str
+            
+    def summaries(self):
+        s = ''
+        for fg in self.fgs:
+            s += fg.summary() + '\n'
+            
+        return s
 
 class FileGroup:
     def __init__(self, filenames, name):
@@ -82,56 +146,102 @@ class FileGroup:
             proc = LogfileProcessor(f)
             self.total_time_experiments += proc.total_time()
             self.experiment_times.add(proc.total_time().total_seconds())
-
-    def average_experiment_time(self):
-        #return timedelta(seconds=self.total_time_experiments.total_seconds() / len(self.files))
-        return timedelta(seconds=self.experiment_times.mean())
-
-    def average_run_time(self):
-        #return timedelta(seconds=self.total_time_runs.total_seconds() / len(self.runs))
-        return timedelta(seconds=self.run_times.mean())
-
-    def sd_experiment_time(self):
-        return timedelta(seconds=self.experiment_times.sd())
-
-    def sd_run_time(self):
-        return timedelta(seconds=self.run_times.sd())
-
+            
+    @property
     def num_objects(self):
         return len(self.files) * self.objects_per_experiment
-
-    def grasp_percentage(self):
-        return 100.0 * self.successful_grasps / self.num_objects()
-
-    def average_time_to_first_handle(self):
-        return timedelta(seconds=self.first_handle_times.mean())
-
-    def sd_time_to_first_handle(self):
-        return timedelta(seconds=self.first_handle_times.sd())
+            
+    @property
+    def objects_successfully_grasped_pct(self):
+        return 100.0 * self.successful_grasps / self.num_objects
+            
+    @property
+    def objects_missed_pct(self):
+        return 100.0 * self.missed_grasps / self.num_objects
+    
+    @property
+    def objects_dropped_pct(self):
+        return 100.0 * self.drops / self.num_objects
+    
+    @property
+    def avg_plan_time_s(self):
+        return -1.0 # TODO
+    @property
+    def sd_plan_time_s(self):
+        return -1.0 # TODO
+    
+    @property
+    def avg_time_to_first_handle_s(self):
+        return self.first_handle_times.mean()
+    @property
+    def sd_time_to_first_handle_s(self):
+        return self.first_handle_times.sd()
+    
+    @property
+    def avg_time_to_grasp_attempt_s(self):
+        return -1.0 # TODO
+    @property
+    def sd_time_to_grasp_attempt_s(self):
+        return -1.0 # TODO
+    
+    @property
+    def avg_run_time_s(self):
+        return self.run_times.mean()
+    @property
+    def sd_run_time_s(self):
+        return self.run_times.sd()
+    
+    @property
+    def occluded_region_time_pct(self):
+        return -1.0 # TODO
+    
+    @property
+    def planning_time_pct(self):
+        return -1.0 # TODO
+    
+    @property
+    def exploring_time_pct(self):
+        return -1.0 # TODO
+    
+    @property
+    def grasping_time_pct(self):
+        return -1.0 # TODO
+    
+    @property
+    def experiments_failed_pct(self):
+        return -1.0 # TODO
+            
+#     def average_experiment_time(self):
+#         return timedelta(seconds=self.experiment_times.mean())
+# 
+#     def sd_experiment_time(self):
+#         return timedelta(seconds=self.experiment_times.sd())
             
     def summary(self):
         result = "Summary for group: {0}\n".format(self.name)
-        if self.grasps_attempted:
-            result += "Attempted grasps: {0}\n".format(self.grasps_attempted)
-            result += "Successfully grasped {0} out of {1} objects ({2:.3g}%)\n".format(self.successful_grasps, self.num_objects(), self.grasp_percentage())
-            result += "Missed grasps: {0}\n".format(self.missed_grasps)
-            result += "Misses per attempted grasp: {0}\n".format(float(self.missed_grasps) / self.grasps_attempted)
-            result += "Misses per object: {0}\n".format(float(self.missed_grasps) / self.num_objects())
-            result += "Drops: {0}\n".format(self.drops)
-            result += "Drops per attempted grasp: {0}\n".format(float(self.drops) / self.grasps_attempted)
-            result += "\n"
-        else:
-            result += "No grasps attempted.\n"
+        
+        result += 'Total number of objects: {0}\n\n'.format(self.num_objects)
+        
+        result += 'Objects successfully grasped (%): {0:.4}\n'.format(self.objects_successfully_grasped_pct)
+        result += 'Objects missed (%): {0:.4}\n'.format(self.objects_missed_pct)
+        result += 'Objects dropped (%): {0:.4}\n\n'.format(self.objects_dropped_pct)
+        
+        result += 'Avg. time to plan (s): {0:.4} +- {1:.4}\n'.format(self.avg_plan_time_s, self.sd_plan_time_s)
+        result += 'Avg. time to see handle (s): {0:.4} +- {1:.4}\n'.format(self.avg_time_to_first_handle_s, self.sd_time_to_first_handle_s)
+        result += 'Avg. time to grasp attempt (s): {0:.4} +- {1:.4}\n\n'.format(self.avg_time_to_grasp_attempt_s, self.sd_time_to_grasp_attempt_s)
+        
+        result += 'Avg. run time (s): {0:.4} +- {1:.4}\n'.format(self.avg_run_time_s, self.sd_run_time_s)
+        result += 'Occluded Region time (%): {0}\n'.format(self.occluded_region_time_pct)
+        result += 'Planning time (%): {0}\n'.format(self.planning_time_pct)
+        result += 'Exploring time (%): {0}\n'.format(self.exploring_time_pct)
+        result += 'Grasping time (%): {0}\n\n'.format(self.grasping_time_pct)
+        
+        result += 'Experiments failed (%): {0}\n\n\n'.format(self.experiments_failed_pct)
 
-        result += "Ran {0} experiments, for a total of {1} runs.\n".format(len(self.files), len(self.runs))
-        result += "Average experiment time: {0}\n".format(self.average_experiment_time())
-        result += "Standard deviation: {0}\n".format(self.sd_experiment_time())
-        result += "Average run time: {0}\n".format(self.average_run_time())
-        result += "Standard deviation: {0}\n".format(self.sd_run_time())
-
-        result += "Average time to first handle (within each run): {0}\n".format(self.average_time_to_first_handle())
-        result += "Standard deviation: {0}\n".format(self.sd_time_to_first_handle())
-            
+#         result += "Ran {0} experiments, for a total of {1} runs.\n".format(len(self.files), len(self.runs))
+#         result += "Average experiment time: {0}\n".format(self.average_experiment_time())
+#         result += "Standard deviation: {0}\n".format(self.sd_experiment_time())
+                    
         return result
         
 
@@ -311,9 +421,24 @@ class LogfileProcessor:
         return result
 
 
+def process_all_files():
+    group_names = ['bsp_bathroom']
+#     group_names = ['bsp_bathroom'] + ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + \
+#                   ['bsp_kitchen'] + ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]]
+                  
+    file_groups = list()
+    for group_name in group_names:
+        file_groups.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
+        
+    for fg in file_groups:
+        print(fg.summary())
         
             
 if __name__ == '__main__':
+    fg_proc = FileGroupProcessor()
+    print(fg_proc.summaries())
+    print(fg_proc.latex_table())
+    """
     if len(sys.argv) < 2:
         print "Error: no file specified"
         sys.exit(1)
@@ -342,3 +467,4 @@ if __name__ == '__main__':
                 print
                 print run_proc.summary()
             print
+    """
