@@ -18,6 +18,10 @@ class NumericData:
 
     def add(self, d):
         self.data.append(d)
+        
+    def append(self, l):
+        assert(type(l) is list)
+        self.data += l
 
     def mean(self):
         if len(self.data) > 0:
@@ -30,11 +34,15 @@ class NumericData:
             return None
         return np.std(np.array(self.data))
     
+    def sum(self):
+        return np.sum(self.data)
+    
 class FileGroupProcessor():
     def __init__(self):
-        group_names = ['bsp_bathroom']
-#         group_names = ['bsp_bathroom'] + ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + \
-#                       ['bsp_kitchen'] + ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]]
+        #group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom']
+        #group_names = ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
+        group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom'] +\
+                      ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
                       
         self.fgs = list()
         for group_name in group_names:
@@ -42,31 +50,33 @@ class FileGroupProcessor():
             
     def latex_table(self):
         latex_str = ('\\begin{table*}[t] \n'
-                     '\\centering \n'
+                     #'\\centering \n'
+                     '\hspace*{-70pt} \n'
                      '\\begin{tabular}{l || c c c c c | c c c c c} \n'
                      '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} \\\\ \n'
-                     '& Trajectory & \multicolumn{4}{c|}{Sampling}& Trajectory & \multicolumn{4}{c}{Sampling}\\\\ \n'
-                     '& Optimization & 10   & 50   & 100  & 200  & Optimization & 10   & 50   & 100  & 200  \\\\ \n')
+                     '& \multicolumn{4}{c}{Sampling} & Trajectory & \multicolumn{4}{c}{Sampling} & Trajectory \\\\ \n'
+                     '& 10   & 50   & 100  & 200       & Optimization & 10   & 50   & 100  & 200   & Optimization   \\\\ \n')
+        hline_str = '\\hline & \multicolumn{5}{c|}{} \\\\ \n'
 
-        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += hline_str
         latex_str += 'Total number of objects & ' + ' & '.join([str(fg.num_objects) for fg in self.fgs]) + ' \\\\ \n'
         
-        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
-        latex_str += 'Objects successfully grasped (\%) & ' + ' & '.join([str(fg.objects_successfully_grasped_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += hline_str
+        latex_str += 'Objects grasped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_successfully_grasped_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Objects missed (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_missed_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Objects dropped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_dropped_pct) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
-        latex_str += 'Avg. time to plan (s) & ' + \
-                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Avg. time to see handle (s) & ' + \
-                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_time_to_first_handle_s, fg.sd_time_to_first_handle_s) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Avg. time to grasp attempt (s) & ' + \
-                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_time_to_grasp_attempt_s, fg.sd_time_to_grasp_attempt_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += '\\hline \multicolumn{1}{c}{Avg. time to} & \multicolumn{5}{c|}{} \\\\ \n'
+        latex_str += 'Plan (s) & ' + \
+                     ' & '.join(['{0:.2f} $\pm$ {1:.1f}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'See handle (s) & ' + \
+                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_first_handle_s), int(fg.sd_time_to_first_handle_s)) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Attempt grasp (s) & ' + \
+                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += hline_str
         latex_str += 'Avg. run time (s) & ' + \
-                     ' & '.join(['{0:.4} $\pm$ {1:.4}'.format(fg.avg_run_time_s, fg.sd_run_time_s) for fg in self.fgs]) + ' \\\\ \n'
+                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Occluded Region time (\%) & ' + \
                      ' & '.join(['{0:.4}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Planning time (\%) & ' + \
@@ -74,7 +84,7 @@ class FileGroupProcessor():
         latex_str += 'Exploring time (\%) & ' + \
                      ' & '.join(['{0:.4}'.format(fg.exploring_time_pct) for fg in self.fgs]) + ' \\\\ \n'
                      
-        latex_str += '\\hline & \multicolumn{5}{c|{} \\\\ \n'
+        latex_str += hline_str
         latex_str += 'Experiments failed (\%) & ' + \
                      ' & '.join(['{0:.4}'.format(fg.experiments_failed_pct) for fg in self.fgs]) + ' \\\\ \n'
 
@@ -106,9 +116,14 @@ class FileGroup:
         self.first_handle_times = NumericData()
         self.total_time_runs = timedelta(0)
         self.total_time_experiments = timedelta(0)
+        self.time_to_grasp_attempt = NumericData()
         
         self.occluded_region_times = NumericData()
-        # TODO pick up from here
+        self.planning_times = NumericData()
+        self.exploring_times = NumericData()
+        self.grasping_times = NumericData()
+        
+        self.premature_stops = 0
 
         if "bathroom" in self.name:
             self.objects_per_experiment = 2
@@ -125,7 +140,6 @@ class FileGroup:
                     if len(run.lines) > 1:
                         self.runs.append(run)
 
-       
         self.calculate_group_statistics()
         self.calculate_experiment_level_statistics()
         
@@ -139,11 +153,23 @@ class FileGroup:
             self.run_times.add(proc.total_time().total_seconds())
             self.missed_grasps += proc.missed_grasps
             self.drops += proc.drops
+            
+            time_to_grasp_attempt = proc.time_to_grasp_attempt()
+            if time_to_grasp_attempt is not None:
+                self.time_to_grasp_attempt.add(time_to_grasp_attempt)
+            
             for name, delta_time in proc.delta_times.items():
-                print name
-                print delta_time
-#             IPython.embed()
-#             sys.exit(0)
+                if name == 'get_occluded_regions':
+                    self.occluded_region_times.append(delta_time)
+                elif name == 'bsp' or name == 'sampling':
+                    self.planning_times.append(delta_time)
+                elif name == 'execute_bsp':
+                    self.exploring_times.append(delta_time)
+                elif name == 'execute_grasp_trajectory':
+                    self.grasping_times.append(delta_time)
+                
+            self.premature_stops += proc.premature_stop
+
             try:
                 self.first_handle_times.add(proc.time_to_first_handle().total_seconds())
             except:
@@ -173,10 +199,10 @@ class FileGroup:
     
     @property
     def avg_plan_time_s(self):
-        return -1.0 # TODO
+        return self.planning_times.mean()
     @property
     def sd_plan_time_s(self):
-        return -1.0 # TODO
+        return self.planning_times.sd()
     
     @property
     def avg_time_to_first_handle_s(self):
@@ -187,10 +213,10 @@ class FileGroup:
     
     @property
     def avg_time_to_grasp_attempt_s(self):
-        return -1.0 # TODO
+        return self.time_to_grasp_attempt.mean()
     @property
     def sd_time_to_grasp_attempt_s(self):
-        return -1.0 # TODO
+        return self.time_to_grasp_attempt.sd()
     
     @property
     def avg_run_time_s(self):
@@ -201,23 +227,23 @@ class FileGroup:
     
     @property
     def occluded_region_time_pct(self):
-        return -1.0 # TODO
-    
+        return 100.0 * self.occluded_region_times.sum() / self.run_times.sum()
+        
     @property
     def planning_time_pct(self):
-        return -1.0 # TODO
+        return 100.0 * self.planning_times.sum() / self.run_times.sum()
     
     @property
     def exploring_time_pct(self):
-        return -1.0 # TODO
-    
+        return 100.0 * self.exploring_times.sum() / self.run_times.sum()
+        
     @property
     def grasping_time_pct(self):
-        return -1.0 # TODO
+        return 100.0 * self.grasping_times.sum() / self.run_times.sum()
     
     @property
     def experiments_failed_pct(self):
-        return -1.0 # TODO
+        return 100.0 * self.premature_stops / float(len(self.files))
             
 #     def average_experiment_time(self):
 #         return timedelta(seconds=self.experiment_times.mean())
@@ -239,10 +265,11 @@ class FileGroup:
         result += 'Avg. time to grasp attempt (s): {0:.4} +- {1:.4}\n\n'.format(self.avg_time_to_grasp_attempt_s, self.sd_time_to_grasp_attempt_s)
         
         result += 'Avg. run time (s): {0:.4} +- {1:.4}\n'.format(self.avg_run_time_s, self.sd_run_time_s)
-        result += 'Occluded Region time (%): {0}\n'.format(self.occluded_region_time_pct)
-        result += 'Planning time (%): {0}\n'.format(self.planning_time_pct)
-        result += 'Exploring time (%): {0}\n'.format(self.exploring_time_pct)
-        result += 'Grasping time (%): {0}\n\n'.format(self.grasping_time_pct)
+        total_frac = sum([self.occluded_region_time_pct, self.planning_time_pct, self.exploring_time_pct, self.grasping_time_pct])/100.0
+        result += 'Occluded Region time (%): {0:.4}\n'.format(self.occluded_region_time_pct / total_frac)
+        result += 'Planning time (%): {0:.4}\n'.format(self.planning_time_pct / total_frac)
+        result += 'Exploring time (%): {0:.4}\n'.format(self.exploring_time_pct / total_frac)
+        result += 'Grasping time (%): {0:.4}\n\n'.format(self.grasping_time_pct / total_frac)
         
         result += 'Experiments failed (%): {0}\n\n\n'.format(self.experiments_failed_pct)
 
@@ -275,47 +302,49 @@ class File:
 
     def split_runs(self):
         if not self.runs:
-            run_index = -1
-            i = 0
-            current = File(name="Run {0}".format(i))
-            for line in self.lines:
-                i += 1
-                if line.count("start kinfu_reset") > 0 or i == len(self.lines):
-                    self.runs.append(current)
-                    run_index += 1
-                    current = File("Run {0}".format(run_index))
-                current.addline(line)
+            #current = File(name="{0}, Run {1}".format(self.name, i))
+            current = None
+            for i, line in enumerate(self.lines):
+                if line.count("start kinfu_reset") > 0 or i == len(self.lines) - 1:
+                    if current is not None:
+                        self.runs.append(current)
+                    current = File("{0}, Run {1}".format(self.name, len(self.runs)))
+                if current is not None:
+                    current.addline(line)
 
         return self.runs
         
 
 class LogfileProcessor:
-    def __init__(self, infile):
+    def __init__(self, infile):  
+        self.is_sampling = infile.name.count('sampling') > 0
         
-            self.start = defaultdict(list)
-            self.end = defaultdict(list)
-            self.info = defaultdict(list)
-            self.name = infile.name
-            self.first_handle_time = None
-            self.zero_weights = []
-            self.nonzero_weights = []
-            self.successful_grasps = 0
-            self.grasps_attempted = 0
-            self.missed_grasps = 0
-            self.drops = 0
-        
-            if CONFIG['verbose']:
-                print "processing {}".format(self.name)
+        self.start = defaultdict(list)
+        self.end = defaultdict(list)
+        self.info = defaultdict(list)
+        self.name = infile.name
+        self.first_handle_time = None
+        self.first_grasp_attempt_time = None
+        self.zero_weights = []
+        self.nonzero_weights = []
+        self.successful_grasps = 0
+        self.grasps_attempted = 0
+        self.missed_grasps = 0
+        self.drops = 0
+        self.premature_stop = 0
+    
+        if CONFIG['verbose']:
+            print "processing {}".format(self.name)
 
-            for line in infile.getlines():
-                self.process_line(line)
+        for line in infile.getlines():
+            self.process_line(line)
 
-            self.start_of_experiment = self.split_line(infile[0])['time']
-            self.end_of_experiment = self.split_line(infile[-1])['time']
-
-            self.total_times = dict()
-            self.delta_times = defaultdict(list) # e.g. delta_times['execute_bsp'] = [0.1, 0.6, ...]
-            self.post_process()
+        self.start_of_experiment = self.split_line(infile[0])['time']
+        self.end_of_experiment = self.split_line(infile[-1])['time']
+    
+        self.total_times = dict()
+        self.delta_times = defaultdict(list) # e.g. delta_times['execute_bsp'] = [0.1, 0.6, ...]
+        self.post_process()
             
     
     @staticmethod
@@ -327,7 +356,11 @@ class LogfileProcessor:
             name = search_results.group(3) # TODO: get name of segment start
             return {'time': time, 'info': info, 'name': name}
         else:
-            return None
+            try:
+                time = LogfileProcessor.split_time(line[1:line.find(']')])
+                return {'time': time}
+            except:
+                return None
 
     @staticmethod
     def get_handles(line):
@@ -366,9 +399,13 @@ class LogfileProcessor:
             if line.count('start') > 0:
                 self.start[result['name']].append(result['time'])
                 if line.count("execute_grasp_trajectory") > 0:
-                    self.grasps_attempted += 1
+                    self.grasps_attempted += 1    
             elif line.count('end') > 0:
                 self.end[result['name']].append(result['time'])
+                if self.is_sampling and line.count('get_occluded_regions') > 0: # start of sampling is end of occluded regions
+                    self.start['sampling'].append(result['time'])
+            elif self.is_sampling and line.count('Number of samples'):
+                self.end['sampling'].append(result['time'])
             elif line.count('handles') and self.get_handles(line)['count'] > 0 and not self.first_handle_time:
                 self.first_handle_time = self.get_handles(line)['time']
             elif line.count('weights') > 0:
@@ -381,6 +418,11 @@ class LogfileProcessor:
                 self.successful_grasps += 1
             elif line.count("dropped object") > 0:
                 self.drops += 1
+                
+            if line.count(' grasp') and not self.first_grasp_attempt_time:
+                self.first_grasp_attempt_time = result['time']
+            if line.count('stop') > 0:
+                self.premature_stop = 1
 
             
         
@@ -407,6 +449,9 @@ class LogfileProcessor:
     def time_to_first_handle(self):
         return self.first_handle_time - self.start_of_experiment
 
+    def time_to_grasp_attempt(self):
+        if self.first_grasp_attempt_time is not None:
+            return (self.first_grasp_attempt_time - self.start_of_experiment).total_seconds()
             
     def summary(self):
         result = "Summary of {0}:\n".format(self.name)
@@ -429,24 +474,11 @@ class LogfileProcessor:
                 result += "No grasps attempted.\n"
         return result
 
-
-def process_all_files():
-    group_names = ['bsp_bathroom']
-#     group_names = ['bsp_bathroom'] + ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + \
-#                   ['bsp_kitchen'] + ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]]
-                  
-    file_groups = list()
-    for group_name in group_names:
-        file_groups.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
-        
-    for fg in file_groups:
-        print(fg.summary())
-        
             
 if __name__ == '__main__':
     fg_proc = FileGroupProcessor()
     print(fg_proc.summaries())
-#     print(fg_proc.latex_table())
+    print(fg_proc.latex_table())
     
 #     CONFIG["verbose"] = sys.argv.count("-v") > 0
 #     CONFIG["total"] = sys.argv.count("-t") > 0
