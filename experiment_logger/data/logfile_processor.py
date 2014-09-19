@@ -32,7 +32,7 @@ class NumericData:
     
 class FileGroupProcessor():
     def __init__(self):
-        group_names = ['bsp_bathroom', 'bsp_kitchen']
+        group_names = ['bsp_bathroom']
 #         group_names = ['bsp_bathroom'] + ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + \
 #                       ['bsp_kitchen'] + ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]]
                       
@@ -106,6 +106,9 @@ class FileGroup:
         self.first_handle_times = NumericData()
         self.total_time_runs = timedelta(0)
         self.total_time_experiments = timedelta(0)
+        
+        self.occluded_region_times = NumericData()
+        # TODO pick up from here
 
         if "bathroom" in self.name:
             self.objects_per_experiment = 2
@@ -136,6 +139,11 @@ class FileGroup:
             self.run_times.add(proc.total_time().total_seconds())
             self.missed_grasps += proc.missed_grasps
             self.drops += proc.drops
+            for name, delta_time in proc.delta_times.items():
+                print name
+                print delta_time
+#             IPython.embed()
+#             sys.exit(0)
             try:
                 self.first_handle_times.add(proc.time_to_first_handle().total_seconds())
             except:
@@ -306,6 +314,7 @@ class LogfileProcessor:
             self.end_of_experiment = self.split_line(infile[-1])['time']
 
             self.total_times = dict()
+            self.delta_times = defaultdict(list) # e.g. delta_times['execute_bsp'] = [0.1, 0.6, ...]
             self.post_process()
             
     
@@ -387,7 +396,7 @@ class LogfileProcessor:
                     print "[Assuming {0} lasted until end of experiment]".format(name)
                 end_list.append(self.end_of_experiment)
             self.total_times[name] = np.sum(np.array(end_list) - np.array(start_list))
-
+            self.delta_times[name] += [t.total_seconds() for t in np.array(end_list) - np.array(start_list)]
     
     def total_time(self):
         return sum(self.total_times.values(), timedelta(0))
@@ -438,4 +447,7 @@ if __name__ == '__main__':
     fg_proc = FileGroupProcessor()
     print(fg_proc.summaries())
 #     print(fg_proc.latex_table())
+    
+#     CONFIG["verbose"] = sys.argv.count("-v") > 0
+#     CONFIG["total"] = sys.argv.count("-t") > 0
     
