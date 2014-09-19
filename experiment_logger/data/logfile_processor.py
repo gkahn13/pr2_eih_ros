@@ -437,34 +437,5 @@ def process_all_files():
 if __name__ == '__main__':
     fg_proc = FileGroupProcessor()
     print(fg_proc.summaries())
-    print(fg_proc.latex_table())
-    """
-    if len(sys.argv) < 2:
-        print "Error: no file specified"
-        sys.exit(1)
-
-    CONFIG["verbose"] = sys.argv.count("-v") > 0
-    CONFIG["total"] = sys.argv.count("-t") > 0
-
-    if sys.argv.count("-g") > 0:
-        groupname = sys.argv[1]
-        group = FileGroup([groupname + "/" + f for f in os.listdir(groupname) if f.count(".txt")], groupname)
-        print group.summary()
-    else:
-        file_name = sys.argv[1]
-
-        infile = File("all runs", file_name)
-        proc = LogfileProcessor(infile)
-        runs = infile.split_runs()
-        run_procs = []
-        for run in runs[1:]:
-            run_procs.append(LogfileProcessor(run))
-
-        print
-        print proc.summary()
-        if not CONFIG["total"]:
-            for run_proc in run_procs:
-                print
-                print run_proc.summary()
-            print
-    """
+#     print(fg_proc.latex_table())
+    
