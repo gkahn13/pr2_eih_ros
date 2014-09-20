@@ -39,7 +39,7 @@ class HandlePosesPublisher:
 #         self.max_positions = np.array([0.8,0.2,0.92])
         
         # for shelf
-        self.min_positions = np.array([0.31,-0.9,1.1])
+        self.min_positions = np.array([0.3,-0.9,1.1])
         self.max_positions = np.array([0.7,0.2,1.5])
                     
     def _handles_callback(self, msg):
