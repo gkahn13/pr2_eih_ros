@@ -48,10 +48,15 @@ class FileGroupProcessor():
         for group_name in group_names:
             self.fgs.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
             
+        sampling_kitchen10_fg = self.fgs[5]
+        sampling_kitchen10_fg.num_objects += 3
+        sampling_kitchen10_fg.successful_grasps += 1
+        sampling_kitchen10_fg.premature_stops += 1
+            
     def latex_table(self):
         latex_str = ('\\begin{table*}[t] \n'
                      #'\\centering \n'
-                     '\hspace*{-70pt} \n'
+                     '\hspace*{-60pt} \n'
                      '\\begin{tabular}{l || c c c c c | c c c c c} \n'
                      '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} \\\\ \n'
                      '& \multicolumn{4}{c}{Sampling} & Trajectory & \multicolumn{4}{c}{Sampling} & Trajectory \\\\ \n'
@@ -63,10 +68,11 @@ class FileGroupProcessor():
         
         latex_str += hline_str
         latex_str += 'Objects grasped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_successfully_grasped_pct) for fg in self.fgs]) + ' \\\\ \n'
+#         latex_str += 'Attempted grasps & ' + ' & '.join(['{0}'.format(fg.grasps_attempted) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Objects missed (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_missed_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Objects dropped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_dropped_pct) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += '\\hline \multicolumn{1}{c}{Avg. time to} & \multicolumn{5}{c|}{} \\\\ \n'
+        latex_str += '\\hline \multicolumn{1}{c||}{Avg. time to} & \multicolumn{5}{c|}{} \\\\ \n'
         latex_str += 'Plan (s) & ' + \
                      ' & '.join(['{0:.2f} $\pm$ {1:.1f}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'See handle (s) & ' + \
@@ -78,15 +84,17 @@ class FileGroupProcessor():
         latex_str += 'Avg. run time (s) & ' + \
                      ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Occluded Region time (\%) & ' + \
-                     ' & '.join(['{0:.4}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+                     ' & '.join(['{0:.1f}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Planning time (\%) & ' + \
-                     ' & '.join(['{0:.4}'.format(fg.planning_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+                     ' & '.join(['{0:.1f}'.format(fg.planning_time_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Exploring time (\%) & ' + \
-                     ' & '.join(['{0:.4}'.format(fg.exploring_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+                     ' & '.join(['{0:.1f}'.format(fg.exploring_time_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Grasping time (\%) & ' + \
+                     ' & '.join(['{0:.1f}'.format(fg.grasping_time_pct) for fg in self.fgs]) + ' \\\\ \n'
                      
-        latex_str += hline_str
-        latex_str += 'Experiments failed (\%) & ' + \
-                     ' & '.join(['{0:.4}'.format(fg.experiments_failed_pct) for fg in self.fgs]) + ' \\\\ \n'
+#         latex_str += hline_str
+#         latex_str += 'Experiments failed (\%) & ' + \
+#                      ' & '.join(['{0:.4}'.format(fg.experiments_failed_pct) for fg in self.fgs]) + ' \\\\ \n'
 
         latex_str += ('\end{tabular} \n'
                      '\\caption{\\TODO{}} \n'
@@ -225,21 +233,24 @@ class FileGroup:
     def sd_run_time_s(self):
         return self.run_times.sd()
     
+    def total_segments_time(self):
+        return self.occluded_region_times.sum() + self.planning_times.sum() + self.exploring_times.sum() + self.grasping_times.sum()
+    
     @property
     def occluded_region_time_pct(self):
-        return 100.0 * self.occluded_region_times.sum() / self.run_times.sum()
+        return 100.0 * self.occluded_region_times.sum() / self.total_segments_time()
         
     @property
     def planning_time_pct(self):
-        return 100.0 * self.planning_times.sum() / self.run_times.sum()
+        return 100.0 * self.planning_times.sum() / self.total_segments_time()
     
     @property
     def exploring_time_pct(self):
-        return 100.0 * self.exploring_times.sum() / self.run_times.sum()
+        return 100.0 * self.exploring_times.sum() / self.total_segments_time()
         
     @property
     def grasping_time_pct(self):
-        return 100.0 * self.grasping_times.sum() / self.run_times.sum()
+        return 100.0 * self.grasping_times.sum() / self.total_segments_time()
     
     @property
     def experiments_failed_pct(self):
@@ -257,6 +268,7 @@ class FileGroup:
         result += 'Total number of objects: {0}\n\n'.format(self.num_objects)
         
         result += 'Objects successfully grasped (%): {0:.4}\n'.format(self.objects_successfully_grasped_pct)
+        result += 'Grasps attempted: {0}'.format(self.grasps_attempted)
         result += 'Objects missed (%): {0:.4}\n'.format(self.objects_missed_pct)
         result += 'Objects dropped (%): {0:.4}\n\n'.format(self.objects_dropped_pct)
         
