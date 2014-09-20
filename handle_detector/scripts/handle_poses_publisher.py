@@ -31,16 +31,16 @@ class HandlePosesPublisher:
         self.handles_thread.start()
         
         # for box
-        self.min_positions = np.array([0.28,-0.9,0.7])
-        self.max_positions = np.array([0.7,0.2,0.86])
+#         self.min_positions = np.array([0.28,-0.9,0.7])
+#         self.max_positions = np.array([0.7,0.2,0.86])
         
         # for kitchen
 #         self.min_positions = np.array([0.48,-0.9,0.68])
 #         self.max_positions = np.array([0.8,0.2,0.92])
         
         # for shelf
-#         self.min_positions = np.array([0.26,-0.9,0.68])
-#         self.max_positions = np.array([0.8,0.2,1.5])
+        self.min_positions = np.array([0.26,-0.9,0.68])
+        self.max_positions = np.array([0.8,0.2,1.5])
                     
     def _handles_callback(self, msg):
         self.handle_list_msg = msg
