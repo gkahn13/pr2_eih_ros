@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from collections import defaultdict
-
+ 
 import numpy as np
 import sys
 import re
