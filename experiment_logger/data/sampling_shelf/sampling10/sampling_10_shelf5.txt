@@ -1,0 +1,37 @@
+-------------------
+[2014-09-21 14:50:07.474976] Beginning new experiment
+[2014-09-21 14:50:17.472835] start kinfu_reset
+[2014-09-21 14:50:17.972815] end kinfu_reset
+[2014-09-21 14:50:17.972979] start get_occluded_regions
+[2014-09-21 14:50:24.914989] kinfu zero weights 132872424
+[2014-09-21 14:50:24.915201] kinfu nonzero weights 1345304
+[2014-09-21 14:50:27.389053] handles 0
+[2014-09-21 14:50:27.981810] end get_occluded_regions
+[2014-09-21 14:50:28.098570] Number of samples 10
+[2014-09-21 14:50:28.100500] start execute_bsp
+[2014-09-21 14:50:28.102908] gripper position 0.0672007 -0.723766   0.70868
+[2014-09-21 14:50:28.103716] gripper position  0.045035 -0.648099  0.769003
+[2014-09-21 14:50:28.104598] gripper position 0.0129583 -0.700041   0.81887
+[2014-09-21 14:50:28.104838] gripper position 0.0596907 -0.687133  0.696467
+[2014-09-21 14:50:38.423166] end execute_bsp
+[2014-09-21 14:50:39.023780] start get_occluded_regions
+[2014-09-21 14:50:46.588169] kinfu zero weights 125950082
+[2014-09-21 14:50:46.588525] kinfu nonzero weights 8267646
+[2014-09-21 14:50:50.683744] end get_occluded_regions
+[2014-09-21 14:50:50.741319] Number of samples 10
+[2014-09-21 14:50:50.742008] start execute_bsp
+[2014-09-21 14:50:50.760795] end execute_bsp
+[2014-09-21 14:50:51.361756] start get_occluded_regions
+[2014-09-21 14:50:55.250540] handles 0
+[2014-09-21 14:50:59.118909] kinfu zero weights 125705452
+[2014-09-21 14:50:59.119751] kinfu nonzero weights 8512276
+[2014-09-21 14:51:02.902022] end get_occluded_regions
+[2014-09-21 14:51:03.329327] Number of samples 10
+[2014-09-21 14:51:03.330182] start execute_bsp
+[2014-09-21 14:51:03.333019] gripper position  0.152796 -0.666819  0.705066
+[2014-09-21 14:51:03.333557] gripper position 0.0783297 -0.641371  0.701152
+[2014-09-21 14:51:03.333970] gripper position  0.122056 -0.538797  0.627938
+[2014-09-21 14:51:07.116944] handles 0
+[2014-09-21 14:51:09.646954] end execute_bsp
+[2014-09-21 14:51:10.248323] start get_occluded_regions
+[2014-09-21 14:51:16.916755] End of experiment

@@ -49,11 +49,6 @@ class FileGroupProcessor():
         for group_name in group_names:
             self.fgs.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
             
-        sampling_kitchen10_fg = self.fgs[5]
-        sampling_kitchen10_fg.num_objects += 3
-        sampling_kitchen10_fg.successful_grasps += 1
-        sampling_kitchen10_fg.premature_stops += 1
-            
     def latex_table(self):
         latex_str = ('\\begin{table*}[t] \n'
                      #'\\centering \n'
