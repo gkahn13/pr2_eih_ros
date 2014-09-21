@@ -42,7 +42,8 @@ class FileGroupProcessor():
         #group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom']
         #group_names = ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
         group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom'] +\
-                      ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
+                      ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen'] +\
+                      ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen'] # TODO: this is for temporary testing purposes. Should be replaced with shelf scenario
                       
         self.fgs = list()
         for group_name in group_names:
@@ -57,32 +58,40 @@ class FileGroupProcessor():
         latex_str = ('\\begin{table*}[t] \n'
                      #'\\centering \n'
                      '\hspace*{-60pt} \n'
-                     '\\begin{tabular}{l || c c c c c | c c c c c} \n'
-                     '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} \\\\ \n'
-                     '& \multicolumn{4}{c}{Sampling} & Trajectory & \multicolumn{4}{c}{Sampling} & Trajectory \\\\ \n'
-                     '& 10   & 50   & 100  & 200       & Optimization & 10   & 50   & 100  & 200   & Optimization   \\\\ \n')
-        hline_str = '\\hline & \multicolumn{5}{c|}{} \\\\ \n'
+                     '\\begin{tabular}{l || p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm}} \n'
+                     '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} & \multicolumn{5}{c}{Dummy Data} \\\\ \n'
+                     '& \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj \\\\ \n'
+                     '& 10   & 50   & 100  & 200       & Opt & 10   & 50   & 100  & 200   & Opt & 10   & 50   & 100  & 200   & Opt  \\\\ \n')
+        hline_str = '\\hline & \multicolumn{5}{c|}{} & \multicolumn{5}{c|}{}  \\\\ \n'
 
         latex_str += hline_str
         latex_str += 'Total number of objects & ' + ' & '.join([str(fg.num_objects) for fg in self.fgs]) + ' \\\\ \n'
         
-        latex_str += hline_str
-        latex_str += 'Objects grasped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_successfully_grasped_pct) for fg in self.fgs]) + ' \\\\ \n'
+        #latex_str += hline_str
+        latex_str += 'Objects grasped & ' + ' & '.join(['{0}'.format(fg.successful_grasps) for fg in self.fgs]) + ' \\\\ \n'
 #         latex_str += 'Attempted grasps & ' + ' & '.join(['{0}'.format(fg.grasps_attempted) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Objects missed (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_missed_pct) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Objects dropped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_dropped_pct) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Objects missed  & ' + ' & '.join(['{0}'.format(fg.missed_grasps) for fg in self.fgs]) + ' \\\\ \n'
+        #latex_str += 'Objects dropped (\%) & ' + ' & '.join(['{0:.4}'.format(fg.objects_dropped_pct) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += '\\hline \multicolumn{1}{c||}{Avg. time to} & \multicolumn{5}{c|}{} \\\\ \n'
-        latex_str += 'Plan (s) & ' + \
-                     ' & '.join(['{0:.2f} $\pm$ {1:.1f}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'See handle (s) & ' + \
-                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_first_handle_s), int(fg.sd_time_to_first_handle_s)) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Attempt grasp (s) & ' + \
-                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
+        #latex_str += '\\hline \multicolumn{1}{c||}{Avg. time to} & \multicolumn{5}{c|}{} \\\\ \n'
+        #latex_str += 'See handle (s) & ' + \
+        #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_first_handle_s), int(fg.sd_time_to_first_handle_s)) for fg in self.fgs]) + ' \\\\ \n'
+        #latex_str += 'Attempt grasp (s) & ' + \
+        #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
         latex_str += hline_str
+        # latex_str += 'Avg. run time (s) & ' + \
+        #              ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Avg. run time (s) & ' + \
-                     ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
+            ' & '.join(['{0}'.format(int(fg.avg_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += ' & ' + ' & '.join(['$\pm$ {0}'.format(int(fg.sd_run_time_s)) for fg in self.fgs]) + '\\\\ \n'
+
+        # latex_str += 'Avg. time to plan (s) & ' + \
+        #     ' & '.join(['{0:.2f} $\pm$ {1:.1f}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Avg. time to plan (s) & ' + \
+            ' & '.join(['{0:.2f}'.format(fg.avg_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += ' & ' + \
+            ' & '.join(['$\pm$ {0:.1f}'.format(fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Occluded Region time (\%) & ' + \
                      ' & '.join(['{0:.1f}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Planning time (\%) & ' + \
@@ -272,11 +281,11 @@ class FileGroup:
         result += 'Objects missed (%): {0:.4}\n'.format(self.objects_missed_pct)
         result += 'Objects dropped (%): {0:.4}\n\n'.format(self.objects_dropped_pct)
         
+        result += 'Avg. run time (s): {0:.4} +- {1:.4}\n'.format(self.avg_run_time_s, self.sd_run_time_s)
         result += 'Avg. time to plan (s): {0:.4} +- {1:.4}\n'.format(self.avg_plan_time_s, self.sd_plan_time_s)
         result += 'Avg. time to see handle (s): {0:.4} +- {1:.4}\n'.format(self.avg_time_to_first_handle_s, self.sd_time_to_first_handle_s)
         result += 'Avg. time to grasp attempt (s): {0:.4} +- {1:.4}\n\n'.format(self.avg_time_to_grasp_attempt_s, self.sd_time_to_grasp_attempt_s)
         
-        result += 'Avg. run time (s): {0:.4} +- {1:.4}\n'.format(self.avg_run_time_s, self.sd_run_time_s)
         total_frac = sum([self.occluded_region_time_pct, self.planning_time_pct, self.exploring_time_pct, self.grasping_time_pct])/100.0
         result += 'Occluded Region time (%): {0:.4}\n'.format(self.occluded_region_time_pct / total_frac)
         result += 'Planning time (%): {0:.4}\n'.format(self.planning_time_pct / total_frac)
@@ -489,7 +498,9 @@ class LogfileProcessor:
             
 if __name__ == '__main__':
     fg_proc = FileGroupProcessor()
-    print(fg_proc.summaries())
+    CONFIG["latex_only"] = sys.argv.count("-l") > 0
+    if not CONFIG["latex_only"]:
+        print(fg_proc.summaries())
     print(fg_proc.latex_table())
     
 #     CONFIG["verbose"] = sys.argv.count("-v") > 0
