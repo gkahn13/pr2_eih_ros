@@ -43,7 +43,7 @@ class FileGroupProcessor():
         #group_names = ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
         group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom'] +\
                       ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen'] +\
-                      ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen'] # TODO: this is for temporary testing purposes. Should be replaced with shelf scenario
+                      ['sampling_shelf/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_shelf'] # TODO: this is for temporary testing purposes. Should be replaced with shelf scenario
                       
         self.fgs = list()
         for group_name in group_names:
@@ -54,7 +54,7 @@ class FileGroupProcessor():
                      #'\\centering \n'
                      '\hspace*{-60pt} \n'
                      '\\begin{tabular}{l || p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm}} \n'
-                     '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} & \multicolumn{5}{c}{Dummy Data} \\\\ \n'
+                     '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} & \multicolumn{5}{c}{Shelf} \\\\ \n'
                      '& \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj \\\\ \n'
                      '& 10   & 50   & 100  & 200       & Opt & 10   & 50   & 100  & 200   & Opt & 10   & 50   & 100  & 200   & Opt  \\\\ \n')
         hline_str = '\\hline & \multicolumn{5}{c|}{} & \multicolumn{5}{c|}{}  \\\\ \n'
@@ -141,6 +141,8 @@ class FileGroup:
             self.objects_per_experiment = 2
         elif "kitchen" in self.name:
             self.objects_per_experiment = 3
+        elif "shelf" in self.name:
+            self.objects_per_experiment = 1
 
         i = 0
         for filename in filenames:
