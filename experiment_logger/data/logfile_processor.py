@@ -39,8 +39,6 @@ class NumericData:
     
 class FileGroupProcessor():
     def __init__(self):
-        #group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom']
-        #group_names = ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen']
         group_names = ['sampling_bathroom/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_bathroom'] +\
                       ['sampling_kitchen/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_kitchen'] +\
                       ['sampling_shelf/sampling{0}'.format(i) for i in [10,50,100,200]] + ['bsp_shelf'] # TODO: this is for temporary testing purposes. Should be replaced with shelf scenario
@@ -50,10 +48,10 @@ class FileGroupProcessor():
             self.fgs.append(FileGroup([group_name + '/' + f for f in os.listdir(group_name) if f.count('.txt')], group_name))
             
     def latex_table(self):
-        latex_str = ('\\begin{table*}[t] \n'
-                     #'\\centering \n'
-                     '\hspace*{-60pt} \n'
-                     '\\begin{tabular}{l || p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm} | p{0.7cm} p{0.7cm} p{0.7cm} p{0.7cm} p{1cm}} \n'
+        latex_str = ('\\renewcommand{\\tabcolsep}{3.5pt} \n'
+                     '\\begin{table*}[t] \n'
+                     '\\centering \n'
+                     '\\begin{tabular}{l || c c c c c | c c c c c | c c c c c} \n'
                      '& \multicolumn{5}{c|}{Bathroom} & \multicolumn{5}{c}{Kitchen} & \multicolumn{5}{c}{Shelf} \\\\ \n'
                      '& \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj & \multicolumn{4}{c}{Sampling} & Traj \\\\ \n'
                      '& 10   & 50   & 100  & 200       & Opt & 10   & 50   & 100  & 200   & Opt & 10   & 50   & 100  & 200   & Opt  \\\\ \n')
