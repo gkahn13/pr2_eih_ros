@@ -73,7 +73,7 @@ class FileGroupProcessor():
         #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
         latex_str += 'Avg. distance travelled (m) & ' + \
-                     ' & '.join(['{0:.4}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
+                     ' & '.join(['{0:.2f}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
 
         latex_str += hline_str
         # latex_str += 'Avg. run time (s) & ' + \
