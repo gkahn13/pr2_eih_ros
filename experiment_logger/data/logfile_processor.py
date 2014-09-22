@@ -74,6 +74,9 @@ class FileGroupProcessor():
         #latex_str += 'Attempt grasp (s) & ' + \
         #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
+        latex_str += 'Avg. distance travelled (m) & ' + \
+                     ' & '.join(['{0:.4}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
+
         latex_str += hline_str
         # latex_str += 'Avg. run time (s) & ' + \
         #              ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
@@ -134,6 +137,7 @@ class FileGroup:
         self.planning_times = NumericData()
         self.exploring_times = NumericData()
         self.grasping_times = NumericData()
+        self.total_distance = 0
         
         self.premature_stops = 0
 
@@ -167,6 +171,7 @@ class FileGroup:
             self.run_times.add(proc.total_time().total_seconds())
             self.missed_grasps += proc.missed_grasps
             self.drops += proc.drops
+            self.total_distance += proc.total_distance_travelled()
             
             time_to_grasp_attempt = proc.time_to_grasp_attempt()
             if time_to_grasp_attempt is not None:
@@ -261,6 +266,14 @@ class FileGroup:
     @property
     def experiments_failed_pct(self):
         return 100.0 * self.premature_stops / float(len(self.files))
+
+    @property
+    def total_distance_travelled(self):
+        return self.total_distance
+
+    @property
+    def average_distance_travelled(self):
+        return self.total_distance / len(self.runs)
             
 #     def average_experiment_time(self):
 #         return timedelta(seconds=self.experiment_times.mean())
@@ -274,9 +287,12 @@ class FileGroup:
         result += 'Total number of objects: {0}\n\n'.format(self.num_objects)
         
         result += 'Objects successfully grasped (%): {0:.4}\n'.format(self.objects_successfully_grasped_pct)
-        result += 'Grasps attempted: {0}'.format(self.grasps_attempted)
+        result += 'Grasps attempted: {0}\n'.format(self.grasps_attempted)
         result += 'Objects missed (%): {0:.4}\n'.format(self.objects_missed_pct)
         result += 'Objects dropped (%): {0:.4}\n\n'.format(self.objects_dropped_pct)
+
+        result += 'Total distance travelled (m): {0:.4}\n'.format(self.total_distance_travelled)
+        result += 'Average distance travelled (per run) (m): {0:.4}\n\n'.format(self.average_distance_travelled)
         
         result += 'Avg. run time (s): {0:.4} +- {1:.4}\n'.format(self.avg_run_time_s, self.sd_run_time_s)
         result += 'Avg. time to plan (s): {0:.4} +- {1:.4}\n'.format(self.avg_plan_time_s, self.sd_plan_time_s)
@@ -350,6 +366,7 @@ class LogfileProcessor:
         self.missed_grasps = 0
         self.drops = 0
         self.premature_stop = 0
+        self.positions = []
     
         if CONFIG['verbose']:
             print "processing {}".format(self.name)
@@ -407,11 +424,15 @@ class LogfileProcessor:
         else:
             return None
 
-            
+    def get_pos(self, pos_string):
+        return np.array([float(s) for s in re.split("\\s+", pos_string.strip())])
 
     def process_line(self, line):
         result = self.split_line(line)
         if result:
+            if line.count("gripper position"):
+                pos = self.get_pos(result['info'])
+                self.positions.append(pos)
             if line.count("missed grasp") > 0:
                 self.missed_grasps += 1
             if line.count('start') > 0:
@@ -471,6 +492,13 @@ class LogfileProcessor:
         if self.first_grasp_attempt_time is not None:
             return (self.first_grasp_attempt_time - self.start_of_experiment).total_seconds()
             
+    def total_distance_travelled(self):
+        total = 0
+        for i in range(1, len(self.positions)):
+            current = self.positions[i] - self.positions[i-1]
+            total += np.sqrt(np.dot(current, current))
+        return total
+
     def summary(self):
         result = "Summary of {0}:\n".format(self.name)
         timesum = self.total_time()
