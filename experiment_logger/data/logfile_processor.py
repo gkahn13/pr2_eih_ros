@@ -72,13 +72,11 @@ class FileGroupProcessor():
         #latex_str += 'Attempt grasp (s) & ' + \
         #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += 'Avg. distance travelled (m) & ' + \
-                     ' & '.join(['{0:.2f}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
 
         latex_str += hline_str
         # latex_str += 'Avg. run time (s) & ' + \
         #              ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Avg. run time (s) & ' + \
+        latex_str += 'Avg. time per object (s) & ' + \
             ' & '.join(['{0}'.format(int(fg.avg_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += ' & ' + ' & '.join(['$\pm$ {0}'.format(int(fg.sd_run_time_s)) for fg in self.fgs]) + '\\\\ \n'
 
@@ -88,13 +86,19 @@ class FileGroupProcessor():
             ' & '.join(['{0:.2f}'.format(fg.avg_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += ' & ' + \
             ' & '.join(['$\pm$ {0:.1f}'.format(fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Occluded Region time (\%) & ' + \
+
+        latex_str += 'Avg. distance travelled (m) & ' + \
+                     ' & '.join(['{0:.2f}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
+
+        latex_str += hline_str
+
+        latex_str += 'Frontier detection (\%) & ' + \
                      ' & '.join(['{0:.1f}'.format(fg.occluded_region_time_pct) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Planning time (\%) & ' + \
+        latex_str += 'Planning (\%) & ' + \
                      ' & '.join(['{0:.1f}'.format(fg.planning_time_pct) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Exploring time (\%) & ' + \
+        latex_str += 'Exploring (\%) & ' + \
                      ' & '.join(['{0:.1f}'.format(fg.exploring_time_pct) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += 'Grasping time (\%) & ' + \
+        latex_str += 'Grasping (\%) & ' + \
                      ' & '.join(['{0:.1f}'.format(fg.grasping_time_pct) for fg in self.fgs]) + ' \\\\ \n'
                      
 #         latex_str += hline_str
