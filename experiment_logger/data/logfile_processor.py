@@ -84,11 +84,11 @@ class FileGroupProcessor():
         latex_str += 'Avg. time to plan (s) & ' + \
             ' & '.join(['{0:.2f}'.format(fg.avg_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += 'Plans per grasp & ' + ' & '.join(['{0:.3}'.format(fg.avg_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += ' & ' + ' & '.join(['$\pm$ {0:.3}'.format(fg.sd_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
-
         latex_str += ' & ' + \
             ' & '.join(['$\pm$ {0:.1f}'.format(fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+
+        latex_str += 'Plans per grasp & ' + ' & '.join(['{0:.3}'.format(fg.avg_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += ' & ' + ' & '.join(['$\pm$ {0:.3}'.format(fg.sd_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
 
         latex_str += 'Avg. distance travelled (m) & ' + \
                      ' & '.join(['{0:.2f}'.format(fg.average_distance_travelled) for fg in self.fgs]) + '\\\\ \n'
