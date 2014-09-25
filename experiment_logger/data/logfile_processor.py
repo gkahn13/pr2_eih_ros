@@ -84,8 +84,8 @@ class FileGroupProcessor():
         latex_str += 'Avg. time to plan (s) & ' + \
             ' & '.join(['{0:.2f}'.format(fg.avg_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
 
-        latex_str += 'Plans per grasp & ' + ' & '.join(['{0}'.format(fg.avg_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
-        latex_str += ' & ' + ' & '.join(['$\pm$ {0}'.format(fg.sd_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += 'Plans per grasp & ' + ' & '.join(['{0:.3}'.format(fg.avg_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += ' & ' + ' & '.join(['$\pm$ {0:.3}'.format(fg.sd_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
 
         latex_str += ' & ' + \
             ' & '.join(['$\pm$ {0:.1f}'.format(fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
@@ -178,7 +178,7 @@ class FileGroup:
             self.missed_grasps += proc.missed_grasps
             self.drops += proc.drops
             self.total_distance += proc.total_distance_travelled()
-            self.plans_per_grasp.add(proc.plans_per_grasp())
+            self.plans_per_grasp.add(float(proc.plans_per_grasp()))
             
             time_to_grasp_attempt = proc.time_to_grasp_attempt()
             if time_to_grasp_attempt is not None:
@@ -382,6 +382,7 @@ class LogfileProcessor:
         self.drops = 0
         self.premature_stop = 0
         self.positions = []
+        self.sampling_rounds = 0
     
         if CONFIG['verbose']:
             print "processing {}".format(self.name)
@@ -445,7 +446,9 @@ class LogfileProcessor:
     def process_line(self, line):
         result = self.split_line(line)
         if result:
-            if line.count("gripper position"):
+            if line.count("Number of samples") > 0:
+                self.sampling_rounds += 1
+            if line.count("gripper position") > 0:
                 pos = self.get_pos(result['info'])
                 self.positions.append(pos)
             if line.count("missed grasp") > 0:
@@ -515,7 +518,7 @@ class LogfileProcessor:
         return total
 
     def plans_per_grasp(self):
-        return len(self.start["bsp"])
+        return len(self.start["bsp"]) + self.sampling_rounds
 
     def summary(self):
         result = "Summary of {0}:\n".format(self.name)
