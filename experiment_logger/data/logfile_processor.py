@@ -72,7 +72,6 @@ class FileGroupProcessor():
         #latex_str += 'Attempt grasp (s) & ' + \
         #             ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_time_to_grasp_attempt_s), int(fg.sd_time_to_grasp_attempt_s)) for fg in self.fgs]) + ' \\\\ \n'
 
-
         latex_str += hline_str
         # latex_str += 'Avg. run time (s) & ' + \
         #              ' & '.join(['{0} $\pm$ {1}'.format(int(fg.avg_run_time_s), int(fg.sd_run_time_s)) for fg in self.fgs]) + ' \\\\ \n'
@@ -84,6 +83,10 @@ class FileGroupProcessor():
         #     ' & '.join(['{0:.2f} $\pm$ {1:.1f}'.format(fg.avg_plan_time_s, fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
         latex_str += 'Avg. time to plan (s) & ' + \
             ' & '.join(['{0:.2f}'.format(fg.avg_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
+
+        latex_str += 'Plans per grasp & ' + ' & '.join(['{0}'.format(fg.avg_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
+        latex_str += ' & ' + ' & '.join(['$\pm$ {0}'.format(fg.sd_plans_per_grasp) for fg in self.fgs]) + ' \\\\ \n'
+
         latex_str += ' & ' + \
             ' & '.join(['$\pm$ {0:.1f}'.format(fg.sd_plan_time_s) for fg in self.fgs]) + ' \\\\ \n'
 
@@ -139,6 +142,7 @@ class FileGroup:
         self.planning_times = NumericData()
         self.exploring_times = NumericData()
         self.grasping_times = NumericData()
+        self.plans_per_grasp = NumericData()
         self.total_distance = 0
         
         self.premature_stops = 0
@@ -174,6 +178,7 @@ class FileGroup:
             self.missed_grasps += proc.missed_grasps
             self.drops += proc.drops
             self.total_distance += proc.total_distance_travelled()
+            self.plans_per_grasp.add(proc.plans_per_grasp())
             
             time_to_grasp_attempt = proc.time_to_grasp_attempt()
             if time_to_grasp_attempt is not None:
@@ -245,6 +250,14 @@ class FileGroup:
     @property
     def sd_run_time_s(self):
         return self.run_times.sd()
+
+    @property
+    def avg_plans_per_grasp(self):
+        return self.plans_per_grasp.mean()
+
+    @property
+    def sd_plans_per_grasp(self):
+        return self.plans_per_grasp.sd()
     
     def total_segments_time(self):
         return self.occluded_region_times.sum() + self.planning_times.sum() + self.exploring_times.sum() + self.grasping_times.sum()
@@ -500,6 +513,9 @@ class LogfileProcessor:
             current = self.positions[i] - self.positions[i-1]
             total += np.sqrt(np.dot(current, current))
         return total
+
+    def plans_per_grasp(self):
+        return len(self.start["bsp"])
 
     def summary(self):
         result = "Summary of {0}:\n".format(self.name)
