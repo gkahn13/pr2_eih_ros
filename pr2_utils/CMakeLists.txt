@@ -10,7 +10,11 @@ find_package(catkin REQUIRED COMPONENTS roscpp roslib actionlib sensor_msgs traj
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(Eigen)
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN_INCLUDE_DIRS})
+# used to be:
+# find_package(Eigen REQUIRED)
+# include_directories(${Eigen_INCLUDE_DIRS})
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options graph)
 
@@ -93,6 +97,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include ${Eigen_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+# I believe the above ${Eigen_INCLUDE_DIRS} is now redundant
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 

@@ -9,7 +9,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 
-#include <pcl_conversions.h>
+#include <pcl_conversions/pcl_conversions.h>
 // PCL specific includes
 //#include <pcl/conversions.h>
 #include <pcl/point_cloud.h>

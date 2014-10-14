@@ -16,7 +16,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include "sensor_msgs/PointCloud2.h"
-#include <pcl_conversions.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl_utils/OccludedRegion.h>
 #include <pcl_utils/OccludedRegionArray.h>
 #include <pcl_utils/BoundingBox.h>
