@@ -10,9 +10,13 @@ find_package(catkin REQUIRED COMPONENTS roscpp roslib actionlib sensor_msgs traj
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(Eigen)
+find_package(cmake_modules REQUIRED)
+find_package(Eigen REQUIRED)
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options graph)
+
+message(STATUS "OpenRAVE_Boost_VERSION: ${OpenRAVE_Boost_VERSION}")
+message(STATUS "OpenRAVE_INCLUDE_DIRS: ${OpenRAVE_INCLUDE_DIRS}")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed

@@ -15,7 +15,14 @@ Arm::Arm(ArmType a, Simulator *s) : arm_type(a), sim(s) {
 
 	tool_frame = (arm_type == ArmType::left) ? "l_gripper_tool_frame" : "r_gripper_tool_frame";
 	manip_name = (arm_type == ArmType::left) ? "leftarm" : "rightarm";
-	manip = sim->robot->GetManipulator(manip_name);
+	
+	std::vector<rave::RobotBase::ManipulatorPtr> manipulators = sim->robot->GetManipulators();
+	for(const rave::RobotBase::ManipulatorPtr& m : manipulators) {
+	    if (m->GetName() == manip_name) {
+	        manip = m;
+	        break;
+	    }
+	}
 
 	joint_indices = manip->GetArmIndices();
 	num_joints = joint_indices.size();
