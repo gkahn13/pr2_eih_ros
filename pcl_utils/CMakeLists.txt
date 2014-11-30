@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
     # remove the below with kinfu
     tf
     tf_conversions
+    pcl_conversions # added for new build
 )
 
 find_package(PCL 1.7 REQUIRED)

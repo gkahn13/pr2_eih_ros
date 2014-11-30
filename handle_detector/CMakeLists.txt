@@ -29,8 +29,11 @@ message("PCL_LIBRARIES: ${PCL_LIBRARIES}")
 find_package(LAPACK REQUIRED)
 
 ## find Eigen package
-find_package(Eigen REQUIRED)
-include_directories(${Eigen_INCLUDE_DIRS})
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN_INCLUDE_DIRS})
+# used to be:
+# find_package(Eigen REQUIRED)
+# include_directories(${Eigen_INCLUDE_DIRS})
 
 ## compiler optimization flags
 set(CMAKE_CXX_FLAGS "-DNDEBUG -O3 -fopenmp -Wno-deprecated")

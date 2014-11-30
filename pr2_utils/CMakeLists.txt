@@ -15,9 +15,6 @@ find_package(Eigen REQUIRED)
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options graph)
 
-message(STATUS "OpenRAVE_Boost_VERSION: ${OpenRAVE_Boost_VERSION}")
-message(STATUS "OpenRAVE_INCLUDE_DIRS: ${OpenRAVE_INCLUDE_DIRS}")
-
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -97,6 +94,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include ${Eigen_INCLUDE_DIRS} ${OpenRAVE_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+# I believe the above ${Eigen_INCLUDE_DIRS} is now redundant
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 
